@@ -2,8 +2,12 @@
 #define MINI_RULES_H
 
 /* Define a set of rules for creating a variant bam. The syntax is:
-   REGION_FILE   rule1:value1    rule1:value1
-  
+   all@!isize:[0,800],mapq:[0,60]
+   region@REGION_FILE
+   rule1@isize:[0,800],mapq:[0,60]
+   rule2@!isize[0,800]:mapq[0,60],:ardclip:supplementary:duplicate:qcfail
+   rule3@
+   
    A file of NA indicates that the rule should be applied genome-wide.
    The ordering of the lines sets the hierarchical rule. For instance, a rule on line 2 will be applied 
    before a rule on line 3 for all regions that are the union of regions in level 3 and below.
@@ -22,6 +26,86 @@
 using namespace BamTools;
 using namespace std;
 
+// hold a range of valid numeric values (e.g. isize). 
+// can optionally invert the range to make rule the complement of the range
+struct Range {
+
+  Range() : min(0), max(0), inverted(false), pattern("") {}
+  Range(int mn, int mx, int in, string p) : min(mn), max(mx), inverted(in), pattern(p) {}
+  ~Range() {}
+
+  int min;
+  int max;
+  bool inverted;
+  string pattern;
+  
+  bool isValid(int val) {
+    if (!inverted)
+      return (val >= min && val <= max);
+    else
+      return (val < min || val > max);
+  }
+
+  void parseRuleLine(string line);
+
+  friend ostream& operator<<(ostream &out, const Range &r);
+};
+
+// a container to hold boolean rules based mostly on alignment flag
+struct FlagRule {
+  
+  FlagRule() : duplicate(true), supp(true), qcfail(true), hardclip(true), 
+               fwd_strand(true), rev_strand(true), mate_fwd_strand(true), mate_rev_strand(true),
+	       unmapped(true), unmapped_mate(true), mapped(true), mapped_mate(true)
+               {}
+
+  void parseRuleLine(string line);
+  
+  bool isValid(BamAlignment &a);
+
+  bool duplicate;
+  bool supp;
+  bool qcfail;
+  bool hardclip;
+  bool fwd_strand;
+  bool rev_strand;
+  bool mate_fwd_strand;
+  bool mate_rev_strand;
+  bool unmapped;
+  bool unmapped_mate;
+  bool mapped;
+  bool mapped_mate;
+
+  friend ostream& operator<<(ostream &out, const FlagRule &fr);
+};
+
+//
+class AbstractRule {
+
+ public:
+
+  string name = "";
+  Range isize = {-1, -1, true, "isize"}; // include all
+  Range mapq =  {-1, -1, true, "mapq"}; 
+  Range len =   {-1, -1, true, "length"};
+  Range clip =  {-1, -1, true, "clip"};
+  Range phred = {-1, -1, true, "phred"};
+
+  bool keep_all = false;
+  bool keep_none = false;
+
+  // set to true if you want a read to belong to the region if its mate does
+  //bool mate = false; 
+
+  FlagRule fr;
+
+  bool isValid(BamAlignment &a);
+  
+  void parseRuleLine(string line);
+
+  friend ostream& operator<<(ostream &out, const AbstractRule &fr);
+};
+
 class MiniRulesCollection;
 
 class MiniRules {
@@ -31,7 +115,7 @@ class MiniRules {
   public:
   MiniRules() {}
   ~MiniRules() {}
-  MiniRules(const MiniRules * mr); // transfer defaults from one to another
+  //MiniRules(const MiniRules * mr); // transfer defaults from one to another
     
   bool isValid(BamAlignment &a);
    
@@ -40,6 +124,7 @@ class MiniRules {
   bool isOverlapping(BamAlignment &a);
 
   friend ostream& operator<<(ostream& out, const MiniRules &mr);
+
 
  private:
 
@@ -50,38 +135,12 @@ class MiniRules {
   int m_level = -1;
   int m_width = 0;
 
-  // full include and full exclude
-  bool m_full_include = false;
-  bool m_full_exclude = false;
+  int pad = 0; // how much should we pad the region?
+
+  vector<AbstractRule> m_abstract_rules;
 
   // rule applies to mate too
   bool m_applies_to_mate = false;
-
-  // numeric properities of reads to filter on
-  int m_isize = 800;
-  int m_mapq = 0;
-  int m_qual = 0;
-  int m_minclip = 5;
-  int m_length = 50;
-  int m_nmlim = 20;
-
-  // boolean properites of reads
-  bool m_unmap = true;
-  bool m_supp = true;
-  bool m_hardclip = true;
-  bool m_duplicate = true;
-  bool m_failqc = true;
-  bool m_exclude_n = false;
-
-  //bool m_hardclip_DISC = true;
-  //bool m_duplicate_DISC = true;
-  //bool m_failqc_DISC = true;
-  //bool m_exclude_n_DISC = false;
-  //bool m_supp_DISC = false;
-  int  m_mapq_DISC = 0;
-
-  // if true, ALL discordant reads are kept, regardless of filters
-  //bool m_force_disckeep = false; 
 
   // count the total number of valid reads
   int m_count = 0;

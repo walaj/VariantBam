@@ -293,8 +293,6 @@ void VariantBamReader::MakeIndex() {
 
 }
 
-
-
 // make a new object and put the reader and writer on the heap.
 // this is also opens the files for reading/writing and checks
 // that they are readable/writable
@@ -307,20 +305,20 @@ VariantBamReader::VariantBamReader(string in, string out, MiniRulesCollection *m
 
   // open the reader
   m_reader = new BamReader();
-  if (m_reader->Open(in)) {
+  if (!m_reader->Open(in)) {
     cerr << "Error: Cannot open " << in << " for reading" << endl;
     exit(EXIT_FAILURE);
   }
 
   // get the index
-  if (m_reader->LocateIndex()) {
+  if (!m_reader->LocateIndex()) {
     cerr << "Error: Cannot locate index file for " << in << endl;
     exit(EXIT_FAILURE);
   }
 
   // open the writer
   m_writer = new BamWriter();
-  if (m_writer->Open(out, m_reader->GetHeaderText(), m_reader->GetReferenceData())) {
+  if (!m_writer->Open(out, m_reader->GetHeaderText(), m_reader->GetReferenceData())) {
     cerr << "Error: Cannot open BAM for writing " << out << endl;
     exit(EXIT_FAILURE);
   }

@@ -1,4 +1,5 @@
 #include "GenomicRegion.h"
+#include "gzstream.h"
 
 static const GenomicRegionVector centromeres =
 {
@@ -212,7 +213,7 @@ bool GenomicRegion::isEmpty() const {
 // parse a region file
 GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
 
-  ifstream iss(file.c_str());
+  igzstream iss(file.c_str());
   if (!iss) { 
     cerr << "Region file does not exist: " << file << endl;
     exit(EXIT_FAILURE);
@@ -223,7 +224,7 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
 
   // get the header line to check format
   string header, header2;;
-  ifstream iss_h(file.c_str());
+  igzstream iss_h(file.c_str());
   getline(iss_h, header, '\n');
   getline(iss_h, header2, '\n');
 
@@ -304,6 +305,37 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
     
   }
   ////////////////////////////////////
+  // VCF file
+  ////////////////////////////////////
+  else if (header.find("vcf") != string::npos || header.find("VCF") != string::npos) {
+    cout << "Parsing VCF file "  << endl;
+    while (getline(iss, line, '\n')) {
+      if (line.length() > 0) {
+	if (line.at(0) != '#') { // its a valid line
+	  istringstream iss_this(line);
+	  int count = 0;
+	  string val, chr, pos;
+	  
+	  while (getline(iss_this, val, '\t')) {
+	    switch (count) {
+	    case 0 : chr = val;
+	    case 1 : pos = val;
+	    }
+	    count++;
+	  }
+	  if (count < 3) {
+	    cerr << "Didn't parse VCF line properly: " << line << endl;
+	  } else {
+	    GenomicRegion gr(chr, pos, pos);
+	    gr.pad(pad);
+	    grv.push_back(gr);
+	  }
+	    
+	}
+      }
+    }
+  }
+  ////////////////////////////////////
   // csv region file
   ////////////////////////////////////
   else {
@@ -324,12 +356,13 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
 
       if (chrToNumber(chr) >= 0) {
 	GenomicRegion gr(chr, pos1, pos2);
+	gr.pad(pad);
 	grv.push_back(gr);
       }
     }
   }
     ////////////////////////////////////
-    
+  
     return (grv);
     
   }
