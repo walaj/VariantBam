@@ -3,8 +3,7 @@
 using namespace std;
 using namespace BamTools;
 
-// Perform a soft-clipping of the sequence by removing low quality bases from the
-// 3' end using Heng Li's algorithm from bwa
+// Trim the sequence by removing low quality bases from either end
 void VariantBamReader::qualityTrimRead(int qualTrim, std::string &seq, std::string &qual) {
 
     assert(seq.size() == qual.size());
@@ -40,8 +39,6 @@ void VariantBamReader::qualityTrimRead(int qualTrim, std::string &seq, std::stri
       return;
     }
 
-    int readlen = seq.length();
-
     // Clip the read
     seq =   seq.substr(startpoint, endpoint);
     qual = qual.substr(startpoint, endpoint);
@@ -66,7 +63,8 @@ unsigned VariantBamReader::getClipCount(BamAlignment a) {
 }
 
 
-bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
+//bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
+bool VariantBamReader::writeVariantBam() {
 
   int keep_counter = 0;
   int total = 0;
@@ -98,22 +96,22 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
     if (m_verbose > 0 && total % 500000 == 0) {
 
       char buffer[100];
-      int perc  = SnowUtils::percentCalc<int>(keep_counter_MAIN, total_MAIN); 
-      string posstring = SnowUtils::AddCommas<int>(a.Position);
-      sprintf (buffer, "Reading read %11s at position %2s:%-11s. Kept %11s (%2d%%) [running count across whole BAM]",  SnowUtils::AddCommas<int>(total_MAIN).c_str(), GenomicRegion::chrToString(a.RefID).c_str(), posstring.c_str(),  SnowUtils::AddCommas<int>(keep_counter_MAIN).c_str(), perc);
+      int perc  = VarUtils::percentCalc<int>(keep_counter_MAIN, total_MAIN); 
+      string posstring = VarUtils::AddCommas<int>(a.Position);
+      sprintf (buffer, "Reading read %11s at position %2s:%-11s. Kept %11s (%2d%%) [running count across whole BAM]",  VarUtils::AddCommas<int>(total_MAIN).c_str(), GenomicRegion::chrToString(a.RefID).c_str(), posstring.c_str(),  VarUtils::AddCommas<int>(keep_counter_MAIN).c_str(), perc);
       printf ("%s\n",buffer);
       char buffer2[100];
       sprintf(buffer2, "   Filter (%% of kept)  -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	      SnowUtils::percentCalc<int>(n_keep_counter, keep_counter), 
-	      SnowUtils::percentCalc<int>(mapq0_keep_counter, keep_counter), 
-	      SnowUtils::percentCalc<int>(discordant_keep_counter, keep_counter), 
-	      SnowUtils::percentCalc<int>(clipped_keep_counter, keep_counter));
+	      VarUtils::percentCalc<int>(n_keep_counter, keep_counter), 
+	      VarUtils::percentCalc<int>(mapq0_keep_counter, keep_counter), 
+	      VarUtils::percentCalc<int>(discordant_keep_counter, keep_counter), 
+	      VarUtils::percentCalc<int>(clipped_keep_counter, keep_counter));
       char buffer3[100];
       sprintf(buffer3, "   Filter (%% of total) -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	      SnowUtils::percentCalc<int>(n_counter, total), 
-	      SnowUtils::percentCalc<int>(mapq0_counter, total), 
-	      SnowUtils::percentCalc<int>(discordant_counter, total), 
-	      SnowUtils::percentCalc<int>(clipped_counter, total));
+	      VarUtils::percentCalc<int>(n_counter, total), 
+	      VarUtils::percentCalc<int>(mapq0_counter, total), 
+	      VarUtils::percentCalc<int>(discordant_counter, total), 
+	      VarUtils::percentCalc<int>(clipped_counter, total));
       if (m_verbose > 1) {
 	printf("%s\n", buffer2);
 	printf("%s\n", buffer3);
@@ -143,6 +141,7 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
     int rule_pass = m_mr->isValid(a);
 
     // build the qc
+    /*
     try {
       string rgroup;
       if (!a.GetTag("RG",rgroup))
@@ -182,8 +181,9 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
       //cerr << "Readgroup " << "NM " << nm << " mapq " << a.MapQuality << " xp " << xp << " len " << a.Length <<
       //	" as " << as << " phred " << phred << endl;
     }
+    */
 
-    if ( rule_pass > 0 && !qc_only ) {
+    if ( rule_pass > 0 /*&& !qc_only*/ ) {
 
       mapq0_keep_counter += (a.MapQuality == 0 ) ? 1 : 0; 
 
@@ -198,12 +198,12 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
       keep_counter++;
       keep_counter_MAIN++;
       
-      int buffer_lim = 100;
+      size_t buffer_lim = 100;
       // deal with bam buff
       if (bam_buffer.size() >= buffer_lim/* && !in_full_region*/) {
 	// check if bad region
-	int32_t wr;
-	if (pileup >= buffer_lim * 0.8 && (bam_buffer.back().Position - bam_buffer[0].Position <= 40)) {
+	int buf_width = bam_buffer.back().Position - bam_buffer[0].Position;
+	if (pileup >= buffer_lim * 0.8 && buf_width <= 40) {
 	  for (auto it = bam_buffer.begin(); it != bam_buffer.end(); it++) 
 	    if (it->MapQuality > 0)
 	      m_writer->SaveAlignment(*it);
@@ -232,22 +232,22 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
   // print the final message
   if (m_verbose > 0) {
     char buffer[100];
-    int perc  = SnowUtils::percentCalc<int>(keep_counter_MAIN, total_MAIN); 
-    string posstring = SnowUtils::AddCommas<int>(a.Position);
-    sprintf (buffer, "Finished region at %20s. Kept %11s (%2d%%) [running count across whole BAM]",  m_region.toStringOffset().c_str(), SnowUtils::AddCommas<int>(keep_counter_MAIN).c_str(), perc);
+    int perc  = VarUtils::percentCalc<int>(keep_counter_MAIN, total_MAIN); 
+    string posstring = VarUtils::AddCommas<int>(a.Position);
+    sprintf (buffer, "Finished region at %20s. Kept %11s (%2d%%) [running count across whole BAM]",  m_region.toString().c_str(), VarUtils::AddCommas<int>(keep_counter_MAIN).c_str(), perc);
     printf ("%s\n",buffer);
     char buffer2[100];
     sprintf(buffer2, "   Filter (%% of kept)  -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	    SnowUtils::percentCalc<int>(n_keep_counter, keep_counter), 
-	    SnowUtils::percentCalc<int>(mapq0_keep_counter, keep_counter), 
-	    SnowUtils::percentCalc<int>(discordant_keep_counter, keep_counter), 
-	    SnowUtils::percentCalc<int>(clipped_keep_counter, keep_counter));
+	    VarUtils::percentCalc<int>(n_keep_counter, keep_counter), 
+	    VarUtils::percentCalc<int>(mapq0_keep_counter, keep_counter), 
+	    VarUtils::percentCalc<int>(discordant_keep_counter, keep_counter), 
+	    VarUtils::percentCalc<int>(clipped_keep_counter, keep_counter));
     char buffer3[100];
     sprintf(buffer3, "   Filter (%% of total) -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	    SnowUtils::percentCalc<int>(n_counter, total), 
-	    SnowUtils::percentCalc<int>(mapq0_counter, total), 
-	    SnowUtils::percentCalc<int>(discordant_counter, total), 
-	    SnowUtils::percentCalc<int>(clipped_counter, total));
+	    VarUtils::percentCalc<int>(n_counter, total), 
+	    VarUtils::percentCalc<int>(mapq0_counter, total), 
+	    VarUtils::percentCalc<int>(discordant_counter, total), 
+	    VarUtils::percentCalc<int>(clipped_counter, total));
     if (m_verbose > 1) {
       printf("%s\n", buffer2);
       printf("%s\n", buffer3);

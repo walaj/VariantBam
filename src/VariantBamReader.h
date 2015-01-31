@@ -3,7 +3,7 @@
 
 #include "MiniRules.h"
 #include "GenomicRegion.h"
-#include "BamQC.h"
+//#include "BamQC.h"
 #include "api/BamReader.h"
 #include "api/BamWriter.h"
 
@@ -33,7 +33,8 @@ class VariantBamReader {
   static unsigned getClipCount(BamAlignment a);
   static void qualityTrimRead(int qualTrim, string &seq, string &qual);
 
-  bool writeVariantBam(BamQC &qc, bool qc_only);
+  //bool writeVariantBam(BamQC &qc, bool qc_only);
+  bool writeVariantBam();
   
   // set which part of the bam to read
   bool setBamRegion(GenomicRegion gp);

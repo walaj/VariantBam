@@ -68,7 +68,8 @@ bool MiniRules::isValid(BamAlignment &a) {
   bool clip  = (new_clipnum >= m_minclip) || (m_minclip == 0);
   
   // check for QUALITY LENGTH
-  bool len = trimmed_bases.length() >= m_length;
+  int newlen = trimmed_bases.length();
+  bool len = newlen >= m_length;
 
   // check to remove reads with N
   bool npass = a.QueryBases.find("N") == string::npos;
@@ -77,7 +78,8 @@ bool MiniRules::isValid(BamAlignment &a) {
   // check NM tag
   uint32_t nm;
   if (a.GetTag("NM", nm)) {} else { nm = 0; }
-  bool nmpass = nm <= m_nmlim;
+  int intnm = nm;
+  bool nmpass = intnm <= m_nmlim;
 
   // accumulate all the information to make a judgement
   bool qual_read = len && nmpass && npass && hardclip_pass && mapq_pass && flag && supp; 
@@ -114,7 +116,7 @@ bool MiniRules::isOverlapping(BamAlignment &a) {
 // if a read does not satisfy a rule it is excluded.
 int MiniRulesCollection::isValid(BamAlignment &a) {
 
-  int which_rule = 0;
+  size_t which_rule = 0;
   
   // find out which rule it is a part of
   // lower number rules dominate
@@ -129,7 +131,8 @@ int MiniRulesCollection::isValid(BamAlignment &a) {
   if (which_rule >= m_rules.size())
     return 0; 
 
-  return which_rule+1; // rules start at 1
+  int level = which_rule + 1;// rules start at 1
+  return level; 
   
 }
 
@@ -275,7 +278,7 @@ ostream& operator<<(ostream &out, const MiniRulesCollection &mr) {
 // print a MiniRules information
 ostream& operator<<(ostream &out, const MiniRules &mr) {
    
-  string file_print = mr.m_whole_genome ? "WHOLE GENOME" : SnowUtils::getFileName(mr.m_region_file);
+  string file_print = mr.m_whole_genome ? "WHOLE GENOME" : VarUtils::getFileName(mr.m_region_file);
   out << "LEVEL " << mr.m_level << " Rules applying to: " << file_print << endl;
   cout << "--Include Mate: " << (mr.m_applies_to_mate ? "ON" : "OFF") << endl;
   if (mr.m_full_include) {
@@ -300,7 +303,7 @@ ostream& operator<<(ostream &out, const MiniRules &mr) {
     //out << "   Remove QCFail:        " << (mr.m_failqc_DISC ? "OFF" : "ON") << endl;
     //out << "   Remove Supplementary: " << (mr.m_supp_DISC ? "OFF" : "ON") << endl;
   }
-  out << "-- Size of rules region: " << (mr.m_whole_genome ? "WHOLE GENOME" : SnowUtils::AddCommas<int>(mr.m_width)) << endl;
+  out << "-- Size of rules region: " << (mr.m_whole_genome ? "WHOLE GENOME" : VarUtils::AddCommas<int>(mr.m_width)) << endl;
   return out;
 }
 

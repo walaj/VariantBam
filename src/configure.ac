@@ -33,14 +33,6 @@ if test "$with_bamtools" -a -d "$with_bamtools"; then
     bamtools_include="-I$with_bamtools/include -I$with_bamtools/include/bamtools"
 fi
 
-AC_ARG_WITH(snowutils, AS_HELP_STRING([--with-snowutils=PATH],
-	[specify directory containing the bamtools library (http://github.com/pezmaster31/bamtools)]))
-
-if test "$with_snowutils" -a -d "$with_snowutils"; then
-    snowutils_ldflags="-Wl,-rpath,$with_snowutils -L$with_snowutils"
-    snowutils_include="-I$with_snowutils"
-fi
-
 # Only fail on warnings when the --enable-development flag is passed into configure
 AC_ARG_ENABLE(development, AS_HELP_STRING([--enable-development],
 	[Turn on development options, like failing compilation on warnings]))
@@ -52,17 +44,14 @@ fi
 AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
-AC_SUBST(CPPFLAGS, "$CPPFLAGS $snowutils_include $bamtools_include")
-AC_SUBST(LDFLAGS, "$snowutils_ldflags $bamtools_ldflags $LDFLAGS")
+AC_SUBST(CPPFLAGS, "$CPPFLAGS $bamtools_include")
+AC_SUBST(LDFLAGS, "$bamtools_ldflags $LDFLAGS")
 
 # We always need to specify to link in bamtools
-AC_SUBST(LIBS, "$LIBS -lbamtools -lsnowutils")
+AC_SUBST(LIBS, "$LIBS -lbamtools")
 
 # Make sure the bamtools headers can be found
 AC_CHECK_HEADERS([api/BamReader.h],,[AC_MSG_ERROR([The bamtools library must be installed (http://github.com/pezmaster31/bamtools). You can specify its path with the --with-bamtools=PATH option])])
-
-# Make sure the bamtools headers can be found
-AC_CHECK_HEADERS([SnowGlobal.h],,[AC_MSG_ERROR([SnowUtils link --with-snowutils=PATH option])])
 
 AC_CONFIG_FILES([Makefile])
 
