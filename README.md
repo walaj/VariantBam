@@ -40,24 +40,15 @@ We ran VariantBam like this:
 
 ```bash
 options=(
-    --snps              Red_blood_cell_count-Harst2012-45_SNPs.gwas
-    --gene-matrix       GeneAtlas2004.gct.gz
-    --gene-intervals    NCBIgenes2013.bed.gz
-    --snp-intervals     TGP2011.bed.gz
-    --null-snps         Lango2010.txt.gz
-    --out               out
-    --slop              10e3
-    --threads           8
-    --null-snpsets      0
-    --min-observations  100
-    --max-iterations    1e7
+    --input-bam         big.bam
+    --output-bam        small.bam
+    --rules-file        rules.vb
+    --proc-regions-file small_chr1_mask.bed
 )
-snpsea ${options[*]}
+variant ${options[*]}
 
-# Time elapsed: 2 minutes 36 seconds
-
-# Create the figure shown above:
-snpsea-barplot out
+# Time elapsed: 396 minutes
+# Processed ~10 million reads, kept ~1 million
 ```
 
 Syntax
@@ -177,7 +168,7 @@ variant -i big.bam -o small.bam -r 'global@!hardclip\nregion@WG\nrule@!isize:[0,
 Note the single quotes so that it is interpreted as a string literal in BASH.
 
 
-[license]: https://github.com/broadinstitute/variant-bam/LICENSE
+[license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
 
 [BamTools]: https://raw.githubusercontent.com/wiki/pezmaster31/bamtools/Tutorial_Toolkit_BamTools-1.0.pdf
 
