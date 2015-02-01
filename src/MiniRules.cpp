@@ -88,11 +88,18 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 
   // parse the rules file
   vector<string> region_files;
-  ifstream iss_rules(file.c_str());
-  if (!iss_rules) {
-    cerr << "Rules file " << file << " is not able to be opened" << endl;
-    exit(EXIT_FAILURE);
+  ifstream iss_file(file.c_str());
+  char delim = '%';
+  if (iss_file) {
+    string temp;
+    file = "";
+    while(getline(iss_file, temp)) {
+      file += temp + "\n";
+    }
+    iss_file.close();
+    delim = '\n';
   }
+  istringstream iss_rules(file.c_str());
   
   // loop through the rules file and grab the rules
   string line;
@@ -103,8 +110,10 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 
   // default a default rule
   AbstractRule rule_all;
+  
+  while(getline(iss_rules, line, delim)) {
 
-  while(getline(iss_rules, line, '\n')) {
+    cout << line << endl;
 
     //exclude comments and empty lines
     bool line_empty = line.find_first_not_of("\t\n ") == string::npos;
@@ -317,6 +326,7 @@ void AbstractRule::parseRuleLine(string line) {
   len.parseRuleLine(noname);
   clip.parseRuleLine(noname);
   phred.parseRuleLine(noname);
+  nm.parseRuleLine(noname);
 
   // parse the line for flag rules
   fr.parseRuleLine(line);
@@ -404,6 +414,14 @@ bool AbstractRule::isValid(BamAlignment &a) {
   if (!fr.isValid(a))
     return false;
   
+  // check for valid NM
+  uint32_t nm_val;
+  if (!a.GetTag("NM",nm_val))
+    nm_val = 0;
+  int nm2 = nm_val;
+  if (!nm.isValid(nm2))
+    return false;
+
   // trim the read, then check length
   unsigned clipnum = VariantBamReader::getClipCount(a);
   string trimmed_bases = a.QueryBases;
@@ -472,6 +490,7 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
     out << "len:" << ar.len << " -- ";
     out << "clip:" << ar.clip << " -- ";
     out << "phred:" << ar.phred << " -- ";
+    out << "nm:" << ar.nm << " -- ";
     out << ar.fr;;
   }
   return out;

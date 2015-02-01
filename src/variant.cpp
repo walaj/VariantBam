@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
   if (opt::verbose > 0) {
     cout << "Input BAM:  " << opt::bam << endl;
     cout << "Output BAM: " << opt::out << endl;
-    cout << "Input rules file: " << opt::rules_file << endl;
+    cout << "Input rules script (file or script): " << opt::rules_file << endl;
     cout << "Input proc regions file: " << opt::proc_regions << endl;
   }
 

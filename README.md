@@ -7,31 +7,42 @@ VariantBam: One-pass extraction of sequencing reads from a BAM file using cascad
 Description
 -----------
 
-VariantBam is a tool to extract interesting sequencing reads from a BAM file. VariantBam 
-was developed to be a one-pass solution for the various needs of different NGS tools. For instance,
-an indel tool might be interested in MAPQ > 0 reads in 30,000 candidate regions of interest, 
-a SNP tool might find a different 20,000, and an SV tool might be interested in only discordant or high-quality 
-clipped reads across the BAM (where high-quality means they are not clipped to do low Phred quality). Alternatively, 
-to save money/space one may not want to store an entire BAM on disk after all the relevant VCF, MAFs, etc have been created. 
-Instead it would be more efficient to store only those read-pairs who intersect some region around the variant locations. 
-VariantBam is designed to handle all of these situations with a single pass through the BAM.
+VariantBam is a tool to extract interesting sequencing reads from a BAM file. To save money, 
+diskspace and future I/O, one may not want to store an entire BAM on disk after all the relevant VCF, 
+MAFs, etc have been created. Instead it would be more efficient to store only those read-pairs 
+who intersect some region around the variant locations. Ideally, these regions could be manually inspected
+or reanalyzed without having to keep the entire BAM.
+
+VariantBam was developed as a one-pass solution for the needs of different NGS tools. For instance, after
+initial processing, an indel tool might be interested in storing MAPQ > 0 reads in 30k candidate regions of interest.
+A separate SNP tool might find a different 20k regions, while a structural variation tool 
+might be interested in only discordant or high-quality clipped reads across the BAM 
+(where high-quality means they are not clipped to do low Phred quality).  
+VariantBam is uses a series of rules defined on distinct regions in order to handle 
+all of these situations with a single pass through the BAM.
 
 VariantBam is implemented in C++ and relies on the BamTools API (Derek Barnett, (c) 2009) for BAM I/O. 
-It is worth mentioning the capabilities of the [BamTools] command line ``bamtools filter`` here, 
-which may provide a solution more to your needs than VariantBam. ``bamtools filter`` allows you to 
-specify a set of filters in JSON format to be applied to a BAM. See the Bamtools documentation_ for more detail. 
-Under what situations would you use ``bamtools filter``, and when would you use VariantBam?
+Note that the capabilities of the [BamTools] command line ``bamtools filter``  
+may provide a solution more suitable your needs than VariantBam. Briefly, ``bamtools filter`` allows you to 
+specify a set of filters in JSON format to be applied to a BAM. See the Bamtools documentation for more detail. 
 
-1. Extract all MAPQ 0 reads from a BAM - Either tool (prefer ``bamtools filter``)
-2. Extract all reads in read group A - ``bamtools filter``
-3. Extract all reads with NM tag >= 4 - Either tool (prefer ``bamtools filter``)
-4. Extract all reads with NM tag >= 4 in exons - VariantBam.
-5. Remove all reads with insert sizes between 100 and 600 bp - VariantBam
-6. Extract all reads and mate within 1000bp of a variant or set of genes - VariantBam
-7. Extract only high-quality reads with N bases beyong phred score X - VariantBam
-8. Reduce a BAM to only high quality reads around your MAFs, VCFs and BED files - VariantBam
+The question then is under what situations would you use ``bamtools filter``, and when would you use VariantBam? 
+Below are a list of scenarios that we feel addresses the different domains of the two tools:
 
-A manuscript for VariantBam is currently under preparation.
+> 1. Extract all MAPQ 0 reads from a BAM - Either tool (prefer ``bamtools filter``)
+> 2. Extract all reads in read group A - ``bamtools filter``
+> 3. Extract all reads with NM tag >= 4 - Either tool (prefer ``bamtools filter``)
+> 4. Extract all reads with NM tag >= 4 in exons - VariantBam.
+> 5. Remove all reads with insert sizes between 100 and 600 bp - VariantBam
+> 6. Extract all reads and mate within 1000bp of a variant or set of genes - VariantBam
+> 7. Extract only high-quality reads with N bases beyong phred score X - VariantBam
+> 8. Reduce a BAM to only high quality reads around your MAFs, VCFs and BED files - VariantBam
+
+Thus, the main additions of VariantBam are three-fold:
+
+> 1. The ability to filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality.
+> 2. Use of interval trees to efficiently determine if a read or read mate overlaps a region.
+> 3. The ability to provide different rules for different regions, and the ability to provide these regions as common variant files (VCF, MAF, BED)
 
 Example
 -------
@@ -46,16 +57,13 @@ options=(
     --proc-regions-file small_chr1_mask.bed
 )
 variant ${options[*]}
-
-# Time elapsed: 396 minutes
-# Processed ~10 million reads, kept ~1 million
 ```
 
 Syntax
 ------
 
 This section will describe the syntax used by VariantBam to specify the cascades of rules and regions 
-that are applied to the BAM[*]_. Below is an example of a valid VariantBam script:
+applied to a BAM. Below is an example of a valid VariantBam script:
 
 ```bash
     ### this is a comment. The line code below defines filters to be applied to each region/rule
@@ -64,11 +72,12 @@ that are applied to the BAM[*]_. Below is an example of a valid VariantBam scrip
     rule@!hardclip;!unmapped;!unmapped_mate;clip:[10,101]
 ```
 
-### Region
+##### Region
 
-Let's look first at the ``region`` tag. The region@ keyword marks that what follows is a region, 
-which is either the keyword ``WG`` for whole genome, or a VCF, MAF, Callstats or BED file. Optionally,
-you can specify that a region is a bit bigger than is actually in the file. You can do this by "padding"
+Let's look first at the ``region`` tag. The region@ keyword marks that what follows is a genomic region, 
+which is either the keyword ``WG`` for whole genome, or a VCF, MAF, Callstats or BED file. Regions are 
+treated such that they will include any read who overlaps it, even partially. Optionally,
+you can specify that your region of interest is a bit bigger than is actually in the file. You can do this by "padding"
 the regions around the sites. For example:
 
 ``region@myvcf.vcf,pad:1000``
@@ -78,24 +87,27 @@ You can also state that the region applies to reads who don't necessarily overla
 ``region@myvcf,pad:1000,mate``
 
 Note that the syntax is such that you must specify the file immediately after the @, following by other options
-in any order.
+in any order. 
 
-### Rules
+##### Rules
 
 The next two lines specify a pair of rules, marked with the ``rule@`` tag. 
-The default rule is to include every read, and the conditions are meant to be 
-thought of as exclusion criteria. You can take the "opposite" of a condition by prefixing
-with a ``!``. For example, the first rule in the above example states:
+The default rule is to include every read, and the conditions within the rule are to be  
+thought of as exclusion criteria. Note that you can take the complement of a condition 
+by prefixing with a ``!``. For example:
 
-Keep all reads EXCEPT any read that satisfies the following: Hardclipped, is unmapped, has unmapped mate,
-has insert size greater than 600, does NOT have mapping quality between 10 and 100. Thus, we are going to get low mapping 
-quality discordant reads from this query. And equivalent specification would be:
-
-``rule@!hardclip;!unmapped;!unmapped_mate;isize:[0,600];mapq:[0,9]``
+```bash
+    # do not include hardclipped reads, reads with isize > 600, or reads with mapq between 10 and 100.
+    rule@!hardclip;isize:[0,600];!mapq:[10,100]
+    
+    # an equivalent specification would be
+    rule@!hardclip;!unmapped;!isize:[601,250000000];mapq:[0,9]``
+```
 
 VariantBam handles multiple rules in the following way. For each read, VariantBam 
 will cycle through the rules within a region until the read satisfies a rule. When it 
-does, it includes the reads and stops checking. The logic for the entire collectoin is then as follows:
+does, it includes the read in the output and stops checking. The logic for the entire collection of 
+rules is then as follows:
 
 On a given rule line, the read must satisfy ALL conditions (logical AND)
 
@@ -115,15 +127,20 @@ and apply rules separately to them.
     region@/home/unix/jwala/myvcf.vcf,mate,pad:1000
     #### I want to keep all the reads (this the default). Ill be explicit with the "every" keyword
     rule@every
-    #### I might also have a BED file which gives a list of exons. In here, I just want to keep "variant" reads
-    #### so I can specify something like:
+    #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads
     region@/home/unix/jwala/myexonlist.bed 
-    rule@y!isize:[100,600];!unmapped;!unmapped_mate
+    ## keep discordant reads
+    rule@!isize:[0,600];
+    ## keep unmapped reads and their mates
+    rule@!mapped;!mapped_mate
+    ## keep reads with a mismatch to reference, but with high mapq
+    rule@nm:[1,101];mapq:[30,100]
+    
 ```
 
-### Global
+##### Global
 
-To make things more clear and reduce redundancy, you can also type a ``global@`` rule anywhere in the stack,
+To reduce redundancy, you can also type a ``global@`` rule anywhere in the stack,
 and it will append that rule to everything below. For example, to exclude hardclipped, duplicate, qcfail and 
 supplementary reads in every region, you would do:
 
@@ -135,7 +152,7 @@ supplementary reads in every region, you would do:
     region@myvcf.vcf
 ```
 
-is equivalent to
+which is equivalent to
 
 ```bash
     region@WG
@@ -153,20 +170,41 @@ applies if there is an overlap among regions. This is because VariantBam will mo
 that apply to this read and stop as soon as it meets an inclusion criteria. I prefer to start with a whole-genome region / rule
 set, and then add more fine-mapped regions later.
 
-### Command Line Script
+##### Command Line Script
 
-The usual method of including a VariantBam script is to write a text file and pass to
-VariantBam with the ``-r`` flag. However, sometimes it is useful to not have to write an intermediate
+The usual method of inputing rules is with a VariantBam script as a text file (passed to
+VariantBam with the ``-r`` flag). However, sometimes it is useful to not have to write an intermediate
 file and just feed rules directly in. In that case, just pass a string literal to the -r flag, and VariantBam
-will parse it as if it read it from a file. For instance, you might run
-something like the following:
+will parse directly. Just separate lines with a ``%``. For instance, you might run something like the following:
 
 ```bash
-variant -i big.bam -o small.bam -r 'global@!hardclip\nregion@WG\nrule@!isize:[0,600];\nrule@clip:[10,101];mapq:[1,60]\nregion@myvcf.vcf'
+variant -i big.bam -o small.bam -r 'global@!hardclip%region@WG%rule@!isize:[0,600];%rule@clip:[10,101];mapq:[1,60]%region@myvcf.vcf'
 ```
 
 Note the single quotes so that it is interpreted as a string literal in BASH.
 
+Full list of available rules
+----------------------------
+
+```bash
+    ## RULE         #EXAMPLE		#DESCRIPTION
+    nm              nm:[0,4]	 	NM tag from BAM (number of mismatches)
+    isize           isize:[100,500]	Insert size, where all insert sizes are converted to positive.
+    len             len:[80,101]         Length of the read following phred trimming
+    clip            clip:[0,5]           Number of clipped bases following phred trimming
+    phred           phred:[4,100]        Range of phred scores that are "quality" (the min is what is really important here)
+    duplicate       !duplicate           Read is marked as optical duplicate 
+    supp            !supp                Read is marked as supplementary
+    qcfail          !qcfail              Read is marked as QC Fail
+    fwd_strand      !fwd_strand          Read is mapped to forward strand
+    rev_strand      !rev_strand          Read is mapped to reverse strand
+    mate_fwd_strand !mate_fwd_strand     Mate of read is mapped to forward strand
+    mate_rev_strand !mate_rev_strand     Mate of read is mapped to reverse strand  
+    unmapped        !unmapped            Read is unmapped
+    unmapped_mate   !unmapped_mate       Mate of read is unmapped
+    mapped          !mapped              Read is mapped
+    mapped_mate     !mapped_mate         Read is unmapped
+```
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
 

@@ -161,6 +161,7 @@ class AbstractRule {
   Range len =   {-1, -1, true, "length"};
   Range clip =  {-1, -1, true, "clip"};
   Range phred = {-1, -1, true, "phred"};
+  Range nm = {-1, -1, true, "nm"};
 
   // set to true if you want a read to belong to the region if its mate does
   //bool mate = false; 
@@ -179,6 +180,7 @@ class AbstractRule {
     len.setEvery();
     clip.setEvery();
     phred.setEvery();
+    nm.setEvery();
     fr.setEvery();
   }
   void setNone() {
@@ -187,17 +189,18 @@ class AbstractRule {
     len.setNone();
     clip.setNone();
     phred.setNone();
+    nm.setNone();
     fr.setNone();
   }
 
   // return if this rule accepts all reads
   bool isEvery() const {
-    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && fr.isEvery();
+    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && fr.isEvery();
   }
 
   // return if this rule accepts no reads
   bool isNone() const {
-    return isize.isNone() && mapq.isNone() && len.isNone() && clip.isNone() && phred.isNone() && fr.isNone();
+    return isize.isNone() && mapq.isNone() && len.isNone() && clip.isNone() && phred.isNone() && nm.isNone() && fr.isNone();
   }
 
 
