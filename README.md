@@ -1,5 +1,5 @@
-VariantBam: One-pass extraction of sequencing reads from a BAM file according to sets of rules defined on sets of genomic intervals
-===================================================================================================================================
+VariantBam: One-pass extraction of sequencing reads from a BAM file using cascading rules
+=========================================================================================
 
 **License:** [GNU GPLv3][license]
 
@@ -22,7 +22,7 @@ which may provide a solution more to your needs than VariantBam. ``bamtools filt
 specify a set of filters in JSON format to be applied to a BAM. See the Bamtools documentation_ for more detail. 
 Under what situations would you use ``bamtools filter``, and when would you use VariantBam?
 
-1. Extract all MAPQ 0 reads from a BAM - Either tool with work (prefer ``bamtools filter``)
+1. Extract all MAPQ 0 reads from a BAM - Either tool (prefer ``bamtools filter``)
 2. Extract all reads in read group A - ``bamtools filter``
 3. Extract all reads with NM tag >= 4 - Either tool (prefer ``bamtools filter``)
 4. Extract all reads with NM tag >= 4 in exons - VariantBam.
