@@ -38,8 +38,14 @@ struct Range {
   int max;
   bool inverted;
   string pattern;
+  bool every = false;
+  bool none = false;
   
   bool isValid(int val) {
+    if (every)
+      return true;
+    if (none)
+      return true;
     if (!inverted)
       return (val >= min && val <= max);
     else
@@ -49,6 +55,26 @@ struct Range {
   void parseRuleLine(string line);
 
   friend ostream& operator<<(ostream &out, const Range &r);
+
+  // set that this ranges accepts everything
+  void setEvery() {
+    every = true;
+    none = false;
+  }
+
+  // set that this range accepts nothing
+  void setNone() {
+    every = false;
+    none = true;
+  }
+  
+  // return if this range accepts all values
+  bool isEvery() const { return every; }
+  
+  // return if this range accepts no values
+  bool isNone() const { return none; }
+
+
 };
 
 // a container to hold boolean rules based mostly on alignment flag
@@ -77,6 +103,51 @@ struct FlagRule {
   bool mapped_mate;
 
   friend ostream& operator<<(ostream &out, const FlagRule &fr);
+
+  void setEvery() {
+    duplicate = true;
+    supp = true;
+    qcfail = true;
+    hardclip = true;
+    fwd_strand = true;
+    rev_strand = true;
+    mate_fwd_strand = true;
+    mate_rev_strand = true;
+    unmapped = true;
+    unmapped_mate = true;
+    mapped = true;
+    mapped_mate = true;
+  }
+
+  void setNone() {
+    duplicate = false;
+    supp = false;
+    qcfail = false;
+    hardclip = false;
+    fwd_strand = false;
+    rev_strand = false;
+    mate_fwd_strand = false;
+    mate_rev_strand = false;
+    unmapped = false;
+    unmapped_mate = false;
+    mapped = false;
+    mapped_mate = false;
+  }
+
+  bool isEvery() const {
+    return duplicate && supp && qcfail && hardclip && fwd_strand && rev_strand && mate_fwd_strand 
+      && mate_rev_strand && mate_rev_strand && unmapped && unmapped_mate && mapped && 
+      mapped_mate;
+  }
+
+  bool isNone() const {
+    return !duplicate && !supp && !qcfail && !hardclip && !fwd_strand && !rev_strand && !mate_fwd_strand 
+      && !mate_rev_strand && !mate_rev_strand && !unmapped && !unmapped_mate && !mapped && 
+      !mapped_mate;
+  }
+
+
+
 };
 
 //
@@ -91,9 +162,6 @@ class AbstractRule {
   Range clip =  {-1, -1, true, "clip"};
   Range phred = {-1, -1, true, "phred"};
 
-  bool keep_all = false;
-  bool keep_none = false;
-
   // set to true if you want a read to belong to the region if its mate does
   //bool mate = false; 
 
@@ -104,6 +172,35 @@ class AbstractRule {
   void parseRuleLine(string line);
 
   friend ostream& operator<<(ostream &out, const AbstractRule &fr);
+
+  void setEvery() {
+    isize.setEvery();
+    mapq.setEvery();
+    len.setEvery();
+    clip.setEvery();
+    phred.setEvery();
+    fr.setEvery();
+  }
+  void setNone() {
+    isize.setNone();
+    mapq.setNone();
+    len.setNone();
+    clip.setNone();
+    phred.setNone();
+    fr.setNone();
+  }
+
+  // return if this rule accepts all reads
+  bool isEvery() const {
+    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && fr.isEvery();
+  }
+
+  // return if this rule accepts no reads
+  bool isNone() const {
+    return isize.isNone() && mapq.isNone() && len.isNone() && clip.isNone() && phred.isNone() && fr.isNone();
+  }
+
+
 };
 
 class MiniRulesCollection;
@@ -124,7 +221,7 @@ class MiniRules {
   bool isOverlapping(BamAlignment &a);
 
   friend ostream& operator<<(ostream& out, const MiniRules &mr);
-
+ 
 
  private:
 
@@ -134,7 +231,6 @@ class MiniRules {
   string m_region_file;
   int m_level = -1;
   int m_width = 0;
-
   int pad = 0; // how much should we pad the region?
 
   vector<AbstractRule> m_abstract_rules;
@@ -161,6 +257,17 @@ class MiniRulesCollection {
   
   void sendToBed(string file);
 
+  // check if we should do the whole genome
+  bool hasWholeGenome() const {
+    for (auto it : m_rules)
+      if (it->m_whole_genome)
+	return true;
+    return false;
+  }
+
+  GenomicRegionVector sendToGrv() const;
+
+  size_t size() const { return m_rules.size(); } 
  private:
 
   vector<MiniRules*> m_rules;

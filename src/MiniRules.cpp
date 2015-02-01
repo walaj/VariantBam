@@ -8,9 +8,9 @@ using namespace BamTools;
 bool MiniRules::isValid(BamAlignment &a) {
 
   for (auto it : m_abstract_rules)
-    if (it.isValid(a))
-      return true;
-
+    if (it.isValid(a)) 
+       return true; // it is includable in at least one. 
+      
   return false;
 
 }
@@ -94,12 +94,15 @@ MiniRulesCollection::MiniRulesCollection(string file) {
     exit(EXIT_FAILURE);
   }
   
-  // set the default rule. Can modify with all@ tag
-  AbstractRule rule_all;
-
   // loop through the rules file and grab the rules
   string line;
   int level = 1;
+
+  // define a default rule set
+  vector<AbstractRule> all_rules;
+
+  // default a default rule
+  AbstractRule rule_all;
 
   while(getline(iss_rules, line, '\n')) {
 
@@ -115,8 +118,19 @@ MiniRulesCollection::MiniRulesCollection(string file) {
       // its a rule line, get the region
       //////////////////////////////////
       if (line.find("region@") != string::npos) {
+	
+	// check that the last one isnt empty. 
+	// if it is, add the global to it
+	if (m_rules.size() > 0)
+	  if (m_rules.back()->m_abstract_rules.size() == 0)
+	    m_rules.back()->m_abstract_rules.push_back(rule_all);
+
+	// start a new MiniRule set
 	MiniRules * mr = new MiniRules();
 	
+	// add the defaults
+	mr->m_abstract_rules = all_rules;
+
 	// check if the mate aplies
 	if (line.find(",mate") != string::npos) {
 	  mr->m_applies_to_mate = true;
@@ -147,26 +161,21 @@ MiniRulesCollection::MiniRulesCollection(string file) {
       }
 
       ////////////////////////////////////
-      // its an ALL rule, set the default
+      // its an rule
       ////////////////////////////////////
-      else if (line.find("all@") != string::npos) {
-	if (line == "all@") // clear the global rule
-	  rule_all = AbstractRule();
-	else
-	  rule_all.parseRuleLine(line);
+      else if (line.find("rule@") != string::npos) {
+	AbstractRule ar = rule_all;
+	ar.parseRuleLine(line);
+	if (m_rules.size() == 0) //its a universal rule
+	  all_rules.push_back(ar);
+	else 
+	  m_rules.back()->m_abstract_rules.push_back(ar);
       }
       ////////////////////////////////////
-      // its a rule
+      // its a global rule
       ///////////////////////////////////
-      else if (line.find("@") != string::npos) {
-	if (m_rules.size() == 0) {
-	  cerr << "Declaring a rule on line " << line << " with defining a region first." << endl;
-	  exit(EXIT_FAILURE);
-	}
-
-	AbstractRule ar = rule_all; // start as default
-	ar.parseRuleLine(line);
-	m_rules.back()->m_abstract_rules.push_back(ar);
+      else if (line.find("global@") != string::npos) {
+	rule_all.parseRuleLine(line);
       }
 
     } //end comment check
@@ -178,7 +187,6 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 // print the MiniRulesCollectoin
 ostream& operator<<(ostream &out, const MiniRulesCollection &mr) {
 
-  out << "---- MiniRulesCollection ----" << endl;
   for (auto it : mr.m_rules)
     out << (*it);
 
@@ -190,10 +198,12 @@ ostream& operator<<(ostream &out, const MiniRulesCollection &mr) {
 ostream& operator<<(ostream &out, const MiniRules &mr) {
   
   string file_print = mr.m_whole_genome ? "WHOLE GENOME" : VarUtils::getFileName(mr.m_region_file);
-  out << endl << "--Region: " << file_print << endl;
-  out << "--Size of rules region: " << (mr.m_whole_genome ? "WHOLE GENOME" : VarUtils::AddCommas<int>(mr.m_width)) << endl;  
-  out << "--Padding: " << mr.pad << endl;
-  out << "--Include Mate: " << (mr.m_applies_to_mate ? "ON" : "OFF") << endl;
+  out << endl << "--Region: " << file_print;
+  if (!mr.m_whole_genome) {
+    out << " --Size: " << VarUtils::AddCommas<int>(mr.m_width); 
+    out << " --Pad: " << mr.pad;
+    out << " --Include Mate: " << (mr.m_applies_to_mate ? "ON" : "OFF") << endl;
+  }
   for (auto it : mr.m_abstract_rules) 
     out << it << endl;
   
@@ -210,14 +220,7 @@ void MiniRulesCollection::sendToBed(string file) {
   }
   out.close();
 
-  // make a composite
-  GenomicRegionVector comp;
-  for (auto it : m_rules)
-    comp.insert(comp.begin(), it->m_grv.begin(), it->m_grv.end()); 
-  
-  // merge it down
-  GenomicRegionVector merged = GenomicRegion::mergeOverlappingIntervals(comp);
-
+  GenomicRegionVector merged = sendToGrv();
   // send to BED file
   GenomicRegion::sendToBed(merged, file);
   return;
@@ -281,9 +284,6 @@ void FlagRule::parseRuleLine(string line) {
 // modify the rules based on the informaiton provided in the line
 void AbstractRule::parseRuleLine(string line) {
 
-  // parse the line for flag rules
-  fr.parseRuleLine(line);
-  
   // get the name
   regex reg_name("(.*?)@.*");
   smatch nmatch;
@@ -293,7 +293,6 @@ void AbstractRule::parseRuleLine(string line) {
     cerr << "Name required for rules. e.g. myrule@" << endl;
     exit(EXIT_FAILURE);
   }
-
 
   // get everything but the name
   regex reg_noname(".*?@(.*)");
@@ -306,10 +305,12 @@ void AbstractRule::parseRuleLine(string line) {
     exit(EXIT_FAILURE);
   }
 
-  // check if the rule applies to reads whose mate is in the region
-  //if (noname.find("mate") != string::npos)
-  //  mate = true;
-  
+  // check for every/none flags
+  if (noname.find("every") != string::npos) 
+    setEvery();
+  if (noname.find("none") != string::npos)
+    setNone();
+
   // modify the ranges if need to
   isize.parseRuleLine(noname);
   mapq.parseRuleLine(noname);
@@ -317,55 +318,70 @@ void AbstractRule::parseRuleLine(string line) {
   clip.parseRuleLine(noname);
   phred.parseRuleLine(noname);
 
-  // check for every/none flages
-  if (noname.find("every") != string::npos) 
-    keep_all = true;
-  if (noname.find("none") != string::npos)
-    keep_none = true;
+  // parse the line for flag rules
+  fr.parseRuleLine(line);
   
 }
 
 // parse for range
 void Range::parseRuleLine(string line) {
   
-  string i_reg_str = ".*?!" + pattern + ":\\[(.*?),(.*?)\\].*";
-  string   reg_str = ".*?"  + pattern + ":\\[(.*?),(.*?)\\].*";
-
-  regex ireg(i_reg_str);
-  regex  reg(reg_str);
-
-
-  smatch match;
-  if (regex_search(line, match, ireg)) {
-    try {
-      min = stoi(match[1].str());
-      max = stoi(match[2].str());
-      inverted = true;
-    } catch (...) {
-      cerr << "Caught error trying to parse inverted for " << pattern << " on line " << line << " match[1] " << match[1].str() << " match[2] " << match[2].str() << endl;     
+  istringstream iss(line);
+  string val;
+  while (getline(iss, val, ';')) {
+    
+    string i_reg_str = pattern + ":?\\[(.*?),(.*?)\\]";
+    string   reg_str = pattern + ":?\\[(.*?),(.*?)\\]";
+    
+    string n_reg_str = pattern + ":?!all";
+    string a_reg_str = pattern + ":?all";
+    
+    regex ireg(i_reg_str);
+    regex  reg(reg_str);
+    regex nreg(n_reg_str);
+    regex areg(a_reg_str);
+    
+    smatch match;
+    if (regex_search(val, match, nreg)) {
+      setNone();
+    } else if (regex_search(val, match, areg)) {
+      setEvery();
+    } else if (regex_search(val, match, ireg)) {
+      try {
+	min = stoi(match[1].str());
+	max = stoi(match[2].str());
+	inverted = true;
+	every = false; none = false;
+	return;
+      } catch (...) {
+	cerr << "Caught error trying to parse inverted for " << pattern << " on line " << line << " match[1] " << match[1].str() << " match[2] " << match[2].str() << endl;     
+	return;
+      }
+    } else if (regex_search(val, match, reg)) {
+      try {
+	min = stoi(match[1].str());
+	max = stoi(match[2].str());
+	inverted = false;
+	every = false; none = false;
+	return;
+      } catch (...) {
+	cerr << "Caught error trying to parse for " << pattern << " on line " << line << " match[1] " << match[1].str() << " match[2] " << match[2].str() << endl;     
+	return;
+      }
     }
-  } else if (regex_search(line, match, reg)) {
-    try {
-      min = stoi(match[1].str());
-      max = stoi(match[2].str());
-      inverted = false;
-    } catch (...) {
-      cerr << "Caught error trying to parse for " << pattern << " on line " << line << " match[1] " << match[1].str() << " match[2] " << match[2].str() << endl;     
-    }
-  }
-
-
+    
+  } // end getline
 }
 
 // main function for determining if a read is valid
 bool AbstractRule::isValid(BamAlignment &a) {
-
+  
   // check if its keep all or none
-  if (keep_all)
+  if (isEvery())
     return true;
-  if (keep_none)
+  if (isNone())
     return false;
-
+  
   // check if is discordant
   bool isize_pass = isize.isValid(abs(a.InsertSize));
   
@@ -445,18 +461,18 @@ bool FlagRule::isValid(BamAlignment &a) {
 // define how to print
 ostream& operator<<(ostream &out, const AbstractRule &ar) {
 
-  out << "  Rule: " << ar.name << endl;
-  if (ar.keep_all) {
-    out << "KEEPING ALL" << endl;
-  } else if (ar.keep_none) {
-    out << "KEEPING NONE" << endl;
+  out << "  Rule: " << ar.name << " -- ";;
+  if (ar.isEvery()) {
+    out << "  KEEPING ALL" << endl;
+  } else if (ar.isNone()) {
+    out << "  KEEPING NONE" << endl;
   } else {
-    out << "    Insert Size:     " << ar.isize << endl;
-    out << "    Mapping Quality: " << ar.mapq << endl;
-    out << "    Trimmed Length:  " << ar.len << endl;
-    out << "    Clipped Length:  " << ar.clip << endl;
-    out << "    Phred Bounds:    " << ar.phred << endl;
-    out << ar.fr << endl;
+    out << "isize:" << ar.isize << " -- " ;
+    out << "mapq:" << ar.mapq << " -- " ;
+    out << "len:" << ar.len << " -- ";
+    out << "clip:" << ar.clip << " -- ";
+    out << "phred:" << ar.phred << " -- ";
+    out << ar.fr;;
   }
   return out;
 }
@@ -464,8 +480,18 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
 // define how to print
 ostream& operator<<(ostream &out, const FlagRule &fr) {
 
-  string keep = "    Keep:   ";
-  string remo = "    Remove: ";
+  if (fr.isEvery()) {
+    out << "  Flag: ALL";
+    return out;
+  } 
+  if (fr.isNone()) {
+    out << "  NONE";
+    return out;
+  }
+    
+
+  string keep = "  Flag Keep: ";
+  string remo = "  Flag Remove: ";
 
   if (fr.hardclip)
     keep = keep + "hardclip,";
@@ -527,7 +553,7 @@ ostream& operator<<(ostream &out, const FlagRule &fr) {
   else
     remo = remo + "mapped_mate,";
 
-  out << keep << endl << remo << endl;
+  out << keep << " -- " << remo;;
   
   return out;
 }
@@ -539,4 +565,18 @@ ostream& operator<<(ostream &out, const Range &r) {
   else
     out << (r.inverted ? "NOT " : "") << "[" << r.min << "," << r.max << "]";
   return out;
+}
+
+// convert a MiniRulesCollection into a GRV
+GenomicRegionVector MiniRulesCollection::sendToGrv() const {
+
+  // make a composite
+  GenomicRegionVector comp;
+  for (auto it : m_rules)
+    comp.insert(comp.begin(), it->m_grv.begin(), it->m_grv.end()); 
+  
+  // merge it down
+  GenomicRegionVector merged = GenomicRegion::mergeOverlappingIntervals(comp);
+
+  return merged;
 }

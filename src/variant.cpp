@@ -107,33 +107,55 @@ int main(int argc, char** argv) {
   // make the mini rules collection from the rules file
   // this also calls function to parse the BED files
   MiniRulesCollection * mr = new MiniRulesCollection(opt::rules_file);
+  // check that it's valid
+  if (mr->size() == 0) {
+    cerr << "No rules or regions specified. Provide via a script and pass with -r flag." << endl;
+    exit(EXIT_FAILURE);
+  }
+    
   if (opt::verbose > 0)
     cout << (*mr);
-  
-  // make a bed file
+ 
+    // make a bed file
   if (opt::verbose > 0)
     cout << "...sending merged regions to BED file" << endl;
   mr->sendToBed("merged_rules.bed");
 
   // parse the proc region file
+  bool runWholeGenome = mr->hasWholeGenome();
   GenomicRegionVector grv_proc_regions = GenomicRegion::regionFileToGRV(opt::proc_regions, 0);
+  // run just the regions in the mask file
   if (grv_proc_regions.size() > 0) {
     sort(grv_proc_regions.begin(), grv_proc_regions.end());      
     if (opt::verbose > 0) {
-      cout << "Number of regions to process: " << grv_proc_regions.size() << endl;
       if (opt::verbose > 1)
 	for (auto it = grv_proc_regions.begin(); it != grv_proc_regions.end(); it++)
 	  cout << "   Process-region: " << *it << endl;
     }
-  } else if (opt::skip_cent) {
+  } 
+  // run everything, but skip the centromerss
+  else if (opt::skip_cent && runWholeGenome) {
     grv_proc_regions = GenomicRegion::non_centromeres;
     if (opt::verbose > 0)
       cout << "Processing whole genome (minus centromeres)" << endl;
-  } else {
+  } 
+  // run everything including centromeres
+  else if (runWholeGenome){
     grv_proc_regions = GenomicRegion::getWholeGenome();
     if (opt::verbose > 0)
       cout << "Processing whole genome (including centromeres)" << endl;
   }
+  // if there is no proc_region file, take the mini collection as a region set
+  else if (grv_proc_regions.size() == 0 && !runWholeGenome) {
+    grv_proc_regions = mr->sendToGrv();
+  }
+
+  // check that there are some regions to run
+  if (grv_proc_regions.size() == 0) {
+    cerr << "No regions to run. Did you specify a file as a region" << endl;
+    exit(EXIT_FAILURE);
+  }
+
 
   // make sure the global mask is sorted
   if (grv_proc_regions.size() > 0)
