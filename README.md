@@ -73,8 +73,7 @@ that are applied to the BAM[*]_. Below is an example of a valid VariantBam scrip
     rule@!hardclip;!unmapped;!unmapped_mate;isize:[0,600];!mapq:[10,100]
     rule@!hardclip;!unmapped;!unmapped_mate;clip:[10,101]
 
-Region
-~~~~~~
+### Region
 
 Let's look first at the ``region`` tag. The region@ keyword marks that what follows is a region, 
 which is either the keyword ``WG`` for whole genome, or a VCF, MAF, Callstats or BED file. Optionally,
@@ -90,8 +89,7 @@ You can also state that the region applies to reads who don't necessarily overla
 Note that the syntax is such that you must specify the file immediately after the @, following by other options
 in any order.
 
-Rules
-~~~~~
+### Rules
 
 The next two lines specify a pair of rules, marked with the ``rule@`` tag. 
 The default rule is to include every read, and the conditions are meant to be 
@@ -120,8 +118,7 @@ within a rule, VariantBam will exclude the read, because it fails the ``!unmappe
 Below is another example which uses the ability of VariantBam to interpret VCFs and BED files,
 and apply rules separately to them.
 
-.. code:: bash
-
+```bash
     ### declare that my region is a VCF file with pads of 1000 on either side of the variant.
     ### use the "mate" keyword to specify that pairs whose mate falls in the region belong to this rule
     region@/home/unix/jwala/myvcf.vcf,mate,pad:1000
@@ -131,31 +128,31 @@ and apply rules separately to them.
     #### so I can specify something like:
     region@/home/unix/jwala/myexonlist.bed 
     rule@y!isize:[100,600];!unmapped;!unmapped_mate
+```
 
-Global
-~~~~~~
+### Global
 
 To make things more clear and reduce redundancy, you can also type a ``global@`` rule anywhere in the stack,
 and it will append that rule to everything below. For example, to exclude hardclipped, duplicate, qcfail and 
 supplementary reads in every region, you would do:
 
-.. code:: bash
-
+```bash
     global@!hardclip;!duplicate;!qcfail;!supplementary
     region@WG
     rule@!isize:[0,600]
     rule@clip:[10,101];mapq:[1,60]
     region@myvcf.vcf
+```
 
 is equivalent to
 
-.. code:: bash
-
+```bash
     region@WG
     rule@!isize:[0,600];!hardclip;!duplicate;!qcfail;!supplementary
     rule@clip:[10,101];mapq:[1,60];!hardclip;!duplicate;!qcfail;!supplementary
     region@myvcf.vcf
     rule@!hardclip;!duplicate;!qcfail;!supplementary
+```
 	
 The global tag will apply through all of the regions. If you want to reset it for everything, just add ``global@every`` 
 back onto the stack.
@@ -165,8 +162,7 @@ applies if there is an overlap among regions. This is because VariantBam will mo
 that apply to this read and stop as soon as it meets an inclusion criteria. I prefer to start with a whole-genome region / rule
 set, and then add more fine-mapped regions later.
 
-Command Line Script
-~~~~~~~~~~~~~~~~~~~
+### Command Line Script
 
 The usual method of including a VariantBam script is to write a text file and pass to
 VariantBam with the ``-r`` flag. However, sometimes it is useful to not have to write an intermediate
