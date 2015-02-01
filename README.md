@@ -66,12 +66,12 @@ Syntax
 This section will describe the syntax used by VariantBam to specify the cascades of rules and regions 
 that are applied to the BAM[*]_. Below is an example of a valid VariantBam script:
 
-.. code:: bash
-
+```bash
     ### this is a comment. The line code below defines filters to be applied to each region/rule
     region@WG
     rule@!hardclip;!unmapped;!unmapped_mate;isize:[0,600];!mapq:[10,100]
     rule@!hardclip;!unmapped;!unmapped_mate;clip:[10,101]
+```
 
 ### Region
 
@@ -170,7 +170,9 @@ file and just feed rules directly in. In that case, just pass a string literal t
 will parse it as if it read it from a file. For instance, you might run
 something like the following:
 
-``variant -i big.bam -o small.bam -r 'global@!hardclip\nregion@WG\nrule@!isize:[0,600];\nrule@clip:[10,101];mapq:[1,60]\nregion@myvcf.vcf'``
+```bash
+variant -i big.bam -o small.bam -r 'global@!hardclip\nregion@WG\nrule@!isize:[0,600];\nrule@clip:[10,101];mapq:[1,60]\nregion@myvcf.vcf'
+```
 
 Note the single quotes so that it is interpreted as a string literal in BASH.
 
