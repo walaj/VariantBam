@@ -35,27 +35,41 @@ bool MiniRules::isOverlapping(BamAlignment &a) {
   
 }
 
-// checks which rule a read applies to (using the hiearchy stored in m_rules).
+// checks which rule a read applies to (using the hiearchy stored in m_regions).
 // if a read does not satisfy a rule it is excluded.
-int MiniRulesCollection::isValid(BamAlignment &a) {
+string MiniRulesCollection::isValid(BamAlignment &a) {
 
+  size_t which_region = 0;
   size_t which_rule = 0;
   
   // find out which rule it is a part of
   // lower number rules dominate
-  for (auto it : m_rules) {
-    if (it->isOverlapping(a))
-      if (it->isValid(a))
-	break;
-    which_rule++;
+
+  for (auto it : m_regions) {
+    which_rule = 0;
+    bool rule_hit = false;
+    if (it->isOverlapping(a)) // read overlaps a region
+      for (auto jt : it->m_abstract_rules) { // loop rules in that region
+	if (jt.isValid(a)) {
+	  rule_hit = true;
+	  break;
+	}
+	which_rule++;
+      }
+
+    // found a hit in a rule
+    if (rule_hit)
+      break;
+    // didnt find hit, move it up one
+    which_region++;
   }
   
   // isn't in a rule or it never satisfied one. Remove
-  if (which_rule >= m_rules.size())
-    return 0; 
+  if (which_region >= m_regions.size())
+    return ""; 
 
-  int level = which_rule + 1;// rules start at 1
-  return level; 
+  string out = "rg" + to_string(++which_region) + "rl" + to_string(++which_rule);
+  return out; 
   
 }
 
@@ -113,8 +127,6 @@ MiniRulesCollection::MiniRulesCollection(string file) {
   
   while(getline(iss_rules, line, delim)) {
 
-    cout << line << endl;
-
     //exclude comments and empty lines
     bool line_empty = line.find_first_not_of("\t\n ") == string::npos;
     bool line_comment = false;
@@ -130,15 +142,15 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 	
 	// check that the last one isnt empty. 
 	// if it is, add the global to it
-	if (m_rules.size() > 0)
-	  if (m_rules.back()->m_abstract_rules.size() == 0)
-	    m_rules.back()->m_abstract_rules.push_back(rule_all);
+	if (m_regions.size() > 0)
+	  if (m_regions.back()->m_abstract_rules.size() == 0)
+	    m_regions.back()->m_abstract_rules.push_back(rule_all);
 
 	// start a new MiniRule set
 	MiniRules * mr = new MiniRules();
 	
 	// add the defaults
-	mr->m_abstract_rules = all_rules;
+	//mr->m_abstract_rules = all_rules;
 
 	// check if the mate aplies
 	if (line.find(",mate") != string::npos) {
@@ -166,7 +178,7 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 	    exit(1);
 	}
 	mr->m_level = level++;
-	m_rules.push_back(mr);
+	m_regions.push_back(mr);
       }
 
       ////////////////////////////////////
@@ -175,10 +187,7 @@ MiniRulesCollection::MiniRulesCollection(string file) {
       else if (line.find("rule@") != string::npos) {
 	AbstractRule ar = rule_all;
 	ar.parseRuleLine(line);
-	if (m_rules.size() == 0) //its a universal rule
-	  all_rules.push_back(ar);
-	else 
-	  m_rules.back()->m_abstract_rules.push_back(ar);
+	m_regions.back()->m_abstract_rules.push_back(ar);
       }
       ////////////////////////////////////
       // its a global rule
@@ -189,6 +198,13 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 
     } //end comment check
   } // end \n parse
+
+  // check that the last one isnt empty. 
+  // if it is, add the global to it
+  if (m_regions.size() > 0)
+    if (m_regions.back()->m_abstract_rules.size() == 0)
+      m_regions.back()->m_abstract_rules.push_back(rule_all);
+  
   
   
 }
@@ -196,9 +212,10 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 // print the MiniRulesCollectoin
 ostream& operator<<(ostream &out, const MiniRulesCollection &mr) {
 
-  for (auto it : mr.m_rules)
+  cout << "----------MiniRulesCollection-------------" << endl;
+  for (auto it : mr.m_regions)
     out << (*it);
-
+  cout << "------------------------------------------" << endl;
   return out;
 
 }
@@ -207,11 +224,13 @@ ostream& operator<<(ostream &out, const MiniRulesCollection &mr) {
 ostream& operator<<(ostream &out, const MiniRules &mr) {
   
   string file_print = mr.m_whole_genome ? "WHOLE GENOME" : VarUtils::getFileName(mr.m_region_file);
-  out << endl << "--Region: " << file_print;
+  out << "--Region: " << file_print;;
   if (!mr.m_whole_genome) {
     out << " --Size: " << VarUtils::AddCommas<int>(mr.m_width); 
     out << " --Pad: " << mr.pad;
     out << " --Include Mate: " << (mr.m_applies_to_mate ? "ON" : "OFF") << endl;
+  } else {
+    out << endl;
   }
   for (auto it : mr.m_abstract_rules) 
     out << it << endl;
@@ -240,7 +259,7 @@ void FlagRule::parseRuleLine(string line) {
 
   istringstream iss(line);
   string val;
-  while (getline(iss, val, ':')) {
+  while (getline(iss, val, ';')) {
     regex reg("!?(.*)");
     smatch match;
     if (regex_search(val, match, reg)) { // it matches a conditions
@@ -293,7 +312,7 @@ void AbstractRule::parseRuleLine(string line) {
   nm.parseRuleLine(noname);
 
   // parse the line for flag rules
-  fr.parseRuleLine(line);
+  fr.parseRuleLine(noname);
   
 }
 
@@ -304,7 +323,7 @@ void Range::parseRuleLine(string line) {
   string val;
   while (getline(iss, val, ';')) {
     
-    string i_reg_str = pattern + ":?\\[(.*?),(.*?)\\]";
+    string i_reg_str = "!" + pattern + ":?\\[(.*?),(.*?)\\]";
     string   reg_str = pattern + ":?\\[(.*?),(.*?)\\]";
     
     string n_reg_str = pattern + ":?!all";
@@ -410,7 +429,7 @@ bool FlagRule::isValid(BamAlignment &a) {
   
   if ( (flags["duplicate"].isOff() &&  a.IsDuplicate()) || (flags["duplicate"].isOn() && !a.IsDuplicate()) )
     return false;
-  if ( (flags["supp"].isOff()      && !a.IsPrimaryAlignment()) || (flags["supp"].isOn() && a.IsPrimaryAlignment()) )
+  if ( (flags["supplementary"].isOff()      && !a.IsPrimaryAlignment()) || (flags["supplementary"].isOn() && a.IsPrimaryAlignment()) )
     return false;
   if ( (flags["qcfail"].isOff()    && a.IsFailedQC()) || (flags["qcfail"].isOn() && !a.IsFailedQC()) )
     return false;
@@ -458,7 +477,7 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
     out << "clip:" << ar.clip << " -- ";
     out << "phred:" << ar.phred << " -- ";
     out << "nm:" << ar.nm << " -- ";
-    out << ar.fr;;
+    out << ar.fr;
   }
   return out;
 }
@@ -506,7 +525,7 @@ GenomicRegionVector MiniRulesCollection::sendToGrv() const {
 
   // make a composite
   GenomicRegionVector comp;
-  for (auto it : m_rules)
+  for (auto it : m_regions)
     comp.insert(comp.begin(), it->m_grv.begin(), it->m_grv.end()); 
   
   // merge it down

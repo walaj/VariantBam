@@ -36,9 +36,9 @@ class Flag {
   void setOn() { on = true; off = false; na = false; } 
   void setOff() { on = false; off = true; na = false; } 
 
-  bool isNA()  const { return on; } 
-  bool isOn()  const { return off; } 
-  bool isOff() const { return na; } 
+  bool isNA()  const { return na; } 
+  bool isOn()  const { return on; } 
+  bool isOff() const { return off; } 
 
  private: 
   bool on;
@@ -104,7 +104,7 @@ struct FlagRule {
   FlagRule() 
                {
 		 flags["duplicate"]  = Flag();
-		 flags["supp"]       = Flag();
+		 flags["supplementary"]       = Flag();
 		 flags["qcfail"]     = Flag();
 		 flags["hardclip"]   = Flag();
 		 flags["fwd_strand"] = Flag();
@@ -233,7 +233,10 @@ class MiniRules {
 
   friend ostream& operator<<(ostream& out, const MiniRules &mr);
  
-
+  size_t size() const {
+    return m_abstract_rules.size();
+  }
+  
  private:
 
   bool m_whole_genome = false;
@@ -262,7 +265,7 @@ class MiniRulesCollection {
   ~MiniRulesCollection() {}
   MiniRulesCollection(string file);
 
-  int isValid(BamAlignment &a);
+  string isValid(BamAlignment &a);
   
   friend ostream& operator<<(ostream& out, const MiniRulesCollection &mr);
   
@@ -270,7 +273,7 @@ class MiniRulesCollection {
 
   // check if we should do the whole genome
   bool hasWholeGenome() const {
-    for (auto it : m_rules)
+    for (auto it : m_regions)
       if (it->m_whole_genome)
 	return true;
     return false;
@@ -278,10 +281,17 @@ class MiniRulesCollection {
 
   GenomicRegionVector sendToGrv() const;
 
-  size_t size() const { return m_rules.size(); } 
+  size_t size() const { return m_regions.size(); } 
+
+  size_t numRules() const {
+    size_t num = 0;
+    for (auto it : m_regions)
+      num += it->size();
+    return num;
+  }
  private:
 
-  vector<MiniRules*> m_rules;
+  vector<MiniRules*> m_regions;
   
 };
 

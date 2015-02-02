@@ -138,7 +138,7 @@ bool VariantBamReader::writeVariantBam() {
 	exit(EXIT_FAILURE);
       }
     }
-    int rule_pass = m_mr->isValid(a);
+    string rule_pass = m_mr->isValid(a);
 
     // build the qc
     /*
@@ -183,7 +183,7 @@ bool VariantBamReader::writeVariantBam() {
     }
     */
 
-    if ( rule_pass > 0 /*&& !qc_only*/ ) {
+    if ( rule_pass != "" /*&& !qc_only*/ ) {
 
       mapq0_keep_counter += (a.MapQuality == 0 ) ? 1 : 0; 
 
@@ -192,7 +192,7 @@ bool VariantBamReader::writeVariantBam() {
 	pileup++;
 
       // add a tag to say which rule it pass
-      a.AddTag("RL","i",rule_pass);
+      a.AddTag("RL","Z",rule_pass);
 
       bam_buffer.push_back(a);
       keep_counter++;

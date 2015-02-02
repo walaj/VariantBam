@@ -112,7 +112,9 @@ int main(int argc, char** argv) {
     cerr << "No rules or regions specified. Provide via a script and pass with -r flag." << endl;
     exit(EXIT_FAILURE);
   }
-    
+
+  assert(mr->numRules() > 0);
+
   if (opt::verbose > 0)
     cout << (*mr);
  
@@ -221,7 +223,17 @@ void parseVarOptions(int argc, char** argv) {
       //case 'p': arg >> opt::perc_limit; break;
       //case 's': arg >> opt::isize; break;
       //case 'q': opt::qc_only = true; break;
-    case 'r': arg >> opt::rules_file; break;
+    case 'r': 
+      if (opt::rules_file.length() > 0) {
+	string tmp;
+        arg >> tmp;
+	if (tmp.length() > 0)
+	  opt::rules_file += "%" + tmp;
+	break;
+      } else {
+	arg >> opt::rules_file; 
+	break;
+      }
     case 'k': arg >> opt::proc_regions; break;
       //case 'm': arg >> opt::min_length; break;
       //case 'z': arg >> opt::min_phred; break;
