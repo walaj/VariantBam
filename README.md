@@ -18,10 +18,10 @@ initial processing, an indel tool might be interested in storing MAPQ > 0 reads 
 A separate SNP tool might find a different 20k regions, while a structural variation tool 
 might be interested in only discordant or high-quality clipped reads across the BAM 
 (where high-quality means they are not clipped to do low Phred quality).  
-VariantBam is uses a series of rules defined on distinct regions in order to handle 
+VariantBam uses a series of rules defined on distinct regions in order to handle 
 all of these situations with a single pass through the BAM.
 
-VariantBam is implemented in C++ and relies on the BamTools API (Derek Barnett, (c) 2009) for BAM I/O. 
+VariantBam is implemented in C++ and relies on the BamTools [API] (Derek Barnett, (c) 2009) for BAM I/O. 
 Note that the capabilities of the [BamTools] command line ``bamtools filter``  
 may provide a solution more suitable your needs than VariantBam. Briefly, ``bamtools filter`` allows you to 
 specify a set of filters in JSON format to be applied to a BAM. See the Bamtools documentation for more detail. 
@@ -68,8 +68,8 @@ applied to a BAM. Below is an example of a valid VariantBam script:
 ```bash
     ### this is a comment. The line code below defines filters to be applied to each region/rule
     region@WG
-    rule@!hardclip;!unmapped;!unmapped_mate;isize:[0,600];!mapq:[10,100]
-    rule@!hardclip;!unmapped;!unmapped_mate;clip:[10,101]
+    rule@!hardclip;mapped;mapped_mate;isize:[0,600];!mapq:[10,100]
+    rule@!hardclip;mapped;mapped_mate;clip:[10,101]
 ```
 
 ##### Region
@@ -101,7 +101,7 @@ by prefixing with a ``!``. For example:
     rule@!hardclip;isize:[0,600];!mapq:[10,100]
     
     # an equivalent specification would be
-    rule@!hardclip;!unmapped;!isize:[601,250000000];mapq:[0,9]``
+    rule@!hardclip;mapped;!isize:[601,250000000];mapq:[0,9]``
 ```
 
 VariantBam handles multiple rules in the following way. For each read, VariantBam 
@@ -116,13 +116,13 @@ Across different rules, the read nead only satisfy ONE rule (logical OR)
 To illustrate this, note that there is a small discrepancy in the first rule of the above. In the BAM format, 
 unmapped reads and reads with unmapped mates are given an insert size of 0. However, in the same rule 
 a condition is described to keep all reads with insert sizes 0-600 inclusive. Recalling the AND logic
-within a rule, VariantBam will exclude the read, because it fails the ``!unmapped`` criteria.
+within a rule, VariantBam will exclude the read, because it fails the ``mapped`` criteria.
 
 Below is another example which uses the ability of VariantBam to interpret VCFs and BED files,
 and apply rules separately to them.
 
 ```bash
-    ### declare that my region is a VCF file with pads of 1000 on either side of the variant.
+    ### declare that region is a VCF file with pads of 1000 on either side of the variant.
     ### use the "mate" keyword to specify that pairs whose mate falls in the region belong to this rule
     region@/home/unix/jwala/myvcf.vcf,mate,pad:1000
     #### I want to keep all the reads (this the default). Ill be explicit with the "every" keyword
@@ -131,8 +131,10 @@ and apply rules separately to them.
     region@/home/unix/jwala/myexonlist.bed 
     ## keep discordant reads
     rule@!isize:[0,600];
-    ## keep unmapped reads and their mates
+    ## keep only unmapped reads and their mates
     rule@!mapped;!mapped_mate
+    ## or keep if it is hardclipped
+    rule@hardclip
     ## keep reads with a mismatch to reference, but with high mapq
     rule@nm:[1,101];mapq:[30,100]
     
@@ -187,9 +189,9 @@ Full list of available rules
 ----------------------------
 
 ```bash
-    ## RULE         #EXAMPLE		#DESCRIPTION
-    nm              nm:[0,4]	 	NM tag from BAM (number of mismatches)
-    isize           isize:[100,500]	Insert size, where all insert sizes are converted to positive.
+    ## RULE         #EXAMPLE		 #DESCRIPTION
+    nm              nm:[0,4]	 	 NM tag from BAM (number of mismatches)
+    isize           isize:[100,500]      Insert size, where all insert sizes are converted to positive.
     len             len:[80,101]         Length of the read following phred trimming
     clip            clip:[0,5]           Number of clipped bases following phred trimming
     phred           phred:[4,100]        Range of phred scores that are "quality" (the min is what is really important here)
@@ -200,14 +202,12 @@ Full list of available rules
     rev_strand      !rev_strand          Read is mapped to reverse strand
     mate_fwd_strand !mate_fwd_strand     Mate of read is mapped to forward strand
     mate_rev_strand !mate_rev_strand     Mate of read is mapped to reverse strand  
-    unmapped        !unmapped            Read is unmapped
-    unmapped_mate   !unmapped_mate       Mate of read is unmapped
     mapped          !mapped              Read is mapped
-    mapped_mate     !mapped_mate         Read is unmapped
+    mapped_mate     !mapped_mate         Read is mapped
 ```
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
 
 [BamTools]: https://raw.githubusercontent.com/wiki/pezmaster31/bamtools/Tutorial_Toolkit_BamTools-1.0.pdf
 
-
+[API]: http://pezmaster31.github.io/bamtools/annotated.html

@@ -22,9 +22,30 @@
 #include "api/BamReader.h"
 #include "api/BamWriter.h"
 #include "GenomicRegion.h"
+#include <unordered_map>
 
 using namespace BamTools;
 using namespace std;
+
+class Flag {
+  
+ public:
+  Flag() : on(false), off(false), na(true) {}
+  
+  void setNA() { on = false; off = false; na = true; } 
+  void setOn() { on = true; off = false; na = false; } 
+  void setOff() { on = false; off = true; na = false; } 
+
+  bool isNA()  const { return on; } 
+  bool isOn()  const { return off; } 
+  bool isOff() const { return na; } 
+
+ private: 
+  bool on;
+  bool off; 
+  bool na;
+
+};
 
 // hold a range of valid numeric values (e.g. isize). 
 // can optionally invert the range to make rule the complement of the range
@@ -63,10 +84,10 @@ struct Range {
   }
 
   // set that this range accepts nothing
-  void setNone() {
+    void setNone() {
     every = false;
     none = true;
-  }
+   }
   
   // return if this range accepts all values
   bool isEvery() const { return every; }
@@ -80,72 +101,57 @@ struct Range {
 // a container to hold boolean rules based mostly on alignment flag
 struct FlagRule {
   
-  FlagRule() : duplicate(true), supp(true), qcfail(true), hardclip(true), 
-               fwd_strand(true), rev_strand(true), mate_fwd_strand(true), mate_rev_strand(true),
-	       unmapped(true), unmapped_mate(true), mapped(true), mapped_mate(true)
-               {}
+  FlagRule() 
+               {
+		 flags["duplicate"]  = Flag();
+		 flags["supp"]       = Flag();
+		 flags["qcfail"]     = Flag();
+		 flags["hardclip"]   = Flag();
+		 flags["fwd_strand"] = Flag();
+		 flags["rev_strand"] = Flag();
+		 flags["mate_fwd_strand"] = Flag();
+		 flags["mate_rev_strand"] = Flag();
+		 flags["mapped"]          = Flag();
+		 flags["mapped_mate"]     = Flag();
+	       }
 
   void parseRuleLine(string line);
   
+  // ask whether a read passes the rule
   bool isValid(BamAlignment &a);
 
-  bool duplicate;
-  bool supp;
-  bool qcfail;
-  bool hardclip;
-  bool fwd_strand;
-  bool rev_strand;
-  bool mate_fwd_strand;
-  bool mate_rev_strand;
-  bool unmapped;
-  bool unmapped_mate;
-  bool mapped;
-  bool mapped_mate;
+  unordered_map<string, Flag> flags;
 
   friend ostream& operator<<(ostream &out, const FlagRule &fr);
 
+  // set every flag to NA (most permissive)
   void setEvery() {
-    duplicate = true;
-    supp = true;
-    qcfail = true;
-    hardclip = true;
-    fwd_strand = true;
-    rev_strand = true;
-    mate_fwd_strand = true;
-    mate_rev_strand = true;
-    unmapped = true;
-    unmapped_mate = true;
-    mapped = true;
-    mapped_mate = true;
+    for (auto it : flags)
+      it.second.setNA();
   }
 
+  // set every flag to OFF everythign off)
   void setNone() {
-    duplicate = false;
-    supp = false;
-    qcfail = false;
-    hardclip = false;
-    fwd_strand = false;
-    rev_strand = false;
-    mate_fwd_strand = false;
-    mate_rev_strand = false;
-    unmapped = false;
-    unmapped_mate = false;
-    mapped = false;
-    mapped_mate = false;
+    for (auto it : flags)
+      it.second.setOff();
   }
 
+
+  // ask if every flag is set to NA (most permissive)
   bool isEvery() const {
-    return duplicate && supp && qcfail && hardclip && fwd_strand && rev_strand && mate_fwd_strand 
-      && mate_rev_strand && mate_rev_strand && unmapped && unmapped_mate && mapped && 
-      mapped_mate;
+    for (auto it : flags) 
+      if (!it.second.isNA())
+	return false;
+    return true;
   }
 
+  // ask if every flag is set to NA (most permissive)
   bool isNone() const {
-    return !duplicate && !supp && !qcfail && !hardclip && !fwd_strand && !rev_strand && !mate_fwd_strand 
-      && !mate_rev_strand && !mate_rev_strand && !unmapped && !unmapped_mate && !mapped && 
-      !mapped_mate;
+    for (auto it : flags) 
+      if (!it.second.isOff())
+	return false;
+    return true;
   }
-
 
 
 };
@@ -163,6 +169,7 @@ class AbstractRule {
   Range phred = {-1, -1, true, "phred"};
   Range nm = {-1, -1, true, "nm"};
 
+  bool none = false;
   // set to true if you want a read to belong to the region if its mate does
   //bool mate = false; 
 
@@ -183,7 +190,8 @@ class AbstractRule {
     nm.setEvery();
     fr.setEvery();
   }
-  void setNone() {
+  
+  void setNone() { 
     isize.setNone();
     mapq.setNone();
     len.setNone();

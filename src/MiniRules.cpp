@@ -238,55 +238,19 @@ void MiniRulesCollection::sendToBed(string file) {
 // parse a rule line looking for flag values
 void FlagRule::parseRuleLine(string line) {
 
-  if (line.find("!hardclip") != string::npos)
-    hardclip = false;
-  else if (line.find("hardclip") != string::npos)
-    hardclip = true;
-
-  if (line.find("!duplicate") != string::npos)
-    duplicate = false;
-  else if (line.find("duplicate") != string::npos)
-    duplicate = true;
-
-  if (line.find("!supplementary") != string::npos)
-    supp = false;
-  else if (line.find("supplementary") != string::npos)
-    supp = true;
-
-  if (line.find("!qcfail") != string::npos)
-    qcfail = false;
-  else if (line.find("qcfail") != string::npos)
-    qcfail = true;
-
-  if (line.find("!fwd_strand") != string::npos)
-    fwd_strand = false;
-  else if (line.find("fwd_strand") != string::npos)
-    fwd_strand = true;
-
-  if (line.find("!rev_strand") != string::npos)
-    rev_strand = false;
-  else if (line.find("rev_strand") != string::npos)
-    rev_strand = true;
-
-  if (line.find("!unmapped") != string::npos)
-    unmapped = false;
-  else if (line.find("unmapped") != string::npos)
-    unmapped = true;
-
-  if (line.find("!unmapped_mate") != string::npos)
-    unmapped_mate = false;
-  else if (line.find("unmapped_mate") != string::npos)
-    unmapped_mate = true;
-
-  if (line.find("!mapped") != string::npos)
-    mapped = false;
-  else if (line.find("mapped") != string::npos)
-    mapped = true;
-
-  if (line.find("!mapped_mate") != string::npos)
-    mapped_mate = false;
-  else if (line.find("mapped_mate") != string::npos)
-    mapped_mate = true;
+  istringstream iss(line);
+  string val;
+  while (getline(iss, val, ':')) {
+    regex reg("!?(.*)");
+    smatch match;
+    if (regex_search(val, match, reg)) { // it matches a conditions
+      auto ff = flags.find(match[1].str()); 
+      if (ff != flags.end() && val.at(0) == '!') // it is a val in flags and is off
+	ff->second.setOff();
+      else if (ff != flags.end()) // is in a val in flags and is on
+	ff->second.setOn();
+    }
+  }
 
 }
 
@@ -315,9 +279,9 @@ void AbstractRule::parseRuleLine(string line) {
   }
 
   // check for every/none flags
-  if (noname.find("every") != string::npos) 
+  if (noname.find("all") != string::npos) 
     setEvery();
-  if (noname.find("none") != string::npos)
+  if (noname.find("!all") != string::npos)
     setNone();
 
   // modify the ranges if need to
@@ -352,9 +316,9 @@ void Range::parseRuleLine(string line) {
     regex areg(a_reg_str);
     
     smatch match;
-    if (regex_search(val, match, nreg)) {
-      setNone();
-    } else if (regex_search(val, match, areg)) {
+    //if (regex_search(val, match, nreg)) {
+      //setNone();
+    if (regex_search(val, match, areg)) {
       setEvery();
     } else if (regex_search(val, match, ireg)) {
       try {
@@ -389,9 +353,7 @@ bool AbstractRule::isValid(BamAlignment &a) {
   // check if its keep all or none
   if (isEvery())
     return true;
-  if (isNone())
-    return false;
-  
+
   // check if is discordant
   bool isize_pass = isize.isValid(abs(a.InsertSize));
   
@@ -443,34 +405,39 @@ bool AbstractRule::isValid(BamAlignment &a) {
 
 bool FlagRule::isValid(BamAlignment &a) {
   
-  if (!duplicate && a.IsDuplicate())
+  if (isEvery())
+    return true;
+  
+  if ( (flags["duplicate"].isOff() &&  a.IsDuplicate()) || (flags["duplicate"].isOn() && !a.IsDuplicate()) )
     return false;
-  if (!supp && !a.IsPrimaryAlignment())
+  if ( (flags["supp"].isOff()      && !a.IsPrimaryAlignment()) || (flags["supp"].isOn() && a.IsPrimaryAlignment()) )
     return false;
-  if (!qcfail && a.IsFailedQC())
+  if ( (flags["qcfail"].isOff()    && a.IsFailedQC()) || (flags["qcfail"].isOn() && !a.IsFailedQC()) )
     return false;
-  if (!fwd_strand && !a.IsReverseStrand())
+  if ( (flags["fwd_strand"].isOff()    && !a.IsReverseStrand()) || (flags["fwd_strand"].isOn() && a.IsReverseStrand()) )
     return false;
-  if (!rev_strand && a.IsReverseStrand())
+  if ( (flags["rev_strand"].isOff()    &&  a.IsReverseStrand()) || (flags["rev_strand"].isOn() && !a.IsReverseStrand()) )
     return false;
-  if (!mate_fwd_strand && !a.IsMateReverseStrand())
+  if ( (flags["mate_fwd_strand"].isOff()    && !a.IsMateReverseStrand()) || (flags["mate_fwd_strand"].isOn() && a.IsMateReverseStrand()) )
     return false;
-  if (!mate_rev_strand && a.IsMateReverseStrand())
+  if ( (flags["mate_rev_strand"].isOff()    &&  a.IsMateReverseStrand()) || (flags["mate_rev_strand"].isOn() && !a.IsMateReverseStrand()) )
     return false;
-  if (!unmapped && !a.IsMapped())
+  if ( (flags["mapped"].isOff()    &&  a.IsMapped()) || (flags["mapped"].isOn() && !a.IsMapped()) )
     return false;
-  if (!unmapped_mate && !a.IsMateMapped())
-    return false;
-  if (!mapped && a.IsMapped())
-    return false;
-  if (!mapped_mate && a.IsMateMapped())
+  if ( (flags["mate_mapped"].isOff()    &&  a.IsMateMapped()) || (flags["mate_mapped"].isOn() && !a.IsMateMapped()) )
     return false;
 
   // check for hard clips
-  if (!hardclip)  // check that we want to chuck hard clip
+  if (!flags["hardclip"].isNA())  {// check that we want to chuck hard clip
+    bool ishclipped = false;
     for (auto cig : a.CigarData)
-      if (cig.Type == 'H')
-	return false;
+      if (cig.Type == 'H') {
+	ishclipped = true;
+	break;
+      }
+    if ( (ishclipped && flags["hardclipped"].isOff()) || (!ishclipped && flags["hardclipped"].isOn()) )
+      return false;
+  }
   
   return true;
   
@@ -503,76 +470,24 @@ ostream& operator<<(ostream &out, const FlagRule &fr) {
     out << "  Flag: ALL";
     return out;
   } 
-  if (fr.isNone()) {
-    out << "  NONE";
-    return out;
+
+  string keep = "  Flag ON: ";
+  string remo = "  Flag OFF: ";
+  string na = "  Flag NA: ";
+
+  // get the strings
+  for (auto it : fr.flags) {
+    if (it.second.isNA())
+      na += it.first + ",";
+    else if (it.second.isOn())
+      keep += it.first + ",";
+    else if (it.second.isOff())
+      remo += it.first + ",";
+    else // shouldn't get here
+      exit(1); 
   }
-    
 
-  string keep = "  Flag Keep: ";
-  string remo = "  Flag Remove: ";
-
-  if (fr.hardclip)
-    keep = keep + "hardclip,";
-  else
-    remo = remo + "hardclip,";
-
-  if (fr.supp)
-    keep = keep + "supplementary,";
-  else
-    remo = remo + "supplementary,"; 
-
-  if (fr.duplicate)
-    keep = keep + "duplicate,";
-  else
-    remo = remo + "duplicate,";
-
-  if (fr.qcfail)
-    keep = keep + "qcfail,";
-  else
-    remo = remo + "qcfail,";
-
-  if (fr.fwd_strand)
-    keep = keep + "fwd_strand,";
-  else
-    remo = remo + "fwd_strand,";
-
-  if (fr.rev_strand)
-    keep = keep + "rev_strand,";
-  else
-    remo = remo + "rev_strand,";
-
-  if (fr.mate_fwd_strand)
-    keep = keep + "mate_fwd_strand,";
-  else
-    remo = remo + "mate_fwd_strand,";
-
-  if (fr.mate_rev_strand)
-    keep = keep + "mate_rev_strand,";
-  else
-    remo = remo + "mate_rev_strand,";
-
-  if (fr.unmapped)
-    keep = keep + "unmapped,";
-  else
-    remo = remo + "unmapped,";
-
-  if (fr.unmapped_mate)
-    keep = keep + "unmapped_mate,";
-  else
-    remo = remo + "unmapped_mate,";
-
-  if (fr.mapped)
-    keep = keep + "mapped,";
-  else
-    remo = remo + "mapped,";
-
-  if (fr.mapped_mate)
-    keep = keep + "mapped_mate,";
-  else
-    remo = remo + "mapped_mate,";
-
-  out << keep << " -- " << remo;;
+  out << keep << " -- " << remo << " -- " << na;
   
   return out;
 }
@@ -597,5 +512,4 @@ GenomicRegionVector MiniRulesCollection::sendToGrv() const {
   // merge it down
   GenomicRegionVector merged = GenomicRegion::mergeOverlappingIntervals(comp);
 
-  return merged;
-}
+  return merged;}
