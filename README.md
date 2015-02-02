@@ -189,7 +189,7 @@ Full list of available rules
 ----------------------------
 
 ```bash
-    ## RULE         #EXAMPLE		 #DESCRIPTION
+    #RULE           #EXAMPLE             #DESCRIPTION
     nm              nm:[0,4]             NM tag from BAM (number of mismatches)
     isize           isize:[100,500]      Insert size, where all insert sizes are converted to positive.
     len             len:[80,101]         Length of the read following phred trimming
