@@ -68,8 +68,8 @@ applied to a BAM. Below is an example of a valid VariantBam script:
 ```bash
     ### this is a comment. The line code below defines filters to be applied to each region/rule
     region@WG
-    rule@!hardclip;mapped;mapped_mate;isize:[0,600];!mapq:[10,100]
-    rule@!hardclip;mapped;mapped_mate;clip:[10,101]
+    rule@!hardclip;mapped;mapped_mate;isize[0,600];!mapq[10,100]
+    rule@!hardclip;mapped;mapped_mate;clip[10,101]
 ```
 
 ##### Region
@@ -80,11 +80,11 @@ treated such that they will include any read who overlaps it, even partially. Op
 you can specify that your region of interest is a bit bigger than is actually in the file. You can do this by "padding"
 the regions around the sites. For example:
 
-``region@myvcf.vcf;pad:1000``
+``region@myvcf.vcf;pad[1000]``
 
 You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does.
 
-``region@myvcf;pad:1000;mate``
+``region@myvcf;pad[1000];mate``
 
 Note that the syntax is such that you must specify the file immediately after the @, following by other options
 in any order. 
@@ -98,10 +98,10 @@ by prefixing with a ``!``. For example:
 
 ```bash
     # do not include hardclipped reads, reads with isize > 600, or reads with mapq between 10 and 100.
-    rule@!hardclip;isize:[0,600];!mapq:[10,100]
+    rule@!hardclip;isize[0,600];!mapq[10,100]
     
     # an equivalent specification would be
-    rule@!hardclip;mapped;!isize:[601,250000000];mapq:[0,9]``
+    rule@!hardclip;mapped;!isize[601,250000000];mapq[0,9]``
 ```
 
 VariantBam handles multiple rules in the following way. For each read, VariantBam 
@@ -124,19 +124,19 @@ and apply rules separately to them.
 ```bash
     ### declare that region is a VCF file with pads of 1000 on either side of the variant.
     ### use the "mate" keyword to specify that pairs whose mate falls in the region belong to this rule
-    region@/home/unix/jwala/myvcf.vcf;mate;pad:1000
+    region@/home/unix/jwala/myvcf.vcf;mate;pad[1000]
     #### I want to keep all the reads (this the default). Ill be explicit with the "every" keyword
     rule@every
     #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads
     region@/home/unix/jwala/myexonlist.bed 
     ## keep discordant reads
-    rule@!isize:[0,600];
+    rule@!isize[0,600];
     ## keep only unmapped reads and their mates
     rule@!mapped;!mapped_mate
     ## or keep if it is hardclipped
     rule@hardclip
     ## keep reads with a mismatch to reference, but with high mapq
-    rule@nm:[1,101];mapq:[30,100]
+    rule@nm[1,101];mapq[30,100]
     
 ```
 
@@ -149,8 +149,8 @@ supplementary reads in every region, you would do:
 ```bash
     global@!hardclip;!duplicate;!qcfail;!supplementary
     region@WG
-    rule@!isize:[0,600]
-    rule@clip:[10,101];mapq:[1,60]
+    rule@!isize[0,600]
+    rule@clip[10,101];mapq[1,60]
     region@myvcf.vcf
 ```
 
@@ -158,8 +158,8 @@ which is equivalent to
 
 ```bash
     region@WG
-    rule@!isize:[0,600];!hardclip;!duplicate;!qcfail;!supplementary
-    rule@clip:[10,101];mapq:[1,60];!hardclip;!duplicate;!qcfail;!supplementary
+    rule@!isize[0,600];!hardclip;!duplicate;!qcfail;!supplementary
+    rule@clip[10,101];mapq[1,60];!hardclip;!duplicate;!qcfail;!supplementary
     region@myvcf.vcf
     rule@!hardclip;!duplicate;!qcfail;!supplementary
 ```
@@ -180,7 +180,7 @@ file and just feed rules directly in. In that case, just pass a string literal t
 will parse directly. Just separate lines with either a new ``-r`` flag or with a ``%``. For instance, you might run something like the following:
 
 ```bash
-variant -i big.bam -o small.bam -r 'global@!hardclip' -r 'region@WG%rule@!isize:[0,600];%rule@clip:[10,101];mapq:[1,60]' -r 'region@myvcf.vcf'
+variant -i big.bam -o small.bam -r 'global@!hardclip' -r 'region@WG%rule@!isize[0,600];%rule@clip[10,101];mapq[1,60]' -r 'region@myvcf.vcf'
 ```
 
 Note the single quotes so that it is interpreted as a string literal in BASH.
@@ -190,11 +190,11 @@ Full list of available rules
 
 ```bash
     #RULE           #EXAMPLE             #DESCRIPTION
-    nm              nm:[0,4]             NM tag from BAM (number of mismatches)
-    isize           isize:[100,500]      Insert size, where all insert sizes are converted to positive.
-    len             len:[80,101]         Length of the read following phred trimming
-    clip            clip:[0,5]           Number of clipped bases following phred trimming
-    phred           phred:[4,100]        Range of phred scores that are "quality" 
+    nm              nm[0,4]              NM tag from BAM (number of mismatches)
+    isize           isize[100,500]       Insert size, where all insert sizes are converted to positive.
+    len             len[80,101]          Length of the read following phred trimming
+    clip            clip[0,5]            Number of clipped bases following phred trimming
+    phred           phred[4,100]         Range of phred scores that are "quality" 
     duplicate       duplicate            Read must be marked as optical duplicate 
     supp            !supp                Read must be primary alignment
     qcfail          !qcfail              Read must note be marked as QC Fail

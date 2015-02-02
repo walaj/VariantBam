@@ -112,7 +112,9 @@ struct FlagRule {
 		 flags["mate_fwd_strand"] = Flag();
 		 flags["mate_rev_strand"] = Flag();
 		 flags["mapped"]          = Flag();
-		 flags["mapped_mate"]     = Flag();
+		 flags["mate_mapped"]     = Flag();
+
+		 
 	       }
 
   void parseRuleLine(string line);

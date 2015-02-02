@@ -13,6 +13,8 @@
 using namespace std;
 using namespace BamTools;
 
+static unordered_map<string, bool> valid;
+
 static const char *VARIANT_BAM_USAGE_MESSAGE =
 "Usage: varbam -i <input.bam> -o <output.bam> [OPTIONS] \n\n"
 "  Description: Process a BAM file for use with rearrangement variant callers by removing proper pairs and bad regions\n"
@@ -92,6 +94,24 @@ void parseVarOptions(int argc, char** argv);
 
 int main(int argc, char** argv) {
 
+  // define what is a valid condition
+  valid["duplicate"]  = true;
+  valid["supplementary"]       = true;
+  valid["qcfail"]     = true;
+  valid["hardclip"]   = true;
+  valid["fwd_strand"] = true;
+  valid["rev_strand"] = true;
+  valid["mate_fwd_strand"] = true;
+  valid["mate_rev_strand"] = true;
+  valid["mapped"]          = true;
+  valid["mate_mapped"]     = true;
+  valid["isize"] = true;
+  valid["clip"] = true;
+  valid["phred"] = true;
+  valid["len"] = true;
+  valid["nm"] = true;
+  valid["mapq"] = true;
+
   // start the timer
   clock_gettime(CLOCK_MONOTONIC, &start);
 
@@ -125,7 +145,9 @@ int main(int argc, char** argv) {
 
   // parse the proc region file
   bool runWholeGenome = mr->hasWholeGenome();
-  GenomicRegionVector grv_proc_regions = GenomicRegion::regionFileToGRV(opt::proc_regions, 0);
+  GenomicRegionVector grv_proc_regions;
+  if (opt::proc_regions.size() > 0)
+    GenomicRegion::regionFileToGRV(opt::proc_regions, 0);
   // run just the regions in the mask file
   if (grv_proc_regions.size() > 0) {
     sort(grv_proc_regions.begin(), grv_proc_regions.end());      

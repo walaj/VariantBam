@@ -5,6 +5,29 @@
 using namespace std;
 using namespace BamTools;
 
+  // define what is a valid condition
+static const unordered_map<string,bool> valid = 
+  { 
+  {"duplicate",     true},
+  {"supplementary", true},
+  {"qcfail",        true},
+  {"hardclip",      true},
+  {"fwd_strand",    true},
+  {"rev_strand",    true},
+  {"mate_fwd_strand",  true},
+  {"mate_rev_strand",  true},
+  {"mapped",           true},
+  {"mate_mapped",      true},
+  {"isize", true},
+  {"clip",  true},
+  {"phred", true},
+  {"len",   true},
+  {"nm",    true},
+  {"mapq",  true}
+};
+
+
+
 bool MiniRules::isValid(BamAlignment &a) {
 
   for (auto it : m_abstract_rules)
@@ -158,7 +181,7 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 	  mr->m_applies_to_mate = true;
 	}
 	// check if we should pad 
-	regex reg_pad(".*?;pad:(.*?)(;|$)");
+	regex reg_pad(".*?;pad\\[([0-9]+)\\].*");
 	smatch pmatch;
 	if (regex_search(line,pmatch,reg_pad))
 	  try { mr->pad = stoi(pmatch[1].str()); } catch (...) { cerr << "Cant read pad value for line " << line << ", setting to 0" << endl; }
@@ -259,7 +282,7 @@ void FlagRule::parseRuleLine(string line) {
   istringstream iss(line);
   string val;
   while (getline(iss, val, ';')) {
-    regex reg("!?(.*)");
+    regex reg("!?([a-z_]+).*");
     smatch match;
     if (regex_search(val, match, reg)) { // it matches a conditions
       auto ff = flags.find(match[1].str()); 
@@ -267,6 +290,10 @@ void FlagRule::parseRuleLine(string line) {
 	ff->second.setOff();
       else if (ff != flags.end()) // is in a val in flags and is on
 	ff->second.setOn();
+      else if (ff == flags.end() && valid.count(match[1].str()) == 0) { // its not anything and its bad
+	cerr << "Not a valid condition: " << match[1].str() << " on line " << line << endl;
+	exit(EXIT_FAILURE);
+      }
     }
   }
 
