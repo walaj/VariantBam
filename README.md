@@ -190,7 +190,7 @@ Full list of available rules
 
 ```bash
     ## RULE         #EXAMPLE		 #DESCRIPTION
-    nm              nm:[0,4]	 	 NM tag from BAM (number of mismatches)
+    nm              nm:[0,4]             NM tag from BAM (number of mismatches)
     isize           isize:[100,500]      Insert size, where all insert sizes are converted to positive.
     len             len:[80,101]         Length of the read following phred trimming
     clip            clip:[0,5]           Number of clipped bases following phred trimming
@@ -200,8 +200,8 @@ Full list of available rules
     qcfail          !qcfail              Read must note be marked as QC Fail
     fwd_strand      fwd_strand           Read must be mapped to forward strand
     rev_strand      rev_strand           Read must be mapped to reverse strand
-    mate_fwd_strand mate_fwd_strand     Mate of read must be mapped to forward strand
-    mate_rev_strand mate_rev_strand     Mate of read must be mapped to reverse strand  
+    mate_fwd_strand mate_fwd_strand      Mate of read must be mapped to forward strand
+    mate_rev_strand mate_rev_strand      Mate of read must be mapped to reverse strand  
     mapped          !mapped              Read must be unmapped
     mapped_mate     mapped_mate          Mate must be mapped
 ```
