@@ -194,16 +194,16 @@ Full list of available rules
     isize           isize:[100,500]      Insert size, where all insert sizes are converted to positive.
     len             len:[80,101]         Length of the read following phred trimming
     clip            clip:[0,5]           Number of clipped bases following phred trimming
-    phred           phred:[4,100]        Range of phred scores that are "quality" (the min is what is really important here)
-    duplicate       !duplicate           Read is marked as optical duplicate 
-    supp            !supp                Read is marked as supplementary
-    qcfail          !qcfail              Read is marked as QC Fail
-    fwd_strand      !fwd_strand          Read is mapped to forward strand
-    rev_strand      !rev_strand          Read is mapped to reverse strand
-    mate_fwd_strand !mate_fwd_strand     Mate of read is mapped to forward strand
-    mate_rev_strand !mate_rev_strand     Mate of read is mapped to reverse strand  
-    mapped          !mapped              Read is mapped
-    mapped_mate     !mapped_mate         Read is mapped
+    phred           phred:[4,100]        Range of phred scores that are "quality" 
+    duplicate       duplicate            Read must be marked as optical duplicate 
+    supp            !supp                Read must be primary alignment
+    qcfail          !qcfail              Read must note be marked as QC Fail
+    fwd_strand      fwd_strand           Read must be mapped to forward strand
+    rev_strand      rev_strand           Read must be mapped to reverse strand
+    mate_fwd_strand mate_fwd_strand     Mate of read must be mapped to forward strand
+    mate_rev_strand mate_rev_strand     Mate of read must be mapped to reverse strand  
+    mapped          !mapped              Read must be unmapped
+    mapped_mate     mapped_mate          Mate must be mapped
 ```
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
