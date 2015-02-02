@@ -189,8 +189,8 @@ Full list of available rules
 ----------------------------
 
 ```bash
-    #RULE           #EXAMPLE             #DESCRIPTION
-    nm              nm[0,4]              NM tag from BAM (number of mismatches)
+    #RULE           #EXAMPLE             #DESCRIPTION OF EXAMPLE / FLAG
+    nm              nm[0,4]              NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
     isize           isize[100,500]       Insert size, where all insert sizes are converted to positive.
     len             len[80,101]          Length of the read following phred trimming
     clip            clip[0,5]            Number of clipped bases following phred trimming
@@ -204,6 +204,11 @@ Full list of available rules
     mate_rev_strand mate_rev_strand      Mate of read must be mapped to reverse strand  
     mapped          !mapped              Read must be unmapped
     mapped_mate     mapped_mate          Mate must be mapped
+    ff              ff                   Read pair must have forward-forward orientation
+    rr              ff                   Read pair must have reverse-reverse orientation
+    fr              ff                   Read pair must have forward-reverse orientation (proper)
+    rf              ff                   Read pair must have reverse-forward orientation
+    discordant      discordant[100,600]  Shortcut for !isize[100,600] || rr || ff || rf (!discordant gives "proper" pairs)
 ```
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE

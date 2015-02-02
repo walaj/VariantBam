@@ -23,7 +23,14 @@ static const unordered_map<string,bool> valid =
   {"phred", true},
   {"len",   true},
   {"nm",    true},
-  {"mapq",  true}
+  {"mapq",  true},
+  {"all",   true},
+  {"ff", true},
+  {"fr", true},
+  {"rr", true},
+  {"rf", true},
+  {"discordant", true}
+  
 };
 
 
@@ -282,7 +289,7 @@ void FlagRule::parseRuleLine(string line) {
   istringstream iss(line);
   string val;
   while (getline(iss, val, ';')) {
-    regex reg("!?([a-z_]+).*");
+    regex reg("!?([a-zA-Z_]+).*");
     smatch match;
     if (regex_search(val, match, reg)) { // it matches a conditions
       auto ff = flags.find(match[1].str()); 
@@ -329,6 +336,37 @@ void AbstractRule::parseRuleLine(string line) {
   if (noname.find("!all") != string::npos)
     setNone();
 
+  // check for discordant
+  regex  regex_disc( ".*?discordant\\[([0-9]+),([0-9]+)\\].*");
+  regex regex_ndisc(".*?!discordant\\[([0-9]+),([0-9]+)\\].*");
+  smatch omatch;
+  if (regex_search(noname, omatch, regex_disc)) {
+    try {
+      isize.min = stoi(omatch[1].str());
+      isize.max = stoi(omatch[2].str());
+      isize.inverted = true;
+      fr.flags["ff"].setOn();
+      fr.flags["rr"].setOn();
+      fr.flags["rf"].setOn();
+    } catch (...) {
+      cerr << "Caught error trying to parse for discordant " << " on line " << noname << " match[1] " << omatch[1].str() << " match[2] " << omatch[2].str() << endl;     
+      exit(EXIT_FAILURE);
+    }
+  } else if (regex_search(noname, omatch, regex_ndisc)) {
+    try {
+      isize.min = stoi(omatch[1].str());
+      isize.max = stoi(omatch[2].str());
+      isize.inverted = false;
+      fr.flags["ff"].setOff();
+      fr.flags["rr"].setOff();
+      fr.flags["rf"].setOff();
+    } catch (...) {
+      cerr << "Caught error trying to parse inverted for discordant " << " on line " << noname << " match[1] " << omatch[1].str() << " match[2] " << omatch[2].str() << endl;     
+      exit(EXIT_FAILURE);
+    }
+
+  }
+
   // modify the ranges if need to
   isize.parseRuleLine(noname);
   mapq.parseRuleLine(noname);
@@ -337,7 +375,7 @@ void AbstractRule::parseRuleLine(string line) {
   phred.parseRuleLine(noname);
   nm.parseRuleLine(noname);
 
-  // parse the line for flag rules
+  // parse the line for flag rules (also checks syntax)
   fr.parseRuleLine(noname);
   
 }
@@ -374,7 +412,7 @@ void Range::parseRuleLine(string line) {
 	return;
       } catch (...) {
 	cerr << "Caught error trying to parse inverted for " << pattern << " on line " << line << " match[1] " << match[1].str() << " match[2] " << match[2].str() << endl;     
-	return;
+	exit(EXIT_FAILURE);
       }
     } else if (regex_search(val, match, reg)) {
       try {
@@ -385,7 +423,7 @@ void Range::parseRuleLine(string line) {
 	return;
       } catch (...) {
 	cerr << "Caught error trying to parse for " << pattern << " on line " << line << " match[1] " << match[1].str() << " match[2] " << match[2].str() << endl;     
-	return;
+	exit(EXIT_FAILURE);
       }
     }
     
@@ -484,6 +522,21 @@ bool FlagRule::isValid(BamAlignment &a) {
       return false;
   }
   
+  // check for orientation
+  bool first = a.Position < a.MatePosition;
+  if (!flags["fr"].isNA()) 
+    if (flags["fr"].isOn() != (first && !a.IsReverseStrand() && a.IsMateReverseStrand()) || (!first &&  a.IsReverseStrand() && !a.IsMateReverseStrand()))
+      return false;
+  if (!flags["rr"].isNA())
+    if (flags["rr"].isOn() != a.IsReverseStrand() && a.IsMateReverseStrand())
+      return false;
+  if (!flags["rf"].isNA())
+    if (flags["rf"].isOn() != (first &&  a.IsReverseStrand() && !a.IsMateReverseStrand()) || ( first && !a.IsReverseStrand() &&  a.IsMateReverseStrand()))
+      return false;
+  if (!flags["ff"].isNA())
+    if (flags["ff"].isOn() != !a.IsReverseStrand() && !a.IsMateReverseStrand())
+      return false;
+
   return true;
   
 }

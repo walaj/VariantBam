@@ -113,8 +113,10 @@ struct FlagRule {
 		 flags["mate_rev_strand"] = Flag();
 		 flags["mapped"]          = Flag();
 		 flags["mate_mapped"]     = Flag();
-
-		 
+		 flags["ff"] = Flag();
+		 flags["fr"] = Flag();
+		 flags["rf"] = Flag();
+		 flags["rr"] = Flag();
 	       }
 
   void parseRuleLine(string line);
@@ -170,6 +172,7 @@ class AbstractRule {
   Range clip =  {-1, -1, true, "clip"};
   Range phred = {-1, -1, true, "phred"};
   Range nm = {-1, -1, true, "nm"};
+  unordered_map<string,bool> orientation;
 
   bool none = false;
   // set to true if you want a read to belong to the region if its mate does
