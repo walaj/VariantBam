@@ -135,6 +135,7 @@ MiniRulesCollection::MiniRulesCollection(string file) {
     
     if (!line_comment && !line_empty) {
 
+      cout << line << endl;
       //////////////////////////////////
       // its a rule line, get the region
       //////////////////////////////////
@@ -153,29 +154,27 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 	//mr->m_abstract_rules = all_rules;
 
 	// check if the mate aplies
-	if (line.find(",mate") != string::npos) {
+	if (line.find(";mate") != string::npos) {
 	  mr->m_applies_to_mate = true;
 	}
 	// check if we should pad 
-	regex reg_pad(".*?,pad:(.*?)(,|$)");
+	regex reg_pad(".*?;pad:(.*?)(;|$)");
 	smatch pmatch;
 	if (regex_search(line,pmatch,reg_pad))
 	  try { mr->pad = stoi(pmatch[1].str()); } catch (...) { cerr << "Cant read pad value for line " << line << ", setting to 0" << endl; }
 	  
-	if (line.find(",pad") != string::npos) {
-	  mr->m_applies_to_mate = true;
-	}
 
-
-	if (line.find("WG") != string::npos) {
+	if (line.find("@WG") != string::npos) {
 	  mr->m_whole_genome = true;
         } else {
-	  regex file_reg("region@(.*?),");
+	  regex file_reg("region@(.*?)(;|$)");
 	  smatch match;
 	  if (regex_search(line,match,file_reg))
 	    mr->setIntervalTreeMap(match[1].str());
-	  else
-	    exit(1);
+	  else {
+	    cerr << "Could not parse line: " << line << " to grab region " << endl;
+	    exit(EXIT_FAILURE);
+	  }
 	}
 	mr->m_level = level++;
 	m_regions.push_back(mr);

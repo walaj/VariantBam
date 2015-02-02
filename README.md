@@ -80,11 +80,11 @@ treated such that they will include any read who overlaps it, even partially. Op
 you can specify that your region of interest is a bit bigger than is actually in the file. You can do this by "padding"
 the regions around the sites. For example:
 
-``region@myvcf.vcf,pad:1000``
+``region@myvcf.vcf;pad:1000``
 
 You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does.
 
-``region@myvcf,pad:1000,mate``
+``region@myvcf;pad:1000;mate``
 
 Note that the syntax is such that you must specify the file immediately after the @, following by other options
 in any order. 
@@ -124,7 +124,7 @@ and apply rules separately to them.
 ```bash
     ### declare that region is a VCF file with pads of 1000 on either side of the variant.
     ### use the "mate" keyword to specify that pairs whose mate falls in the region belong to this rule
-    region@/home/unix/jwala/myvcf.vcf,mate,pad:1000
+    region@/home/unix/jwala/myvcf.vcf;mate;pad:1000
     #### I want to keep all the reads (this the default). Ill be explicit with the "every" keyword
     rule@every
     #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads

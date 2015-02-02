@@ -214,7 +214,7 @@ bool GenomicRegion::isEmpty() const {
 GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
 
   igzstream iss(file.c_str());
-  if (!iss) { 
+  if (!iss || file.length() == 0) { 
     cerr << "Region file does not exist: " << file << endl;
     exit(EXIT_FAILURE);
   }
@@ -222,7 +222,7 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
   GenomicRegionVector grv;
   string line;
 
-  // get the header line to check format
+ // get the header line to check format
   string header, header2;;
   igzstream iss_h(file.c_str());
   getline(iss_h, header, '\n');
