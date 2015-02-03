@@ -64,7 +64,7 @@ unsigned VariantBamReader::getClipCount(BamAlignment a) {
 
 
 //bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
-bool VariantBamReader::writeVariantBam() {
+bool VariantBamReader::writeVariantBam(BamQC &qc) {
 
   int keep_counter = 0;
   int total = 0;
@@ -144,8 +144,10 @@ bool VariantBamReader::writeVariantBam() {
     string rule_pass = m_mr->isValid(a);
 
     // build the qc
-    /*
+    if (qc.use)
     try {
+      if (a.Name == "")
+      	a.BuildCharData();
       string rgroup;
       if (!a.GetTag("RG",rgroup))
 	cerr << "Failed to read rgroup" << endl;
@@ -153,24 +155,48 @@ bool VariantBamReader::writeVariantBam() {
       int this_isize = a.InsertSize;
       this_isize = (a.MateRefID != a.RefID || this_isize > 2000) ? 2000 : this_isize;
 
+      // get clip num
+      unsigned clipnum = VariantBamReader::getClipCount(a);
+      
+      // get the mean phred quality
+      size_t i = 0;
+      int phred = 0;
+      while(i < a.Qualities.length()) {
+        phred += char2phred(a.Qualities[i]);
+	i++;
+      }
+      if (a.Qualities.length() > 0)
+	phred = static_cast<int>(floor(static_cast<float>(phred) / a.Qualities.length()));
+      
+      // get the NM tag
+      uint32_t nm;
+      if (a.GetTag("NM", nm)) {} else { nm = 0; }
+
       assert(a.MapQuality <= 60);
-      //assert(clipnum <= 101);
+      assert(clipnum <= 101);
       //assert(as <= 101);
       //assert(xp <= 101);
       assert(a.Length <= 101 && a.Length  >= 0);
-      //assert(phred <= 60 && phred  >= 0);
-      //assert(nm <= 101);
+      assert(phred <= 60 && phred  >= 0);
+      assert(nm <= 101);
 
-      //qc.map[rgroup].nm[nm]++;
-      qc.map[rgroup].mapq[a.MapQuality]++;
-      //if (a.InsertSize > 0 && a.IsPaired() && (FR_f || FR_r) ) // only count "proper" reads
-	//qc.map[rgroup].isize[this_isize]++;
+      // discordant
+      bool FR_f = !a.IsReverseStrand() && (a.Position < a.MatePosition) && (a.RefID == a.MateRefID) &&  a.IsMateReverseStrand();
+      bool FR_r =  a.IsReverseStrand() && (a.Position > a.MatePosition) && (a.RefID == a.MateRefID) && !a.IsMateReverseStrand();
+      bool FR = FR_f || FR_r;
+      if (a.InsertSize > 0 && a.IsPaired() && FR ) // only count "proper" reads
+	qc.map[rgroup].isize[this_isize]++;
+
+      // all the rest
       //qc.map[rgroup].xp[xp]++;
-      //qc.map[rgroup].len[a.Length]++;
+      qc.map[rgroup].len[a.Length]++;
       //qc.map[rgroup].as[as]++;
-      //qc.map[rgroup].clip[clipnum]++;
-      //qc.map[rgroup].phred[phred]++;
+      qc.map[rgroup].clip[clipnum]++;
+      qc.map[rgroup].phred[phred]++;
       qc.map[rgroup].num_reads++;
+      qc.map[rgroup].mapq[a.MapQuality]++;
+      qc.map[rgroup].nm[nm]++;
+
       if (!a.IsMapped())
 	qc.map[rgroup].unmap++;
       if (a.IsFailedQC()) 
@@ -179,12 +205,15 @@ bool VariantBamReader::writeVariantBam() {
 	qc.map[rgroup].duplicate++;
       if (!a.IsPrimaryAlignment())
 	qc.map[rgroup].supp++;
+
     } catch (...) {
       cerr << "Failed at adding to QC" << endl;
-      //cerr << "Readgroup " << "NM " << nm << " mapq " << a.MapQuality << " xp " << xp << " len " << a.Length <<
-      //	" as " << as << " phred " << phred << endl;
+      //cerr << "Readgroup " << "NM " << nm << " mapq " << a.MapQuality << 
+        //" xp " << xp << 
+        //" len " << a.Length <<
+      	//" as " << as << 
+        //" phred " << phred << endl;
     }
-    */
 
     if ( rule_pass != "" /*&& !qc_only*/ ) {
 

@@ -5,7 +5,7 @@
 #include "GenomicRegion.h"
 #include "api/BamReader.h"
 #include "api/BamWriter.h"
-//#include "BamQC.h"
+#include "BamQC.h"
 #include "VarUtils.h"
 #include "MiniRules.h"
 #include "VariantBamReader.h"
@@ -126,8 +126,11 @@ int main(int argc, char** argv) {
   // parse the proc region file
   bool runWholeGenome = mr->hasWholeGenome();
   GenomicRegionVector grv_proc_regions;
-  if (opt::proc_regions.size() > 0)
-    GenomicRegion::regionFileToGRV(opt::proc_regions, 0);
+  if (opt::proc_regions.length() > 0)
+    grv_proc_regions = GenomicRegion::regionFileToGRV(opt::proc_regions, 0);
+  if (opt::proc_regions.length() > 0)
+    assert(grv_proc_regions.size() > 0);
+  
   // run just the regions in the mask file
   if (grv_proc_regions.size() > 0) {
     sort(grv_proc_regions.begin(), grv_proc_regions.end());      
@@ -166,7 +169,7 @@ int main(int argc, char** argv) {
     sort(grv_proc_regions.begin(), grv_proc_regions.end());      
 
   BamAlignment a;
-  //  BamQC qc; 
+  BamQC qc; 
 
   VariantBamReader sv_reader(opt::bam, opt::out, mr, opt::verbose);
 
@@ -178,7 +181,7 @@ int main(int argc, char** argv) {
     if (opt::verbose > 0)
       cout << "Running region: "  << (*it) << endl;
     //sv_reader.writeVariantBam(qc, opt::qc_only);
-    sv_reader.writeVariantBam();
+    sv_reader.writeVariantBam(qc);
     
     if (opt::verbose > 0) {
       VarUtils::displayRuntime(start);
@@ -191,9 +194,9 @@ int main(int argc, char** argv) {
   sv_reader.MakeIndex();
 
   // write out the stats
-  //ofstream stats_out;
-  //stats_out.open("./qcreport.txt");
-  //stats_out << qc;
+  ofstream stats_out;
+  stats_out.open("qcreport.txt");
+  stats_out << qc;
 
   if (opt::verbose > 0) {
     VarUtils::displayRuntime(start);
