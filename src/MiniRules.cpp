@@ -38,7 +38,7 @@ static const unordered_map<string,bool> valid =
 
 bool MiniRules::isValid(BamAlignment &a) {
 
-  for (auto it : m_abstract_rules)
+  for (auto& it : m_abstract_rules)
     if (it.isValid(a)) 
        return true; // it is includable in at least one. 
       
@@ -80,7 +80,7 @@ string MiniRulesCollection::isValid(BamAlignment &a) {
     which_rule = 0;
     bool rule_hit = false;
     if (it->isOverlapping(a)) // read overlaps a region
-      for (auto jt : it->m_abstract_rules) { // loop rules in that region
+      for (auto& jt : it->m_abstract_rules) { // loop rules in that region
 	if (jt.isValid(a)) {
 	  rule_hit = true;
 	  break;
@@ -113,7 +113,7 @@ void MiniRules::setIntervalTreeMap(string file) {
   sort(m_grv.begin(), m_grv.end());
 
   // set the width
-  for (auto it : m_grv)
+  for (auto& it : m_grv)
     m_width += it.width();
  
   size_t grv_size = m_grv.size();
@@ -513,9 +513,14 @@ bool AbstractRule::isValid(BamAlignment &a) {
   if (!need_to_continue)
     return true;
 
-  // now we need to read the char data
-  if (a.Name == "") // we need to build char
+  // now check if we need to build char if all we want is clip
+  unsigned clipnum = VariantBamReader::getClipCount(a);
+  if (nm.isEvery() && len.isEvery() && !clip.isValid(clipnum)) // if clip fails, its not going to get better by trimming. kill it now before building teh char data
+    return false;
+
+  if (a.Name == "") {// only build once 
     a.BuildCharData();
+  }
 
   // check for valid NM
   if (!nm.isEvery()) {
@@ -528,7 +533,6 @@ bool AbstractRule::isValid(BamAlignment &a) {
   }
 
   // trim the read, then check length
-  unsigned clipnum = VariantBamReader::getClipCount(a);
   int new_len = a.QueryBases.length();
   int new_clipnum = clipnum;
 
@@ -591,7 +595,7 @@ bool FlagRule::isValid(BamAlignment &a) {
   if (!hardclip.isNA())  {// check that we want to chuck hard clip
     if (a.CigarData.size() > 1) { // check that its not simple
       bool ishclipped = false;
-      for (auto cig : a.CigarData)
+      for (auto& cig : a.CigarData)
 	if (cig.Type == 'H') {
 	  ishclipped = true;
 	  break;

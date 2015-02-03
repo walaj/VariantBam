@@ -90,6 +90,9 @@ bool VariantBamReader::writeVariantBam() {
 
   while (m_reader->GetNextAlignmentCore(a)) {
 
+    // clear the name because it's just a relic?
+    a.Name = "";
+
     total++;
     total_MAIN++;
         
@@ -184,6 +187,10 @@ bool VariantBamReader::writeVariantBam() {
     */
 
     if ( rule_pass != "" /*&& !qc_only*/ ) {
+
+      // build it if we haven't
+      if (a.Name == "")
+	a.BuildCharData();
 
       mapq0_keep_counter += (a.MapQuality == 0 ) ? 1 : 0; 
 

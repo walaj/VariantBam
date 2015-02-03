@@ -196,7 +196,7 @@ Note the single quotes so that it is interpreted as a string literal in BASH.
 Full list of available rules
 ----------------------------
 
-```bash
+```
     #RULE           #EXAMPLE             #DESCRIPTION OF EXAMPLE / FLAG
     nm              nm[0,4]              NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
     isize           isize[100,500]       Insert size, where all insert sizes are converted to positive.
@@ -213,9 +213,9 @@ Full list of available rules
     mapped          !mapped              Read must be unmapped
     mapped_mate     mapped_mate          Mate must be mapped
     ff              ff                   Read pair must have forward-forward orientation
-    rr              ff                   Read pair must have reverse-reverse orientation
-    fr              ff                   Read pair must have forward-reverse orientation (proper)
-    rf              ff                   Read pair must have reverse-forward orientation
+    rr              rr                   Read pair must have reverse-reverse orientation
+    fr              fr                   Read pair must have forward-reverse orientation (proper)
+    rf              rf                   Read pair must have reverse-forward orientation
     ic              ic                   Read pair must have inter-chromosomal mapping
     discordant      discordant[100,600]  Shortcut for !isize[100,600] || rr || ff || rf || ic (!discordant gives "proper" pairs)
 ```
