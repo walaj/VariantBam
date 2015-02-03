@@ -40,6 +40,9 @@ class Flag {
   bool isOn()  const { return on; } 
   bool isOff() const { return off; } 
 
+  // return true if modified
+  bool parseRuleLine(string &val, regex &reg);
+
  private: 
   bool on;
   bool off; 
@@ -59,7 +62,7 @@ struct Range {
   int max;
   bool inverted;
   string pattern;
-  bool every = false;
+  bool every = true;
   bool none = false;
   
   bool isValid(int val) {
@@ -103,6 +106,7 @@ struct FlagRule {
   
   FlagRule() 
                {
+		 /*
 		 flags["duplicate"]  = Flag();
 		 flags["supplementary"]       = Flag();
 		 flags["qcfail"]     = Flag();
@@ -117,45 +121,124 @@ struct FlagRule {
 		 flags["fr"] = Flag();
 		 flags["rf"] = Flag();
 		 flags["rr"] = Flag();
+		 flags["ic"] = Flag();
+		 */
+
+		 dup  = Flag();
+		 supp       = Flag();
+		 qcfail     = Flag();
+		 hardclip   = Flag();
+		 fwd_strand = Flag();
+		 rev_strand = Flag();
+		 mate_fwd_strand = Flag();
+		 mate_rev_strand = Flag();
+		 mapped          = Flag();
+		 mate_mapped     = Flag();
+		 ff = Flag();
+		 fr = Flag();
+		 rf = Flag();
+		 rr = Flag();
+		 ic = Flag();
+
 	       }
 
+  Flag dup, supp, qcfail, hardclip, fwd_strand, rev_strand,
+    mate_fwd_strand, mate_rev_strand, mapped, mate_mapped, ff, fr, rf, rr, ic;
+
+
+  bool na = true;
   void parseRuleLine(string line);
   
   // ask whether a read passes the rule
   bool isValid(BamAlignment &a);
 
-  unordered_map<string, Flag> flags;
+  //unordered_map<string, Flag> flags;
 
   friend ostream& operator<<(ostream &out, const FlagRule &fr);
 
   // set every flag to NA (most permissive)
   void setEvery() {
-    for (auto it : flags)
-      it.second.setNA();
+    dup.setOn();
+    supp.setOn();
+    qcfail.setOn();
+    hardclip.setOn();
+    fwd_strand.setOn();
+    rev_strand.setOn();
+    mate_fwd_strand.setOn();
+    mate_rev_strand.setOn();
+    mapped.setOn();
+    mate_mapped.setOn();
+    ff.setOn();
+    fr.setOn();
+    rf.setOn();
+    rr.setOn();
+    ic.setOn();
+    na = true;
   }
 
   // set every flag to OFF everythign off)
   void setNone() {
-    for (auto it : flags)
-      it.second.setOff();
+    dup.setOff();
+    supp.setOff();
+    qcfail.setOff();
+    hardclip.setOff();
+    fwd_strand.setOff();
+    rev_strand.setOff();
+    mate_fwd_strand.setOff();
+    mate_rev_strand.setOff();
+    mapped.setOff();
+    mate_mapped.setOff();
+    ff.setOff();
+    fr.setOff();
+    rf.setOff();
+    rr.setOff();
+    ic.setOff();
   }
 
 
   // ask if every flag is set to NA (most permissive)
-  bool isEvery() const {
-    for (auto it : flags) 
-      if (!it.second.isNA())
-	return false;
+  bool isEvery() const { return na; }
+  /*
+    if (!na) // save compute
+      return false;
+    
+    bool is_every = !dup.isNA() && !supp.isNA() && !hardclip.isNA() && 
+      fwd_strand.isNA()
+    if (!supp.isNA()) return false;
+    if (!hardclip.isNA()) return false;
+    if (!dup.isNA()) return false;
+    if (!dup.isNA()) return false;
+    if (!dup.isNA()) return false;
+    if (!dup.isNA()) return false;
+    if (!dup.isNA()) return false;
+    if (!dup.isNA()) return false;
+
+    supp.isNA();
+    qcfail.isNA();
+    hardclip.isNA();
+    fwd_strand.isNA();
+    rev_strand.isNA();
+    mate_fwd_strand.isNA();
+    mate_rev_strand.isNA();
+    mapped.isNA();
+    mate_mapped.isNA();
+    ff.isNA();
+    fr.isNA();
+    rf.isNA();
+    rr.isNA();
+    ic.isNA();
+
     return true;
   }
+  */
 
   // ask if every flag is set to NA (most permissive)
-  bool isNone() const {
-    for (auto it : flags) 
-      if (!it.second.isOff())
-	return false;
-    return true;
-  }
+  //bool isNone() const {
+  //  for (auto it : flags) 
+  //    if (!it.second.isOff())
+  //	return false;
+  //return true;
+  //}
 
 
 };
@@ -204,6 +287,7 @@ class AbstractRule {
     phred.setNone();
     nm.setNone();
     fr.setNone();
+    none = true;
   }
 
   // return if this rule accepts all reads
@@ -213,7 +297,8 @@ class AbstractRule {
 
   // return if this rule accepts no reads
   bool isNone() const {
-    return isize.isNone() && mapq.isNone() && len.isNone() && clip.isNone() && phred.isNone() && nm.isNone() && fr.isNone();
+    return none;
+    //return isize.isNone() && mapq.isNone() && len.isNone() && clip.isNone() && phred.isNone() && nm.isNone() && fr.isNone();
   }
 
 

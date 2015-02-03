@@ -88,7 +88,7 @@ bool VariantBamReader::writeVariantBam() {
   BamAlignmentVector bam_buffer;
   vector<int> mapq_buffer;
 
-  while (m_reader->GetNextAlignment(a)) {
+  while (m_reader->GetNextAlignmentCore(a)) {
 
     total++;
     total_MAIN++;

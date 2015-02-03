@@ -208,7 +208,8 @@ Full list of available rules
     rr              ff                   Read pair must have reverse-reverse orientation
     fr              ff                   Read pair must have forward-reverse orientation (proper)
     rf              ff                   Read pair must have reverse-forward orientation
-    discordant      discordant[100,600]  Shortcut for !isize[100,600] || rr || ff || rf (!discordant gives "proper" pairs)
+    ic              ic                   Read pair must have inter-chromosomal mapping
+    discordant      discordant[100,600]  Shortcut for !isize[100,600] || rr || ff || rf || ic (!discordant gives "proper" pairs)
 ```
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE

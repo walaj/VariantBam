@@ -29,6 +29,7 @@ static const unordered_map<string,bool> valid =
   {"fr", true},
   {"rr", true},
   {"rf", true},
+  {"ic", true},
   {"discordant", true}
   
 };
@@ -165,7 +166,6 @@ MiniRulesCollection::MiniRulesCollection(string file) {
     
     if (!line_comment && !line_empty) {
 
-      cout << line << endl;
       //////////////////////////////////
       // its a rule line, get the region
       //////////////////////////////////
@@ -215,8 +215,60 @@ MiniRulesCollection::MiniRulesCollection(string file) {
       ////////////////////////////////////
       else if (line.find("rule@") != string::npos) {
 	AbstractRule ar = rule_all;
+
+	// parse the line
 	ar.parseRuleLine(line);
 	m_regions.back()->m_abstract_rules.push_back(ar);
+
+	// check for "discordant" shortcut
+	regex  regex_disc( ".*?discordant\\[([0-9]+),([0-9]+)\\]($|;)");
+	smatch omatch;
+	if (regex_search(line, omatch, regex_disc)) {
+	  bool isneg = line.find("!discordant[") != string::npos;
+	  try {
+	    // fill in the isize condition 
+	    m_regions.back()->m_abstract_rules.back().isize.min = stoi(omatch[1].str());
+	    m_regions.back()->m_abstract_rules.back().isize.max = stoi(omatch[2].str());
+	    m_regions.back()->m_abstract_rules.back().isize.inverted = !isneg;
+	    m_regions.back()->m_abstract_rules.back().isize.every = false;
+	    // use the template to set a sequene of orientation rules
+	    AbstractRule aro = ar;
+	    if (isneg)
+	      aro.fr.ff.setOff();
+	    else
+	      aro.fr.ff.setOn();
+	    aro.fr.na = false;
+	    m_regions.back()->m_abstract_rules.push_back(aro);
+	    // set another rr rule
+	    aro = ar;
+	    if (isneg)
+	      aro.fr.rr.setOff();
+	    else
+	      aro.fr.rr.setOn();
+	    aro.fr.na = false;
+	    m_regions.back()->m_abstract_rules.push_back(aro);
+	    // set another rf rule
+	    aro = ar;
+	    if (isneg)
+	      aro.fr.rf.setOff();
+	    else
+	      aro.fr.rf.setOn();
+	    aro.fr.na = false;
+	    m_regions.back()->m_abstract_rules.push_back(aro);
+	    // set another ic rule
+	    aro = ar;
+	    if (isneg)
+	      aro.fr.ic.setOff();
+	    else
+	      aro.fr.ic.setOn();
+	    aro.fr.na = false;
+	    m_regions.back()->m_abstract_rules.push_back(aro);
+	  } catch (...) {
+	    cerr << "Caught error trying to parse for discordant " << " on line " << line << " match[1] " << omatch[1].str() << " match[2] " << omatch[2].str() << endl;     
+	    exit(EXIT_FAILURE);
+	  }
+	} // end discorant regex
+	  
       }
       ////////////////////////////////////
       // its a global rule
@@ -289,19 +341,36 @@ void FlagRule::parseRuleLine(string line) {
   istringstream iss(line);
   string val;
   while (getline(iss, val, ';')) {
-    regex reg("!?([a-zA-Z_]+).*");
-    smatch match;
-    if (regex_search(val, match, reg)) { // it matches a conditions
-      auto ff = flags.find(match[1].str()); 
-      if (ff != flags.end() && val.at(0) == '!') // it is a val in flags and is off
-	ff->second.setOff();
-      else if (ff != flags.end()) // is in a val in flags and is on
-	ff->second.setOn();
-      else if (ff == flags.end() && valid.count(match[1].str()) == 0) { // its not anything and its bad
-	cerr << "Not a valid condition: " << match[1].str() << " on line " << line << endl;
-	exit(EXIT_FAILURE);
-      }
-    }
+    regex reg_dup("^!?dup.*");
+    regex reg_sup("^!?supp.*");
+    regex reg_qc("^!?qcfail$");
+    regex reg_fs("^!?fwd_strand$");
+    regex reg_hc("^!?hardclip.*");
+    regex reg_rs("^!?rev_strand$");
+    regex reg_mf("^!?mate_fwd_strand$");
+    regex reg_mr("^!?mate_rev_strand$");
+    regex reg_mp("^!?mapped$");
+    regex reg_mm("^!?mate_mapped$");
+    regex reg_ff("^!?ff$");
+    regex reg_fr("^!?fr$");
+    regex reg_rf("^!?rf$");
+    regex reg_rr("^!?rr$");
+    regex reg_ic("^!?ic$");
+
+    if (dup.parseRuleLine(val, reg_dup))   na = false;
+    if (supp.parseRuleLine(val, reg_sup))  na = false;
+    if (qcfail.parseRuleLine(val, reg_qc)) na = false;
+    if (hardclip.parseRuleLine(val, reg_hc))        na = false;
+    if (fwd_strand.parseRuleLine(val, reg_fs))      na = false;
+    if (mate_rev_strand.parseRuleLine(val, reg_mr)) na = false;
+    if (mate_fwd_strand.parseRuleLine(val, reg_mf)) na = false;
+    if (mate_mapped.parseRuleLine(val, reg_mm))     na = false;
+    if (mapped.parseRuleLine(val, reg_mp)) na = false;
+    if (ff.parseRuleLine(val, reg_ff))     na = false;
+    if (fr.parseRuleLine(val, reg_fr))     na = false;
+    if (rf.parseRuleLine(val, reg_rf))     na = false;
+    if (rr.parseRuleLine(val, reg_rr))     na = false;
+    if (ic.parseRuleLine(val, reg_ic))     na = false;
   }
 
 }
@@ -330,42 +399,28 @@ void AbstractRule::parseRuleLine(string line) {
     exit(EXIT_FAILURE);
   }
 
+  // check that the conditoins are valid
+  istringstream iss_c(noname);
+  string tmp;
+  while (getline(iss_c, tmp, ';')) {
+    regex reg(".*?!?([a-z_]+).*");
+    smatch cmatch;
+    if (regex_search(tmp, cmatch, reg)) {
+      if (valid.count(cmatch[1].str()) == 0) {
+	cerr << "Invalid condition of: " << tmp << endl;
+	exit(EXIT_FAILURE);
+      }
+    } else {
+      cerr << "Invalid condition of: " << tmp << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+  
   // check for every/none flags
   if (noname.find("all") != string::npos) 
     setEvery();
   if (noname.find("!all") != string::npos)
     setNone();
-
-  // check for discordant
-  regex  regex_disc( ".*?discordant\\[([0-9]+),([0-9]+)\\].*");
-  regex regex_ndisc(".*?!discordant\\[([0-9]+),([0-9]+)\\].*");
-  smatch omatch;
-  if (regex_search(noname, omatch, regex_disc)) {
-    try {
-      isize.min = stoi(omatch[1].str());
-      isize.max = stoi(omatch[2].str());
-      isize.inverted = true;
-      fr.flags["ff"].setOn();
-      fr.flags["rr"].setOn();
-      fr.flags["rf"].setOn();
-    } catch (...) {
-      cerr << "Caught error trying to parse for discordant " << " on line " << noname << " match[1] " << omatch[1].str() << " match[2] " << omatch[2].str() << endl;     
-      exit(EXIT_FAILURE);
-    }
-  } else if (regex_search(noname, omatch, regex_ndisc)) {
-    try {
-      isize.min = stoi(omatch[1].str());
-      isize.max = stoi(omatch[2].str());
-      isize.inverted = false;
-      fr.flags["ff"].setOff();
-      fr.flags["rr"].setOff();
-      fr.flags["rf"].setOff();
-    } catch (...) {
-      cerr << "Caught error trying to parse inverted for discordant " << " on line " << noname << " match[1] " << omatch[1].str() << " match[2] " << omatch[2].str() << endl;     
-      exit(EXIT_FAILURE);
-    }
-
-  }
 
   // modify the ranges if need to
   isize.parseRuleLine(noname);
@@ -439,41 +494,55 @@ bool AbstractRule::isValid(BamAlignment &a) {
 
   // check if is discordant
   bool isize_pass = isize.isValid(abs(a.InsertSize));
-  
-  // check that read orientation is as expected
-  if (!isize_pass) {
-    bool FR_f = !a.IsReverseStrand() && (a.Position < a.MatePosition) && (a.RefID == a.MateRefID) &&  a.IsMateReverseStrand();
-    bool FR_r =  a.IsReverseStrand() && (a.Position > a.MatePosition) && (a.RefID == a.MateRefID) && !a.IsMateReverseStrand();
-    bool FR = FR_f || FR_r;
-    isize_pass = isize_pass || !FR;
-  }
+
   if (!isize_pass) {
     return false;
   }
 
   // check for valid mapping quality
-  if (!mapq.isValid(a.MapQuality)) 
-    return false;
+  if (!mapq.isEvery())
+    if (!mapq.isValid(a.MapQuality)) 
+      return false;
   
   // check for valid flags
   if (!fr.isValid(a))
     return false;
   
+  // if we dont need to because everything is pass, just just pass it
+  bool need_to_continue = !nm.isEvery() || !clip.isEvery() || !len.isEvery();
+  if (!need_to_continue)
+    return true;
+
+  // now we need to read the char data
+  if (a.Name == "") // we need to build char
+    a.BuildCharData();
+
   // check for valid NM
-  uint32_t nm_val;
-  if (!a.GetTag("NM",nm_val))
-    nm_val = 0;
-  int nm2 = nm_val;
-  if (!nm.isValid(nm2))
-    return false;
+  if (!nm.isEvery()) {
+    uint32_t nm_val;
+    if (!a.GetTag("NM",nm_val))
+      nm_val = 0;
+    int nm2 = nm_val;
+    if (!nm.isValid(nm2))
+      return false;
+  }
 
   // trim the read, then check length
   unsigned clipnum = VariantBamReader::getClipCount(a);
-  string trimmed_bases = a.QueryBases;
-  string trimmed_quals = a.Qualities;
-  VariantBamReader::qualityTrimRead(phred.min, trimmed_bases, trimmed_quals); 
-  int new_len = trimmed_bases.length();
-  int new_clipnum = max(0, static_cast<int>(clipnum - (a.Length - new_len)));
+  int new_len = a.QueryBases.length();
+  int new_clipnum = clipnum;
+
+  if (!phred.isEvery()) {
+    string trimmed_bases, trimmed_quals;
+    if (!a.GetTag("TS", trimmed_bases)) {
+      trimmed_bases = a.QueryBases;
+      trimmed_quals = a.Qualities;
+      VariantBamReader::qualityTrimRead(phred.min, trimmed_bases, trimmed_quals); 
+      a.AddTag("TS", "Z", trimmed_bases);
+    } 
+    new_len = trimmed_bases.length();
+    new_clipnum = max(0, static_cast<int>(clipnum - (a.Length - new_len)));
+  }
 
   // check for valid length
   if (!len.isValid(new_len))
@@ -491,13 +560,24 @@ bool FlagRule::isValid(BamAlignment &a) {
   if (isEvery())
     return true;
   
-  if ( (flags["duplicate"].isOff() &&  a.IsDuplicate()) || (flags["duplicate"].isOn() && !a.IsDuplicate()) )
-    return false;
-  if ( (flags["supplementary"].isOff()      && !a.IsPrimaryAlignment()) || (flags["supplementary"].isOn() && a.IsPrimaryAlignment()) )
-    return false;
-  if ( (flags["qcfail"].isOff()    && a.IsFailedQC()) || (flags["qcfail"].isOn() && !a.IsFailedQC()) )
-    return false;
-  if ( (flags["fwd_strand"].isOff()    && !a.IsReverseStrand()) || (flags["fwd_strand"].isOn() && a.IsReverseStrand()) )
+  if (!dup.isNA()) 
+    if ((dup.isOff() && a.IsDuplicate()) || (dup.isOn() && !a.IsDuplicate()))
+      return false;
+  if (!supp.isNA()) 
+    if ((supp.isOff() && !a.IsPrimaryAlignment()) || (supp.isOn() && a.IsPrimaryAlignment()))
+      return false;
+  if (!qcfail.isNA())
+    if ((qcfail.isOff() && a.IsFailedQC()) || (qcfail.isOn() && !a.IsFailedQC()))
+      return false;
+  if (!mapped.isNA())
+    if ( (mapped.isOff() && a.IsMapped()) || (mapped.isOn() && !a.IsMapped()) )
+      return false;
+  if (!mate_mapped.isNA())
+    if ( (mate_mapped.isOff() && a.IsMateMapped()) || (mate_mapped.isOn() && !a.IsMateMapped()) )
+      return false;
+
+
+  /* if ( (flags["fwd_strand"].isOff()    && !a.IsReverseStrand()) || (flags["fwd_strand"].isOn() && a.IsReverseStrand()) )
     return false;
   if ( (flags["rev_strand"].isOff()    &&  a.IsReverseStrand()) || (flags["rev_strand"].isOn() && !a.IsReverseStrand()) )
     return false;
@@ -505,37 +585,55 @@ bool FlagRule::isValid(BamAlignment &a) {
     return false;
   if ( (flags["mate_rev_strand"].isOff()    &&  a.IsMateReverseStrand()) || (flags["mate_rev_strand"].isOn() && !a.IsMateReverseStrand()) )
     return false;
-  if ( (flags["mapped"].isOff()    &&  a.IsMapped()) || (flags["mapped"].isOn() && !a.IsMapped()) )
-    return false;
-  if ( (flags["mate_mapped"].isOff()    &&  a.IsMateMapped()) || (flags["mate_mapped"].isOn() && !a.IsMateMapped()) )
-    return false;
+  */
 
   // check for hard clips
-  if (!flags["hardclip"].isNA())  {// check that we want to chuck hard clip
-    bool ishclipped = false;
-    for (auto cig : a.CigarData)
-      if (cig.Type == 'H') {
-	ishclipped = true;
-	break;
-      }
-    if ( (ishclipped && flags["hardclipped"].isOff()) || (!ishclipped && flags["hardclipped"].isOn()) )
-      return false;
+  if (!hardclip.isNA())  {// check that we want to chuck hard clip
+    if (a.CigarData.size() > 1) { // check that its not simple
+      bool ishclipped = false;
+      for (auto cig : a.CigarData)
+	if (cig.Type == 'H') {
+	  ishclipped = true;
+	  break;
+	}
+      if ( (ishclipped && hardclip.isOff()) || (!ishclipped && hardclip.isOn()) )
+	return false;
+    }
   }
-  
+
   // check for orientation
-  bool first = a.Position < a.MatePosition;
-  if (!flags["fr"].isNA()) 
-    if (flags["fr"].isOn() != (first && !a.IsReverseStrand() && a.IsMateReverseStrand()) || (!first &&  a.IsReverseStrand() && !a.IsMateReverseStrand()))
+  // check first if we need to even look for orientation
+  bool ocheck = !ff.isNA() || !fr.isNA() || !rf.isNA() || !rr.isNA() || !ic.isNA();
+  if ( ocheck ) {
+    bool first = a.Position < a.MatePosition;
+    bool bfr = (first && (!a.IsReverseStrand() && a.IsMateReverseStrand())) || (!first &&  a.IsReverseStrand() && !a.IsMateReverseStrand());
+    bool brr = a.IsReverseStrand() && a.IsMateReverseStrand();
+    bool brf = (first &&  (a.IsReverseStrand() && !a.IsMateReverseStrand())) || (!first && !a.IsReverseStrand() &&  a.IsMateReverseStrand());
+    bool bff = !a.IsReverseStrand() && !a.IsMateReverseStrand();
+    //if ( (bfr + brr + brf + bff) != 1) {
+    //  cerr << "FR: " << fr << " RF: " << rf << " FF:" << ff << " RR : " << rr << " first " << first << "a.IsReverseStrand() " << a.IsReverseStrand() << " a.IsMateReverseSTrand() " << a.IsMateReverseStrand() << endl;
+    //  exit(EXIT_FAILURE);
+    // }
+      
+    bool bic = a.MateRefID != a.RefID;
+   
+    // its FR and it CANT be FR (off) or its !FR and it MUST be FR (ON)
+    // orienation not defined for inter-chrom, so exclude these with !ic
+    if (!bic) {
+      if ( (bfr && fr.isOff()) || (!bfr && fr.isOn())) 
+	return false;
+      // etc....
+      if ( (brr && rr.isOff()) || (!brr && rr.isOn())) 
+	return false;
+      if ( (brf && rf.isOff()) || (!brf && rf.isOn())) 
+	return false;
+      if ( (bff && ff.isOff()) || (!bff && ff.isOn())) 
+	return false;
+    }
+    if ( (bic && ic.isOff()) || (!bic && ic.isOn()))
       return false;
-  if (!flags["rr"].isNA())
-    if (flags["rr"].isOn() != a.IsReverseStrand() && a.IsMateReverseStrand())
-      return false;
-  if (!flags["rf"].isNA())
-    if (flags["rf"].isOn() != (first &&  a.IsReverseStrand() && !a.IsMateReverseStrand()) || ( first && !a.IsReverseStrand() &&  a.IsMateReverseStrand()))
-      return false;
-  if (!flags["ff"].isNA())
-    if (flags["ff"].isOn() != !a.IsReverseStrand() && !a.IsMateReverseStrand())
-      return false;
+      
+  }
 
   return true;
   
@@ -548,14 +646,19 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
   if (ar.isEvery()) {
     out << "  KEEPING ALL" << endl;
   } else if (ar.isNone()) {
-    out << "  KEEPING NONE" << endl;
-  } else {
-    out << "isize:" << ar.isize << " -- " ;
-    out << "mapq:" << ar.mapq << " -- " ;
-    out << "len:" << ar.len << " -- ";
-    out << "clip:" << ar.clip << " -- ";
-    out << "phred:" << ar.phred << " -- ";
-    out << "nm:" << ar.nm << " -- ";
+    out << "  KEEPING NONE" << endl;  } else {
+    if (!ar.isize.isEvery())
+      out << "isize:" << ar.isize << " -- " ;
+    if (!ar.mapq.isEvery())
+      out << "mapq:" << ar.mapq << " -- " ;
+    if (!ar.len.isEvery())
+      out << "len:" << ar.len << " -- ";
+    if (!ar.clip.isEvery())
+      out << "clip:" << ar.clip << " -- ";
+    if (!ar.phred.isEvery())
+      out << "phred:" << ar.phred << " -- ";
+    if (!ar.nm.isEvery())
+      out << "nm:" << ar.nm << " -- ";
     out << ar.fr;
   }
   return out;
@@ -569,9 +672,67 @@ ostream& operator<<(ostream &out, const FlagRule &fr) {
     return out;
   } 
 
-  string keep = "  Flag ON: ";
-  string remo = "  Flag OFF: ";
-  string na = "  Flag NA: ";
+  string keep = "Flag ON: ";
+  string remo = "Flag OFF: ";
+  string na = "Flag NA: ";
+
+  if (fr.dup.isOff())
+    remo += "duplicate,";
+  if (fr.dup.isOn())
+    keep += "duplicate,";
+
+  if (fr.supp.isOff())
+    remo += "supplementary,";
+  if (fr.supp.isOn())
+    keep += "supplementary,";
+
+  if (fr.qcfail.isOff())
+    remo += "qcfail,";
+  if (fr.qcfail.isOn())
+    keep += "qcfail,";
+
+  if (fr.hardclip.isOff())
+    remo += "hardclip,";
+  if (fr.hardclip.isOn())
+    keep += "hardclip,";
+
+  if (fr.ic.isOff())
+    remo += "ic,";
+  if (fr.ic.isOn())
+    keep += "ic,";
+
+  if (fr.ff.isOff())
+    remo += "ff,";
+  if (fr.ff.isOn())
+    keep += "ff,";
+
+  if (fr.fr.isOff())
+    remo += "fr,";
+  if (fr.fr.isOn())
+    keep += "fr,";
+
+  if (fr.rr.isOff())
+    remo += "rr,";
+  if (fr.rr.isOn())
+    keep += "rr,";
+
+  if (fr.rf.isOff())
+    remo += "rf,";
+  if (fr.rf.isOn())
+    keep += "rf,";
+
+  if (fr.mapped.isOff())
+    remo += "mapped,";
+  if (fr.mapped.isOn())
+    keep += "mapped,";
+
+  if (fr.mate_mapped.isOff())
+    remo += "mate_mapped,";
+  if (fr.mate_mapped.isOn())
+    keep += "mate_mapped,";
+
+
+  /*
 
   // get the strings
   for (auto it : fr.flags) {
@@ -584,15 +745,16 @@ ostream& operator<<(ostream &out, const FlagRule &fr) {
     else // shouldn't get here
       exit(1); 
   }
+  */
+  if (!fr.isEvery())
+    out << keep << " -- " << remo;
 
-  out << keep << " -- " << remo << " -- " << na;
-  
   return out;
 }
 
 // define how to print
 ostream& operator<<(ostream &out, const Range &r) {
-  if (r.inverted && r.min == -1 && r.max == -1)
+  if (r.isEvery())
     out << "all";
   else
     out << (r.inverted ? "NOT " : "") << "[" << r.min << "," << r.max << "]";
@@ -610,4 +772,26 @@ GenomicRegionVector MiniRulesCollection::sendToGrv() const {
   // merge it down
   GenomicRegionVector merged = GenomicRegion::mergeOverlappingIntervals(comp);
 
-  return merged;}
+  return merged;
+}
+
+bool Flag::parseRuleLine(string &val, regex &reg) {
+
+  smatch match;
+  if (regex_search(val, match, reg)) {
+    //auto ff = flags.find(match[1].str()); 
+    if (val.at(0) == '!') { // it is a val in flags and is off
+      setOff();
+      return true;
+    } else  { // is in a val in flags and is on
+      setOn();
+      return true;
+    } //else if (ff == flags.end() && valid.count(match[1].str()) == 0) { // its not anything and its bad
+      //cerr << "Not a valid condition: " << match[1].str() << " on val " << val << endl;
+      //exit(EXIT_FAILURE);
+    //}
+  }
+
+  return false;
+  
+}

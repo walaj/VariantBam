@@ -410,6 +410,8 @@ GenomicIntervalTreeMap GenomicRegion::createTreeMap(const GenomicRegionVector &g
 // send a grv to BED format
 void GenomicRegion::sendToBed(const GenomicRegionVector &grv, const string file) {
   
+  if (grv.size() ==  0)
+    return; 
   ofstream ofile(file.c_str(), ios::out);
   for (auto it : grv)
     ofile << chrToString(it.chr) << "\t" << it.pos1 << "\t" << it.pos2 << endl;
