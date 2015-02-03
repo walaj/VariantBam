@@ -11,15 +11,23 @@ VariantBam is a tool to extract interesting sequencing reads from a BAM file. To
 diskspace and future I/O, one may not want to store an entire BAM on disk after all the relevant VCF, 
 MAFs, etc have been created. Instead it would be more efficient to store only those read-pairs 
 who intersect some region around the variant locations. Ideally, these regions could be manually inspected
-or reanalyzed without having to keep the entire BAM.
+or reanalyzed without having to keep the entire BAM. Having small BAMs is also important in the tool development, where
+access to small test files can facilitate a more rapid "build/test" cycle. 
 
 VariantBam was developed as a one-pass solution for the needs of different NGS tools. For instance, after
 initial processing, an indel tool might be interested in storing MAPQ > 0 reads in 30k candidate regions of interest.
 A separate SNP tool might find a different 20k regions, while a structural variation tool 
-might be interested in only discordant or high-quality clipped reads across the BAM 
-(where high-quality means they are not clipped to do low Phred quality).  
+might be interested in only discordant or high-quality clipped reads across the BAM. Alternatively, 
+one may want to extract all clipped reads from a BAM while avoiding any reads that lie within LINE/SINE elements. 
 VariantBam uses a series of rules defined on distinct regions in order to handle 
 all of these situations with a single pass through the BAM.
+
+In situations where the sequencing or library preparation quality is low, it may be advantageous
+to remove poor quality reads before starting the analysis train. VariantBam handles this by optionally taking into
+account Phred base-qualities when making a decision whether to keep a sequencing read. For instance, one might 
+only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be 
+setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass.
+
 
 VariantBam is implemented in C++ and relies on the BamTools [API] (Derek Barnett, (c) 2009) for BAM I/O. 
 Note that the capabilities of the [BamTools] command line ``bamtools filter``  
