@@ -5,6 +5,9 @@
 #include <vector>
 #include <cstdlib>
 #include <iostream>
+#include "api/BamReader.h"
+#include "api/BamWriter.h"
+
 
 using namespace std;
 
@@ -38,6 +41,9 @@ struct BamQC {
   friend ostream& operator<<(std::ostream& out, const BamQC& qc);
   bool use = true; // hack so that you can pass qc but not use, in case you want to speed of bam processing without the BuildCharData
 
+  // count an additional read
+  void addRead(BamTools::BamAlignment &a);
+  
 };
 
 

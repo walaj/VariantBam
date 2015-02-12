@@ -4351,11 +4351,11 @@ CFLAGS="-O3"
 
 CPPFLAGS="$CPPFLAGS $bamtools_include"
 
-LDFLAGS="$bamtools_ldflags $LDFLAGS"
+LDFLAGS="$bamtools_ldflags $LDFLAGS -L."
 
 
-# We always need to specify to link in bamtools
-LIBS="$LIBS -lbamtools"
+# We always need to specify to link in bamtools and ahocorasick
+LIBS="$LIBS -lbamtools -lahocorasick"
 
 
 # Make sure the bamtools headers can be found

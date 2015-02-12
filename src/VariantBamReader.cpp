@@ -62,24 +62,12 @@ unsigned VariantBamReader::getClipCount(BamAlignment a) {
   return clipnum;
 }
 
+// read in reads from a BAM in order. If m_writer != NULL write the bam, otherwise
+// store in &bav.
+bool VariantBamReader::writeVariantBam(BamQC &qc, BamAlignmentVector &bav, AC_AUTOMATA_t *atm) {
 
-//bool VariantBamReader::writeVariantBam(BamQC &qc, bool qc_only) {
-bool VariantBamReader::writeVariantBam(BamQC &qc) {
-
-  int keep_counter = 0;
-  int total = 0;
-  int keep_counter_MAIN = 0;
-  int total_MAIN = 0;
-
-  int mapq0_keep_counter = 0;
-  int discordant_keep_counter = 0;
-  int n_keep_counter = 0;
-  int clipped_keep_counter = 0;
-
-  int mapq0_counter = 0;
-  int discordant_counter = 0;
-  int n_counter = 0;
-  int clipped_counter = 0;
+  ReadCount rc_main;
+  ReadCount rc_this;
 
   int pileup = 0;
   
@@ -93,126 +81,38 @@ bool VariantBamReader::writeVariantBam(BamQC &qc) {
     // clear the name because it's just a relic?
     a.Name = "";
 
-    total++;
-    total_MAIN++;
+    rc_this.total++;
+    rc_main.total++;
         
-    if (m_verbose > 0 && total % 500000 == 0) {
-
-      char buffer[100];
-      int perc  = VarUtils::percentCalc<int>(keep_counter_MAIN, total_MAIN); 
-      string posstring = VarUtils::AddCommas<int>(a.Position);
-      sprintf (buffer, "Reading read %11s at position %2s:%-11s. Kept %11s (%2d%%) [running count across whole BAM]",  VarUtils::AddCommas<int>(total_MAIN).c_str(), GenomicRegion::chrToString(a.RefID).c_str(), posstring.c_str(),  VarUtils::AddCommas<int>(keep_counter_MAIN).c_str(), perc);
-      printf ("%s\n",buffer);
-      char buffer2[100];
-      sprintf(buffer2, "   Filter (%% of kept)  -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	      VarUtils::percentCalc<int>(n_keep_counter, keep_counter), 
-	      VarUtils::percentCalc<int>(mapq0_keep_counter, keep_counter), 
-	      VarUtils::percentCalc<int>(discordant_keep_counter, keep_counter), 
-	      VarUtils::percentCalc<int>(clipped_keep_counter, keep_counter));
-      char buffer3[100];
-      sprintf(buffer3, "   Filter (%% of total) -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	      VarUtils::percentCalc<int>(n_counter, total), 
-	      VarUtils::percentCalc<int>(mapq0_counter, total), 
-	      VarUtils::percentCalc<int>(discordant_counter, total), 
-	      VarUtils::percentCalc<int>(clipped_counter, total));
-      if (m_verbose > 1) {
-	printf("%s\n", buffer2);
-	printf("%s\n", buffer3);
-      }
+    // print the message every 500k reads and check 
+    // if we should continue or quit
+    if (m_verbose > 0 && rc_main.total % 500000 == 0) {
+      printMessage(rc_main, a);
 
       // zero the counters
-      mapq0_keep_counter = 0;
-      discordant_keep_counter = 0;
-      n_keep_counter = 0;
-      clipped_keep_counter = 0;
-      
-      mapq0_counter = 0;
-      discordant_counter = 0;
-      n_counter = 0;
-      clipped_counter = 0;
-      keep_counter = 0;
-      total = 0;
+      rc_this = ReadCount();
 
-      // kill if seen 50m reads, and it's looking bad
+      // kill if seen 25m reads, and it's looking bad
       int perclimit = 50;
-      if (perc >= perclimit && total > 25000000) { 
-	cerr << "This is a a really bad BAM after checking out 25m+ reads. Killing job. Percent weird reads: " << perc << " is above limit of " << perclimit << endl;
+      if (rc_main.percent() >= perclimit && rc_main.total > 25000000) { 
+	cerr << "This is a a really bad BAM after checking out 25m+ reads. Killing job. Percent weird reads: " << rc_main.percent() << " is above limit of " << perclimit << endl;
 	cerr << "Reading in region" << m_region << endl;
 	exit(EXIT_FAILURE);
       }
     }
+
+    // check if read passes rules. 
     string rule_pass = m_mr->isValid(a);
 
     // build the qc
-    if (qc.use)
-    try {
-      if (a.Name == "")
-      	a.BuildCharData();
-      string rgroup;
-      if (!a.GetTag("RG",rgroup))
-	cerr << "Failed to read rgroup" << endl;
+    // if (qc.use)
+    //  qc.addRead(a);
 
-      int this_isize = a.InsertSize;
-      this_isize = (a.MateRefID != a.RefID || this_isize > 2000) ? 2000 : this_isize;
-
-      // get clip num
-      unsigned clipnum = VariantBamReader::getClipCount(a);
-      
-      // get the mean phred quality
-      size_t i = 0;
-      int phred = 0;
-      while(i < a.Qualities.length()) {
-        phred += char2phred(a.Qualities[i]);
-	i++;
-      }
-      if (a.Qualities.length() > 0)
-	phred = static_cast<int>(floor(static_cast<float>(phred) / a.Qualities.length()));
-      
-      // get the NM tag
-      uint32_t nm;
-      if (a.GetTag("NM", nm)) {} else { nm = 0; }
-
-      assert(a.MapQuality <= 60);
-      assert(clipnum <= 101);
-      //assert(as <= 101);
-      //assert(xp <= 101);
-      assert(a.Length <= 101 && a.Length  >= 0);
-      assert(phred <= 60 && phred  >= 0);
-      assert(nm <= 101);
-
-      // discordant
-      bool FR_f = !a.IsReverseStrand() && (a.Position < a.MatePosition) && (a.RefID == a.MateRefID) &&  a.IsMateReverseStrand();
-      bool FR_r =  a.IsReverseStrand() && (a.Position > a.MatePosition) && (a.RefID == a.MateRefID) && !a.IsMateReverseStrand();
-      bool FR = FR_f || FR_r;
-      if (a.InsertSize > 0 && a.IsPaired() && FR ) // only count "proper" reads
-	qc.map[rgroup].isize[this_isize]++;
-
-      // all the rest
-      //qc.map[rgroup].xp[xp]++;
-      qc.map[rgroup].len[a.Length]++;
-      //qc.map[rgroup].as[as]++;
-      qc.map[rgroup].clip[clipnum]++;
-      qc.map[rgroup].phred[phred]++;
-      qc.map[rgroup].num_reads++;
-      qc.map[rgroup].mapq[a.MapQuality]++;
-      qc.map[rgroup].nm[nm]++;
-
-      if (!a.IsMapped())
-	qc.map[rgroup].unmap++;
-      if (a.IsFailedQC()) 
-	qc.map[rgroup].qcfail++;
-      if (a.IsDuplicate())
-	qc.map[rgroup].duplicate++;
-      if (!a.IsPrimaryAlignment())
-	qc.map[rgroup].supp++;
-
-    } catch (...) {
-      cerr << "Failed at adding to QC" << endl;
-      //cerr << "Readgroup " << "NM " << nm << " mapq " << a.MapQuality << 
-        //" xp " << xp << 
-        //" len " << a.Length <<
-      	//" as " << as << 
-        //" phred " << phred << endl;
+    // check the substring
+    if (atm && rule_pass == "") {
+      a.BuildCharData();
+      if (ahomatch(a.QueryBases, atm))
+	rule_pass = "seq";
     }
 
     if ( rule_pass != "" /*&& !qc_only*/ ) {
@@ -221,18 +121,17 @@ bool VariantBamReader::writeVariantBam(BamQC &qc) {
       if (a.Name == "")
 	a.BuildCharData();
 
-      mapq0_keep_counter += (a.MapQuality == 0 ) ? 1 : 0; 
-
       // keep track of pile
       if (a.MapQuality == 0) 
 	pileup++;
 
-      // add a tag to say which rule it pass
+      // add a tag to say which region/rule it passes
       a.AddTag("RL","Z",rule_pass);
 
       bam_buffer.push_back(a);
-      keep_counter++;
-      keep_counter_MAIN++;
+
+      rc_this.keep++;
+      rc_main.keep++;
       
       size_t buffer_lim = 100;
       // deal with bam buff
@@ -241,15 +140,24 @@ bool VariantBamReader::writeVariantBam(BamQC &qc) {
 	int buf_width = bam_buffer.back().Position - bam_buffer[0].Position;
 	if (pileup >= buffer_lim * 0.8 && buf_width <= 40) {
 	  for (auto it = bam_buffer.begin(); it != bam_buffer.end(); it++) 
-	    if (it->MapQuality > 0)
-	      m_writer->SaveAlignment(*it);
+	    if (it->MapQuality > 0) {
+	      if (m_writer)
+		m_writer->SaveAlignment(*it);
+	      else 
+		bav.push_back(*it);
+	    }
 	  if (m_verbose > 2)
 	    cout << "Detected mapq 0 pileup of " << pileup << " at " << a.RefID+1 << ":" << bam_buffer[0].Position << "-" << bam_buffer.back().Position << endl;
 	} 
 	// it's OK or its in full region
 	else if (bam_buffer.size() >= buffer_lim) {
-	  for (auto it = bam_buffer.begin(); it != bam_buffer.end(); it++) 
-	    m_writer->SaveAlignment(*it);
+	  for (auto it = bam_buffer.begin(); it != bam_buffer.end(); it++) {
+	    if (m_writer)
+	      m_writer->SaveAlignment(*it);
+	    else 
+	      bav.push_back(*it);
+		  
+	  }
 	}
 
 	bam_buffer.clear();
@@ -263,33 +171,15 @@ bool VariantBamReader::writeVariantBam(BamQC &qc) {
 
   // write the final buffer
   for (auto it = bam_buffer.begin(); it != bam_buffer.end(); it++)
-    m_writer->SaveAlignment(*it);
+    if (m_writer)
+      m_writer->SaveAlignment(*it);
+    else 
+      bav.push_back(*it);
+  
   
   // print the final message
-  if (m_verbose > 0) {
-    char buffer[100];
-    int perc  = VarUtils::percentCalc<int>(keep_counter_MAIN, total_MAIN); 
-    string posstring = VarUtils::AddCommas<int>(a.Position);
-    sprintf (buffer, "Finished region at %20s. Kept %11s (%2d%%) [running count across whole BAM]",  m_region.toString().c_str(), VarUtils::AddCommas<int>(keep_counter_MAIN).c_str(), perc);
-    printf ("%s\n",buffer);
-    char buffer2[100];
-    sprintf(buffer2, "   Filter (%% of kept)  -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	    VarUtils::percentCalc<int>(n_keep_counter, keep_counter), 
-	    VarUtils::percentCalc<int>(mapq0_keep_counter, keep_counter), 
-	    VarUtils::percentCalc<int>(discordant_keep_counter, keep_counter), 
-	    VarUtils::percentCalc<int>(clipped_keep_counter, keep_counter));
-    char buffer3[100];
-    sprintf(buffer3, "   Filter (%% of total) -- Reads with N (%2d%%), Mapq0 (%2d%%), Discordant (%2d%%), Clipped (%2d%%)", 
-	    VarUtils::percentCalc<int>(n_counter, total), 
-	    VarUtils::percentCalc<int>(mapq0_counter, total), 
-	    VarUtils::percentCalc<int>(discordant_counter, total), 
-	    VarUtils::percentCalc<int>(clipped_counter, total));
-    if (m_verbose > 1) {
-      printf("%s\n", buffer2);
-      printf("%s\n", buffer3);
-    }
-  }
-  
+  if (m_verbose > 0)
+    printMessage(rc_main, a);
   
   return true;
 
@@ -348,8 +238,18 @@ VariantBamReader::VariantBamReader(string in, string out, MiniRulesCollection *m
 
   // get the index
   if (!m_reader->LocateIndex()) {
-    cerr << "Error: Cannot locate index file for " << in << endl;
-    exit(EXIT_FAILURE);
+    
+    // try finding it manually
+    string bai = in;
+    if (!m_reader->OpenIndex(bai + ".bai")) {
+      bai = VarUtils::scrubString(bai, ".bam");
+      bai += ".bai";
+      if (!m_reader->OpenIndex(bai)) {
+	cerr << "Error: Cannot locate index file for " << in << endl;
+	exit(EXIT_FAILURE);
+      }
+    }
+
   }
 
   // open the writer
@@ -362,3 +262,32 @@ VariantBamReader::VariantBamReader(string in, string out, MiniRulesCollection *m
 
 }
 
+
+void VariantBamReader::printMessage(const ReadCount &rc_main, const BamAlignment &a) const {
+
+  char buffer[100];
+  string posstring = VarUtils::AddCommas<int>(a.Position);
+  sprintf (buffer, "Reading read %11s at position %2s:%-11s. Kept %11s (%2d%%) [running count across whole BAM]",  
+	   rc_main.totalString().c_str(), GenomicRegion::chrToString(a.RefID).c_str(), posstring.c_str(),  
+	   rc_main.keepString().c_str(), rc_main.percent());
+  printf ("%s\n",buffer);
+
+
+}
+
+bool VariantBamReader::ahomatch(const string& seq, AC_AUTOMATA_t * atm) {
+
+  // make into Ac strcut
+  AC_TEXT_t tmp_text = {seq.c_str(), seq.length()};
+  ac_automata_settext (atm, &tmp_text, 0);
+
+  // do the check
+  AC_MATCH_t * matchp;  
+  matchp = ac_automata_findnext(atm);
+  if (matchp)
+    return true;
+  else 
+    return false;
+  
+
+}

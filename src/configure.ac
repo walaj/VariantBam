@@ -45,10 +45,10 @@ AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
 AC_SUBST(CPPFLAGS, "$CPPFLAGS $bamtools_include")
-AC_SUBST(LDFLAGS, "$bamtools_ldflags $LDFLAGS")
+AC_SUBST(LDFLAGS, "$bamtools_ldflags $LDFLAGS -L.")
 
-# We always need to specify to link in bamtools
-AC_SUBST(LIBS, "$LIBS -lbamtools")
+# We always need to specify to link in bamtools and ahocorasick
+AC_SUBST(LIBS, "$LIBS -lbamtools -lahocorasick")
 
 # Make sure the bamtools headers can be found
 AC_CHECK_HEADERS([api/BamReader.h],,[AC_MSG_ERROR([The bamtools library must be installed (http://github.com/pezmaster31/bamtools). You can specify its path with the --with-bamtools=PATH option])])
