@@ -9,8 +9,6 @@
 #include "VarUtils.h"
 #include "MiniRules.h"
 #include "VariantBamReader.h"
-#include "ahocorasick.h"
-#include "gzstream.h"
 
 //
 //bamt=/broad/software/free/Linux/redhat_5_x86_64/pkgs/pezmaster31_bamtools-6708a21
@@ -112,44 +110,24 @@ int main(int argc, char** argv) {
 
   // convert the region / rules vecs into rules
   if (!VarUtils::existTest(opt::rules_file) && opt::rules_vec.size() == 0) {
-    cerr << "Rules / regions not read in. Rules file not found: " << opt::rules_file;
+    cerr << "Rules / regions not read in. Rules file not found: " << opt::rules_file << endl;;
     exit(EXIT_FAILURE);
   }
-  for(int i = 0; i < min(opt::rules_vec.size(), opt::region_vec.size()); i++) {
+
+  // add the "region" and "rules"
+  for(size_t i = 0; i < min(opt::rules_vec.size(), opt::region_vec.size()); i++) {
     if (i == 0)
       opt::rules = "region@" + opt::region_vec[0] + "%" + opt::rules_vec[0];
     else
       opt::rules += "%region@" + opt::region_vec[i] + "%" + opt::rules_vec[i];
   }
-    
+
   if (opt::verbose > 0) {
     cout << "Input BAM:  " << opt::bam << endl;
     cout << "Output BAM: " << opt::out << endl;
     cout << "Input rules and regions: " << opt::rules << endl;
     cout << "Input proc regions file: " << opt::proc_regions << endl;
   }
-
-  // make the AC structure
-  AC_AUTOMATA_t *atm = ac_automata_init();
-  // add patterns to automate
-  string seq_file = "/cga/wu/sachet/hla/hla_caller/polysolver_data_and_code/data/abc_38_both_pm_update.uniq";
-  igzstream iss(seq_file.c_str());
-  vector<string> pattern;
-  if (iss) {
-    string pat;
-    while (getline(iss, pat, '\n'))
-      pattern.push_back(pat);
-  }
-  cout << "Read in " << pattern.size() << " sequences to match substrings on" << endl;
-  cout << "Generating automata..." << endl;
-  for (auto& i : pattern) {
-    AC_PATTERN_t tmp_pattern;
-    tmp_pattern.astring = i.c_str();
-    tmp_pattern.length = i.length();
-    ac_automata_add(atm, &tmp_pattern);
-  }
-  ac_automata_finalize(atm);
-  cout << "Done generating automata..." << endl;
 
   // make the mini rules collection from the rules file
   // this also calls function to parse the BED files
@@ -199,18 +177,18 @@ int main(int argc, char** argv) {
   } 
   // run everything including centromeres
   else if (runWholeGenome){
-    grv_proc_regions = GenomicRegion::getWholeGenome();
-    if (opt::verbose > 0)
-      cout << "Processing whole genome (including centromeres)" << endl;
+    //grv_proc_regions = GenomicRegion::getWholeGenome();
+    //if (opt::verbose > 0)
+    cout << "Processing whole genome (including centromeres)" << endl;
   }
   // if there is no proc_region file, take the mini collection as a region set
   else if (grv_proc_regions.size() == 0 && !runWholeGenome) {
     grv_proc_regions = mr->sendToGrv();
   }
-
   // check that there are some regions to run
-  if (grv_proc_regions.size() == 0) {
-    cerr << "No regions to run. Did you specify a file as a region" << endl;
+  else  {
+    cerr << "No regions to run. Did you specify a file as a region?" << endl;
+    cerr << "Defaulting to whole genome" << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -222,24 +200,23 @@ int main(int argc, char** argv) {
   BamQC qc; 
 
   VariantBamReader sv_reader(opt::bam, opt::out, mr, opt::verbose);
+  sv_reader.start = start;
 
   // dummy vector to store reads. Won't be used because writer is != NULL
   BamAlignmentVector bav;
+
+  if (runWholeGenome)
+    sv_reader.writeVariantBam(qc, bav);
+
   // loop through the process regions and extract files
-  atm = NULL;
   for (auto it = grv_proc_regions.begin(); it != grv_proc_regions.end(); it++) {
 
     sv_reader.setBamRegion(*it);
 
     if (opt::verbose > 0)
       cout << "Running region: "  << (*it) << endl;
-    //sv_reader.writeVariantBam(qc, opt::qc_only);
-    sv_reader.writeVariantBam(qc, bav, atm);
-    
-    if (opt::verbose > 0) {
-      VarUtils::displayRuntime(start);
-      cout << endl;
-    }
+
+    sv_reader.writeVariantBam(qc, bav);
 
   }
 

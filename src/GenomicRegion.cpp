@@ -269,7 +269,7 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
   ////////////////////////////////////
   // MuTect2 Indel BED
   ////////////////////////////////////
-  else if ( (header.find("track") != string::npos) || (header2.find("ActiveRegions") != string::npos) ) {
+  else if ( (header.find("track") != string::npos) && (header2.find("ActiveRegions") != string::npos) ) {
     cout << "Reading Mutect2 BED" << endl;
       string curr_chr = "dum";
     while (getline(iss, line, '\n')) {
@@ -338,9 +338,9 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
   ////////////////////////////////////
   // csv region file
   ////////////////////////////////////
-  else {
+  else if (header.find(',') != string::npos) {
     while (getline(iss, line, '\n')) {
-      
+
       size_t counter = 0;
       string chr, pos1, pos2, val;
       
@@ -361,6 +361,33 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
       }
     }
   }
+  ////////////////////////////////////
+  // bed file
+  ////////////////////////////////////
+  else {
+    while (getline(iss, line, '\n')) {
+      
+      size_t counter = 0;
+      string chr, pos1, pos2, val;
+      
+      istringstream iss_line(line);
+      while(getline(iss_line, val, '\t')) {
+	switch (counter) {
+	case 0 : chr  = val;  break;
+	case 1 : pos1 = val; break;
+	case 2 : pos2 = val; break;
+	}
+	counter++;
+      }
+
+      if (chrToNumber(chr) >= 0) {
+	GenomicRegion gr(chr, pos1, pos2);
+	gr.pad(pad);
+	grv.push_back(gr);
+      }
+    }
+  }
+
     ////////////////////////////////////
   
     return (grv);

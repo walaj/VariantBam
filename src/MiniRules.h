@@ -23,6 +23,7 @@
 #include "api/BamWriter.h"
 #include "GenomicRegion.h"
 #include <unordered_map>
+#include "ahocorasick.h"
 
 using namespace BamTools;
 using namespace std;
@@ -104,44 +105,24 @@ struct Range {
 // a container to hold boolean rules based mostly on alignment flag
 struct FlagRule {
   
-  FlagRule() 
-               {
-		 /*
-		 flags["duplicate"]  = Flag();
-		 flags["supplementary"]       = Flag();
-		 flags["qcfail"]     = Flag();
-		 flags["hardclip"]   = Flag();
-		 flags["fwd_strand"] = Flag();
-		 flags["rev_strand"] = Flag();
-		 flags["mate_fwd_strand"] = Flag();
-		 flags["mate_rev_strand"] = Flag();
-		 flags["mapped"]          = Flag();
-		 flags["mate_mapped"]     = Flag();
-		 flags["ff"] = Flag();
-		 flags["fr"] = Flag();
-		 flags["rf"] = Flag();
-		 flags["rr"] = Flag();
-		 flags["ic"] = Flag();
-		 */
-
-		 dup  = Flag();
-		 supp       = Flag();
-		 qcfail     = Flag();
-		 hardclip   = Flag();
-		 fwd_strand = Flag();
-		 rev_strand = Flag();
-		 mate_fwd_strand = Flag();
-		 mate_rev_strand = Flag();
-		 mapped          = Flag();
-		 mate_mapped     = Flag();
-		 ff = Flag();
-		 fr = Flag();
-		 rf = Flag();
-		 rr = Flag();
-		 ic = Flag();
-
-	       }
-
+  FlagRule() {
+    dup  = Flag();
+    supp       = Flag();
+    qcfail     = Flag();
+    hardclip   = Flag();
+    fwd_strand = Flag();
+    rev_strand = Flag();
+    mate_fwd_strand = Flag();
+    mate_rev_strand = Flag();
+    mapped          = Flag();
+    mate_mapped     = Flag();
+    ff = Flag();
+    fr = Flag();
+    rf = Flag();
+    rr = Flag();
+    ic = Flag();
+  }
+  
   Flag dup, supp, qcfail, hardclip, fwd_strand, rev_strand,
     mate_fwd_strand, mate_rev_strand, mapped, mate_mapped, ff, fr, rf, rr, ic;
 
@@ -198,48 +179,6 @@ struct FlagRule {
 
   // ask if every flag is set to NA (most permissive)
   bool isEvery() const { return na; }
-  /*
-    if (!na) // save compute
-      return false;
-    
-    bool is_every = !dup.isNA() && !supp.isNA() && !hardclip.isNA() && 
-      fwd_strand.isNA()
-    if (!supp.isNA()) return false;
-    if (!hardclip.isNA()) return false;
-    if (!dup.isNA()) return false;
-    if (!dup.isNA()) return false;
-    if (!dup.isNA()) return false;
-    if (!dup.isNA()) return false;
-    if (!dup.isNA()) return false;
-    if (!dup.isNA()) return false;
-
-    supp.isNA();
-    qcfail.isNA();
-    hardclip.isNA();
-    fwd_strand.isNA();
-    rev_strand.isNA();
-    mate_fwd_strand.isNA();
-    mate_rev_strand.isNA();
-    mapped.isNA();
-    mate_mapped.isNA();
-    ff.isNA();
-    fr.isNA();
-    rf.isNA();
-    rr.isNA();
-    ic.isNA();
-
-    return true;
-  }
-  */
-
-  // ask if every flag is set to NA (most permissive)
-  //bool isNone() const {
-  //  for (auto it : flags) 
-  //    if (!it.second.isOff())
-  //	return false;
-  //return true;
-  //}
-
 
 };
 
@@ -255,17 +194,29 @@ class AbstractRule {
   Range clip =  {-1, -1, true, "clip"};
   Range phred = {-1, -1, true, "phred"};
   Range nm = {-1, -1, true, "nm"};
+  Range nbases = {-1,-1,true, "nbases"};
   unordered_map<string,bool> orientation;
+
+  AC_AUTOMATA_t * atm;
+  string atm_file;
+  bool atm_inv = false;
+  size_t atm_count = 0;
 
   bool none = false;
   // set to true if you want a read to belong to the region if its mate does
   //bool mate = false; 
+
+  string rule_line;
 
   FlagRule fr;
 
   bool isValid(BamAlignment &a);
   
   void parseRuleLine(string line);
+
+  bool ahomatch(const string& seq);
+
+  void parseSeqLine(string line);
 
   friend ostream& operator<<(ostream &out, const AbstractRule &fr);
 
@@ -276,7 +227,9 @@ class AbstractRule {
     clip.setEvery();
     phred.setEvery();
     nm.setEvery();
+    nbases.setEvery();
     fr.setEvery();
+    atm_file = "";
   }
   
   void setNone() { 
@@ -286,13 +239,14 @@ class AbstractRule {
     clip.setNone();
     phred.setNone();
     nm.setNone();
+    nbases.setNone();
     fr.setNone();
     none = true;
   }
 
   // return if this rule accepts all reads
   bool isEvery() const {
-    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && fr.isEvery();
+    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && nbases.isEvery() && fr.isEvery() && (atm_file.length() == 0);
   }
 
   // return if this rule accepts no reads
@@ -336,7 +290,7 @@ class MiniRules {
   int m_level = -1;
   int m_width = 0;
   int pad = 0; // how much should we pad the region?
-
+  
   vector<AbstractRule> m_abstract_rules;
 
   // rule applies to mate too
@@ -356,7 +310,7 @@ class MiniRulesCollection {
   MiniRulesCollection(string file);
 
   string isValid(BamAlignment &a);
-  
+
   friend ostream& operator<<(ostream& out, const MiniRulesCollection &mr);
   
   void sendToBed(string file);

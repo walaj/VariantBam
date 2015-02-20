@@ -1,11 +1,13 @@
 #include "MiniRules.h"
 #include "VariantBamReader.h"
 #include <regex>
+#include "gzstream.h"
+#include <unistd.h>
 
 using namespace std;
 using namespace BamTools;
 
-  // define what is a valid condition
+// define what is a valid condition
 static const unordered_map<string,bool> valid = 
   { 
   {"duplicate",     true},
@@ -21,7 +23,7 @@ static const unordered_map<string,bool> valid =
   {"isize", true},
   {"clip",  true},
   {"phred", true},
-  {"len",   true},
+  {"length",   true},
   {"nm",    true},
   {"mapq",  true},
   {"all",   true},
@@ -30,7 +32,9 @@ static const unordered_map<string,bool> valid =
   {"rr", true},
   {"rf", true},
   {"ic", true},
-  {"discordant", true}
+  {"discordant", true},
+  {"seq", true},
+  {"nbases", true}
   
 };
 
@@ -70,6 +74,11 @@ bool MiniRules::isOverlapping(BamAlignment &a) {
 // if a read does not satisfy a rule it is excluded.
 string MiniRulesCollection::isValid(BamAlignment &a) {
 
+  if (m_regions.size() == 0) {
+    cerr << "Empty MiniRules" << endl;
+    exit(EXIT_FAILURE);
+  }
+
   size_t which_region = 0;
   size_t which_rule = 0;
   
@@ -100,6 +109,7 @@ string MiniRulesCollection::isValid(BamAlignment &a) {
     return ""; 
 
   string out = "rg" + to_string(++which_region) + "rl" + to_string(++which_rule);
+
   return out; 
   
 }
@@ -166,6 +176,14 @@ MiniRulesCollection::MiniRulesCollection(string file) {
     
     if (!line_comment && !line_empty) {
 
+      // check that it doesn't have too many rules on it
+      if (count(line.begin(), line.end(), '@') > 1) {
+	cerr << "ERROR: Every line must start with region@ or global@ or a rule, and only one region/rule per line" << endl;
+	cerr << "  If separating lines in -r flag, separate with %. If in file, use \\n" << endl;
+	cerr << "  Offending line: " << line << endl;
+	exit(EXIT_FAILURE);
+      }
+
       //////////////////////////////////
       // its a rule line, get the region
       //////////////////////////////////
@@ -209,11 +227,17 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 	mr->m_level = level++;
 	m_regions.push_back(mr);
       }
+      ////////////////////////////////////
+      // its a global rule
+      ///////////////////////////////////
+      else if (line.find("global@") != string::npos) {
+	rule_all.parseRuleLine(line);
+      }
 
       ////////////////////////////////////
       // its an rule
       ////////////////////////////////////
-      else if (line.find("rule@") != string::npos) {
+      else {
 	AbstractRule ar = rule_all;
 
 	// parse the line
@@ -270,13 +294,7 @@ MiniRulesCollection::MiniRulesCollection(string file) {
 	} // end discorant regex
 	  
       }
-      ////////////////////////////////////
-      // its a global rule
-      ///////////////////////////////////
-      else if (line.find("global@") != string::npos) {
-	rule_all.parseRuleLine(line);
-      }
-
+  
     } //end comment check
   } // end \n parse
 
@@ -378,25 +396,14 @@ void FlagRule::parseRuleLine(string line) {
 // modify the rules based on the informaiton provided in the line
 void AbstractRule::parseRuleLine(string line) {
 
-  // get the name
-  regex reg_name("(.*?)@.*");
-  smatch nmatch;
-  if (regex_search(line, nmatch, reg_name)) {
-    name = nmatch[1].str();
-  } else {
-    cerr << "Name required for rules. e.g. myrule@" << endl;
-    exit(EXIT_FAILURE);
-  }
-
-  // get everything but the name
-  regex reg_noname(".*?@(.*)");
+  // get everything but the global keyword, if there is one
+  regex reg_noname("global@(.*)");
   smatch nnmatch;
   string noname;
   if (regex_search(line, nnmatch, reg_noname)) {
     noname = nnmatch[1].str();
   } else {
-    cerr << "Rule is empty. Non-empty rule required. eg. myrule@!isize:[0,800]" << endl;
-    exit(EXIT_FAILURE);
+    noname = line;
   }
 
   // check that the conditoins are valid
@@ -428,11 +435,14 @@ void AbstractRule::parseRuleLine(string line) {
   len.parseRuleLine(noname);
   clip.parseRuleLine(noname);
   phred.parseRuleLine(noname);
+  nbases.parseRuleLine(noname);
   nm.parseRuleLine(noname);
 
   // parse the line for flag rules (also checks syntax)
   fr.parseRuleLine(noname);
   
+  parseSeqLine(noname);
+
 }
 
 // parse for range
@@ -503,20 +513,23 @@ bool AbstractRule::isValid(BamAlignment &a) {
   if (!mapq.isEvery())
     if (!mapq.isValid(a.MapQuality)) 
       return false;
-  
+
   // check for valid flags
   if (!fr.isValid(a))
     return false;
-  
+
   // if we dont need to because everything is pass, just just pass it
-  bool need_to_continue = !nm.isEvery() || !clip.isEvery() || !len.isEvery();
+  bool need_to_continue = !nm.isEvery() || !clip.isEvery() || !len.isEvery() || (atm_file != "");
   if (!need_to_continue)
     return true;
 
   // now check if we need to build char if all we want is clip
-  unsigned clipnum = VariantBamReader::getClipCount(a);
-  if (nm.isEvery() && len.isEvery() && !clip.isValid(clipnum)) // if clip fails, its not going to get better by trimming. kill it now before building teh char data
-    return false;
+  unsigned clipnum = 0;
+  if (!clip.isEvery()) {
+    clipnum = VariantBamReader::getClipCount(a);
+    if (nm.isEvery() && len.isEvery() && !clip.isValid(clipnum)) // if clip fails, its not going to get better by trimming. kill it now before building teh char data
+      return false;
+  }
 
   if (a.Name == "") {// only build once 
     a.BuildCharData();
@@ -546,6 +559,25 @@ bool AbstractRule::isValid(BamAlignment &a) {
     } 
     new_len = trimmed_bases.length();
     new_clipnum = max(0, static_cast<int>(clipnum - (a.Length - new_len)));
+
+    // they were all trimmed away
+    if (new_len == 0)
+      return false;
+
+    // check the N
+    if (!nbases.isEvery()) {
+      size_t n = count(trimmed_bases.begin(), trimmed_bases.end(), 'N');
+      if (!nbases.isValid(n))
+	return false;
+    }
+
+  }
+
+  // check the N if we didn't do phred trimming
+  if (!nbases.isEvery() && phred.isEvery()) {
+    size_t n = count(a.QueryBases.begin(), a.QueryBases.end(), 'N');
+    if (!nbases.isValid(n))
+      return false;
   }
 
   // check for valid length
@@ -556,6 +588,12 @@ bool AbstractRule::isValid(BamAlignment &a) {
   if (!clip.isValid(new_clipnum))
     return false;
 
+  if (atm_file.length()) {
+    bool m = ahomatch(a.QueryBases);
+    if ( (!m && !atm_inv) || (m && atm_inv) )
+      return false;
+  }
+
   return true;
 }
 
@@ -563,7 +601,7 @@ bool FlagRule::isValid(BamAlignment &a) {
   
   if (isEvery())
     return true;
-  
+
   if (!dup.isNA()) 
     if ((dup.isOff() && a.IsDuplicate()) || (dup.isOn() && !a.IsDuplicate()))
       return false;
@@ -579,17 +617,6 @@ bool FlagRule::isValid(BamAlignment &a) {
   if (!mate_mapped.isNA())
     if ( (mate_mapped.isOff() && a.IsMateMapped()) || (mate_mapped.isOn() && !a.IsMateMapped()) )
       return false;
-
-
-  /* if ( (flags["fwd_strand"].isOff()    && !a.IsReverseStrand()) || (flags["fwd_strand"].isOn() && a.IsReverseStrand()) )
-    return false;
-  if ( (flags["rev_strand"].isOff()    &&  a.IsReverseStrand()) || (flags["rev_strand"].isOn() && !a.IsReverseStrand()) )
-    return false;
-  if ( (flags["mate_fwd_strand"].isOff()    && !a.IsMateReverseStrand()) || (flags["mate_fwd_strand"].isOn() && a.IsMateReverseStrand()) )
-    return false;
-  if ( (flags["mate_rev_strand"].isOff()    &&  a.IsMateReverseStrand()) || (flags["mate_rev_strand"].isOn() && !a.IsMateReverseStrand()) )
-    return false;
-  */
 
   // check for hard clips
   if (!hardclip.isNA())  {// check that we want to chuck hard clip
@@ -609,22 +636,28 @@ bool FlagRule::isValid(BamAlignment &a) {
   // check first if we need to even look for orientation
   bool ocheck = !ff.isNA() || !fr.isNA() || !rf.isNA() || !rr.isNA() || !ic.isNA();
   if ( ocheck ) {
+
     bool first = a.Position < a.MatePosition;
     bool bfr = (first && (!a.IsReverseStrand() && a.IsMateReverseStrand())) || (!first &&  a.IsReverseStrand() && !a.IsMateReverseStrand());
     bool brr = a.IsReverseStrand() && a.IsMateReverseStrand();
     bool brf = (first &&  (a.IsReverseStrand() && !a.IsMateReverseStrand())) || (!first && !a.IsReverseStrand() &&  a.IsMateReverseStrand());
     bool bff = !a.IsReverseStrand() && !a.IsMateReverseStrand();
-    //if ( (bfr + brr + brf + bff) != 1) {
-    //  cerr << "FR: " << fr << " RF: " << rf << " FF:" << ff << " RR : " << rr << " first " << first << "a.IsReverseStrand() " << a.IsReverseStrand() << " a.IsMateReverseSTrand() " << a.IsMateReverseStrand() << endl;
-    //  exit(EXIT_FAILURE);
-    // }
       
-    bool bic = a.MateRefID != a.RefID;
+    bool bic = (a.MateRefID != a.RefID);
    
+    //debug
+    //if (ff.isOn() && !bic) {
+    // cout << a.RefID << ":" << a.Position << (a.IsReverseStrand() ? "(-)" : "(+)") << " - " << a.MateRefID << ":" << a.MatePosition << (a.IsMateReverseStrand() ? "(-)" : "(+)") << " bff " << bff << " " << (ff.isOn() && !bff) << " " << *this << endl;
+    // }
+
+    // take care of inter-chromsoomal
+    if ( (bic && ic.isOff()) || (!bic && ic.isOn()))
+      return false;
+
     // its FR and it CANT be FR (off) or its !FR and it MUST be FR (ON)
     // orienation not defined for inter-chrom, so exclude these with !ic
     if (!bic) {
-      if ( (bfr && fr.isOff()) || (!bfr && fr.isOn())) 
+      if ( (bfr && fr.isOff()) || (!bfr && fr.isOn()))
 	return false;
       // etc....
       if ( (brr && rr.isOff()) || (!brr && rr.isOn())) 
@@ -634,9 +667,6 @@ bool FlagRule::isValid(BamAlignment &a) {
       if ( (bff && ff.isOff()) || (!bff && ff.isOn())) 
 	return false;
     }
-    if ( (bic && ic.isOff()) || (!bic && ic.isOn()))
-      return false;
-      
   }
 
   return true;
@@ -646,23 +676,28 @@ bool FlagRule::isValid(BamAlignment &a) {
 // define how to print
 ostream& operator<<(ostream &out, const AbstractRule &ar) {
 
-  out << "  Rule: " << ar.name << " -- ";;
+  out << "  Rule: " << ar.name << " -- ";
   if (ar.isEvery()) {
-    out << "  KEEPING ALL" << endl;
+    out << "  KEEPING ALL";
   } else if (ar.isNone()) {
-    out << "  KEEPING NONE" << endl;  } else {
+    out << "  KEEPING NONE";  
+  } else {
     if (!ar.isize.isEvery())
       out << "isize:" << ar.isize << " -- " ;
     if (!ar.mapq.isEvery())
       out << "mapq:" << ar.mapq << " -- " ;
     if (!ar.len.isEvery())
-      out << "len:" << ar.len << " -- ";
+      out << "length:" << ar.len << " -- ";
     if (!ar.clip.isEvery())
       out << "clip:" << ar.clip << " -- ";
     if (!ar.phred.isEvery())
       out << "phred:" << ar.phred << " -- ";
     if (!ar.nm.isEvery())
       out << "nm:" << ar.nm << " -- ";
+    if (!ar.nbases.isEvery())
+      out << "nbases:" << ar.nbases << " -- ";
+    if (ar.atm_file != "")
+      out << "matching on " << ar.atm_count << " subsequences from file " << ar.atm_file << " -- ";
     out << ar.fr;
   }
   return out;
@@ -672,13 +707,12 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
 ostream& operator<<(ostream &out, const FlagRule &fr) {
 
   if (fr.isEvery()) {
-    out << "  Flag: ALL";
+    out << "Flag: ALL";
     return out;
   } 
 
   string keep = "Flag ON: ";
   string remo = "Flag OFF: ";
-  string na = "Flag NA: ";
 
   if (fr.dup.isOff())
     remo += "duplicate,";
@@ -798,4 +832,74 @@ bool Flag::parseRuleLine(string &val, regex &reg) {
 
   return false;
   
+}
+
+// check if a string contains a substring using Aho Corasick algorithm
+bool AbstractRule::ahomatch(const string& seq) {
+
+  // make into Ac strcut
+  AC_TEXT_t tmp_text = {seq.c_str(), static_cast<unsigned>(seq.length())};
+  ac_automata_settext (atm, &tmp_text, 0);
+
+  // do the check
+  AC_MATCH_t * matchp;  
+  matchp = ac_automata_findnext(atm);
+
+  if (matchp) 
+    return true;
+  else 
+    return false;
+  
+  
+}
+
+// add the aho subsequences by reading in the sequence file
+void AbstractRule::parseSeqLine(string line) {
+
+  rule_line = line;
+
+  // get the sequence file out
+  regex reg("^!?seq\\[(.*)\\].*");
+  smatch match;
+  if (regex_search(line, match, reg)) {
+    line = match[1].str();
+    atm_file = line;
+  } else {
+    return;
+  }
+  
+  // open the sequence file
+  igzstream iss(line.c_str());
+  if (!iss) {
+    cerr << "ERROR: Cannot read the sequence file: " << line << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  // should it be inverted?
+  string inv;
+  if (line.at(0) == '!') {
+    atm_inv = true;
+    inv = " -- Inverted -- ";
+  }
+
+  // initialize it
+  atm = ac_automata_init();
+  
+  // make the Aho-Corasick key
+  cout << "...generating Aho-Corasick key"  << inv << " from file " << atm_file << endl;
+  string pat;
+  size_t count = 0;
+  while (getline(iss, pat, '\n')) {
+    count++;
+    AC_PATTERN_t tmp_pattern;
+    tmp_pattern.astring = pat.c_str();
+    tmp_pattern.length = static_cast<unsigned>(pat.length());
+    ac_automata_add(atm, &tmp_pattern);
+  }
+  ac_automata_finalize(atm);
+  cout << "Done generating Aho-Corasick key of size " << count << endl;  
+
+  atm_count = count;
+  return;
+
 }

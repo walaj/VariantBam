@@ -64,13 +64,15 @@ unsigned VariantBamReader::getClipCount(BamAlignment a) {
 
 // read in reads from a BAM in order. If m_writer != NULL write the bam, otherwise
 // store in &bav.
-bool VariantBamReader::writeVariantBam(BamQC &qc, BamAlignmentVector &bav, AC_AUTOMATA_t *atm) {
+bool VariantBamReader::writeVariantBam(BamQC &qc, BamAlignmentVector &bav) {
 
   ReadCount rc_main;
   ReadCount rc_this;
 
   int pileup = 0;
   
+  unordered_map<string, size_t> rule_count;
+
   BamTools::BamAlignment a;
 
   BamAlignmentVector bam_buffer;
@@ -88,6 +90,9 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, BamAlignmentVector &bav, AC_AU
     // if we should continue or quit
     if (m_verbose > 0 && rc_main.total % 500000 == 0) {
       printMessage(rc_main, a);
+
+      if (m_verbose > 1)
+	printRuleCounts(rule_count);
 
       // zero the counters
       rc_this = ReadCount();
@@ -109,13 +114,19 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, BamAlignmentVector &bav, AC_AU
     //  qc.addRead(a);
 
     // check the substring
-    if (atm && rule_pass == "") {
-      a.BuildCharData();
-      if (ahomatch(a.QueryBases, atm))
-	rule_pass = "seq";
-    }
+    //if (atm && rule_pass == "") {
+    //  a.BuildCharData();
+    //  if (ahomatch(a.QueryBases, atm))
+    //	rule_pass = "seq";
+    //}
 
     if ( rule_pass != "" /*&& !qc_only*/ ) {
+
+      auto ff = rule_count.find(rule_pass);
+      if (ff != rule_count.end())
+	ff->second++;
+      else
+	rule_count[rule_pass] = 1;
 
       // build it if we haven't
       if (a.Name == "")
@@ -270,24 +281,21 @@ void VariantBamReader::printMessage(const ReadCount &rc_main, const BamAlignment
   sprintf (buffer, "Reading read %11s at position %2s:%-11s. Kept %11s (%2d%%) [running count across whole BAM]",  
 	   rc_main.totalString().c_str(), GenomicRegion::chrToString(a.RefID).c_str(), posstring.c_str(),  
 	   rc_main.keepString().c_str(), rc_main.percent());
-  printf ("%s\n",buffer);
-
-
-}
-
-bool VariantBamReader::ahomatch(const string& seq, AC_AUTOMATA_t * atm) {
-
-  // make into Ac strcut
-  AC_TEXT_t tmp_text = {seq.c_str(), seq.length()};
-  ac_automata_settext (atm, &tmp_text, 0);
-
-  // do the check
-  AC_MATCH_t * matchp;  
-  matchp = ac_automata_findnext(atm);
-  if (matchp)
-    return true;
-  else 
-    return false;
   
-
+  printf ("%s | ",buffer);
+  VarUtils::displayRuntime(start);
+  cout << endl;
+  
 }
+
+void VariantBamReader::printRuleCounts(unordered_map<string, size_t> &rm) const {
+
+  size_t total = 0;
+  for (auto& i : rm)
+    total += i.second;
+  for (auto& i : rm) {
+    cout << "  " << i.first << ":" << i.second << "(" << VarUtils::percentCalc<size_t>(i.second, total) << "%)" << endl;
+  }
+  
+}
+

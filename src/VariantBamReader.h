@@ -6,7 +6,7 @@
 #include "BamQC.h"
 #include "api/BamReader.h"
 #include "api/BamWriter.h"
-#include "ahocorasick.h"
+#include <time.h>
 
 using namespace std;
 using namespace BamTools;
@@ -58,16 +58,18 @@ class VariantBamReader {
     delete m_writer;
     delete m_reader;
   }
+
+  struct timespec start;
   
   VariantBamReader(string inbam, string outbam, MiniRulesCollection* mr, int verbose);
 
   static unsigned getClipCount(BamAlignment a);
   static void qualityTrimRead(int qualTrim, string &seq, string &qual);
 
-  static bool ahomatch(const string& seq, AC_AUTOMATA_t * atm);
-
   //bool writeVariantBam(BamQC &qc, bool qc_only);
-  bool writeVariantBam(BamQC &qc, BamAlignmentVector &bav, AC_AUTOMATA_t *atm);
+  bool writeVariantBam(BamQC &qc, BamAlignmentVector &bav);
+
+  void printRuleCounts(unordered_map<string, size_t> &rm) const;
   
   // set which part of the bam to read
   bool setBamRegion(GenomicRegion gp);

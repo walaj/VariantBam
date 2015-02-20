@@ -76,8 +76,8 @@ applied to a BAM. Below is an example of a valid VariantBam script:
 ```bash
     ### this is a comment. The line code below defines filters to be applied to each region/rule
     region@WG
-    rule@!hardclip;mapped;mapped_mate;isize[0,600];!mapq[10,100]
-    rule@!hardclip;mapped;mapped_mate;clip[10,101]
+    !hardclip;mapped;mapped_mate;isize[0,600];!mapq[10,100]
+    !hardclip;mapped;mapped_mate;clip[10,101]
 ```
 
 ##### Region
@@ -106,10 +106,10 @@ by prefixing with a ``!``. For example:
 
 ```bash
     # do not include hardclipped reads, reads with isize > 600, or reads with mapq between 10 and 100.
-    rule@!hardclip;isize[0,600];!mapq[10,100]
+    !hardclip;isize[0,600];!mapq[10,100]
     
     # an equivalent specification would be
-    rule@!hardclip;mapped;!isize[601,250000000];mapq[0,9]``
+    !hardclip;mapped;!isize[601,250000000];mapq[0,9]``
 ```
 
 VariantBam handles multiple rules in the following way. For each read, VariantBam 
@@ -134,17 +134,17 @@ and apply rules separately to them.
     ### use the "mate" keyword to specify that pairs whose mate falls in the region belong to this rule
     region@/home/unix/jwala/myvcf.vcf;mate;pad[1000]
     #### I want to keep all the reads (this the default). Ill be explicit with the "every" keyword
-    rule@every
+    every
     #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads
     region@/home/unix/jwala/myexonlist.bed 
     ## keep discordant reads
-    rule@!isize[0,600];
+    !isize[0,600];
     ## keep only unmapped reads and their mates
-    rule@!mapped;!mapped_mate
+    !mapped;!mapped_mate
     ## or keep if it is hardclipped
-    rule@hardclip
+    hardclip
     ## keep reads with a mismatch to reference, but with high mapq
-    rule@nm[1,101];mapq[30,100]
+    nm[1,101];mapq[30,100]
     
 ```
 
@@ -157,8 +157,8 @@ supplementary reads in every region, you would do:
 ```bash
     global@!hardclip;!duplicate;!qcfail;!supplementary
     region@WG
-    rule@!isize[0,600]
-    rule@clip[10,101];mapq[1,60]
+    !isize[0,600]
+    clip[10,101];mapq[1,60]
     region@myvcf.vcf
 ```
 
@@ -166,10 +166,10 @@ which is equivalent to
 
 ```bash
     region@WG
-    rule@!isize[0,600];!hardclip;!duplicate;!qcfail;!supplementary
-    rule@clip[10,101];mapq[1,60];!hardclip;!duplicate;!qcfail;!supplementary
+    !isize[0,600];!hardclip;!duplicate;!qcfail;!supplementary
+    clip[10,101];mapq[1,60];!hardclip;!duplicate;!qcfail;!supplementary
     region@myvcf.vcf
-    rule@!hardclip;!duplicate;!qcfail;!supplementary
+    !hardclip;!duplicate;!qcfail;!supplementary
 ```
 	
 The global tag will apply through all of the regions. If you want to reset it for everything, just add ``global@every`` 
@@ -188,7 +188,7 @@ file and just feed rules directly in. In that case, just pass a string literal t
 will parse directly. Just separate lines with either a new ``-r`` flag or with a ``%``. For instance, you might run something like the following:
 
 ```bash
-variant -i big.bam -o small.bam -r 'global@!hardclip' -r 'region@WG%rule@!isize[0,600];%rule@clip[10,101];mapq[1,60]' -r 'region@myvcf.vcf'
+variant -i big.bam -o small.bam -r 'global@!hardclip' -r 'region@WG%!isize[0,600];%clip[10,101];mapq[1,60]' -r 'region@myvcf.vcf'
 ```
 
 Note the single quotes so that it is interpreted as a string literal in BASH.
@@ -197,11 +197,15 @@ Full list of available rules
 ----------------------------
 
 ```
-    #RULE           #EXAMPLE             #DESCRIPTION OF EXAMPLE / FLAG
+    #RULE           #EXAMPLE             #DESCRIPTION OF EXAMPLE / FLAG 
+    seq	            seq[/home/seqs.txt]  File containing substrings that must be present in the sequence.
+    ins             ins[5,101]           Number of inserted bases on the reads (from parsed CIGAR string)
+    del             del[10,101]          Number of deleted bases relative to reference (from parsed CIGAR string). 
     nm              nm[0,4]              NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
     isize           isize[100,500]       Insert size, where all insert sizes are converted to positive.
     len             len[80,101]          Length of the read following phred trimming
     clip            clip[0,5]            Number of clipped bases following phred trimming
+    nbases          nbases[0,5]          Removed reads that have within this range of N bases.
     phred           phred[4,100]         Range of phred scores that are "quality" 
     duplicate       duplicate            Read must be marked as optical duplicate 
     supp            !supp                Read must be primary alignment
