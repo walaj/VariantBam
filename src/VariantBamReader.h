@@ -4,14 +4,18 @@
 #include "MiniRules.h"
 #include "GenomicRegion.h"
 #include "BamQC.h"
-#include "api/BamReader.h"
-#include "api/BamWriter.h"
+//#include "api/BamReader.h"
+//#include "api/BamWriter.h"
 #include <time.h>
+#include "reads.h"
+
+//#include "hts.h"                                                                                                                                                                                                    
+//#include "sam.h"                                                                                                                                                                                                    
+//#include "bgzf.h"                                                                                                                                                                                                   
+//#include "kstring.h"
 
 using namespace std;
-using namespace BamTools;
-
-typedef vector<BamTools::BamAlignment> BamAlignmentVector;
+//using namespace BamTools;
 
 // Phred score transformations
 inline int char2phred(char b) {
@@ -44,30 +48,48 @@ struct ReadCount {
 };
 
 
-
-
-
-
-
-
 class VariantBamReader {
 
  public:
-  VariantBamReader() {}
+  VariantBamReader() { }
   ~VariantBamReader() {
+#ifdef HAVE_BAMTOOLS
+    m_writer->Close();
+    m_reader->Close();
     delete m_writer;
     delete m_reader;
+#endif
+
+#ifdef HAVE_HTSLIB
+    bgzf_close(fp);
+    bam_hdr_destroy(br);
+    hts_itr_destroy(hts_itr);
+    hts_idx_destroy(idx);
+    sam_close(fop);
+#endif
   }
+
+  void saveAlignment(Read &r);
+
+  unordered_map<string, bool> m_hash;
+
+  bool twopass = false;
 
   struct timespec start;
   
   VariantBamReader(string inbam, string outbam, MiniRulesCollection* mr, int verbose);
 
-  static unsigned getClipCount(BamAlignment a);
+  void dumpBuffer(ReadVec &buff, ReadVec &store, int mapq);
+
+  //static unsigned getClipCount(BamAlignment a);
   static void qualityTrimRead(int qualTrim, string &seq, string &qual);
 
+  static int32_t qualityTrimRead(int qualTrim, int32_t &startpoint, shared_ptr<bam1_t> &b);
+
   //bool writeVariantBam(BamQC &qc, bool qc_only);
-  bool writeVariantBam(BamQC &qc, BamAlignmentVector &bav);
+  //bool writeVariantBam(BamQC &qc, BamAlignmentVector &bav);
+  //bool writeVariantBam(BamQC &qc, bam1_v &bav);
+  bool writeVariantBam(BamQC &qc, ReadVec &bav);
 
   void printRuleCounts(unordered_map<string, size_t> &rm) const;
   
@@ -78,18 +100,42 @@ class VariantBamReader {
   void MakeIndex();
 
   // print to stdout
-  void printMessage(const ReadCount &rc_main, const BamAlignment &a) const;
+  void printMessage(const ReadCount &rc_main, const Read &r) const;
+
+  void writeVariantBamFromHash();
+
+  void rewind() { 
+    #ifdef HAVE_BAMTOOLS
+    m_reader->Rewind(); 
+    #endif
+  }
 
  private:
   
   string m_bam;
   string m_out;
+#ifdef HAVE_BAMTOOLS
   BamReader * m_reader;
   BamWriter * m_writer;
+#endif
   GenomicRegion m_region;
   MiniRulesCollection * m_mr;
   int m_verbose;
+
+#ifdef HAVE_HTSLIB
+  // hts
+  BGZF * fp = 0;
+  hts_idx_t * idx = 0; // hts_idx_load(bamfile.c_str(), HTS_FMT_BAI);
+  hts_itr_t * hts_itr = 0; // sam_itr_queryi(idx, 3, 60000, 80000);
+  bam_hdr_t * br = 0;
+
+  samFile* fop = 0;
+  //fp = sam_open(fn, mode);
+#endif
+
 };
 
 
 #endif 
+
+

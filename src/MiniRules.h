@@ -19,13 +19,15 @@
 
 #include <string>
 #include <vector>
-#include "api/BamReader.h"
-#include "api/BamWriter.h"
+//#include "api/BamReader.h"
+//#include "api/BamWriter.h"
 #include "GenomicRegion.h"
 #include <unordered_map>
 #include "ahocorasick.h"
 
-using namespace BamTools;
+#include "reads.h"
+
+//using namespace BamTools;
 using namespace std;
 
 class Flag {
@@ -123,17 +125,28 @@ struct FlagRule {
     ic = Flag();
   }
   
+
+  /**
+   * if inv is true, then if flag rule is ON and read is ON, return FALSE
+   */ 
+  /*bool inline flagCheck(Flag &f, bam1_t *b, int bamflag, bool inv) {
+    
+    if (!f.isNA()) {
+      bool val = (b->core.flag & bamflag);
+      if ( (f.isOff() && val) || (f.isOn() && !val))
+	return inv ? false : true;
+    }
+    return true; 
+    }*/
+
   Flag dup, supp, qcfail, hardclip, fwd_strand, rev_strand,
     mate_fwd_strand, mate_rev_strand, mapped, mate_mapped, ff, fr, rf, rr, ic;
-
 
   bool na = true;
   void parseRuleLine(string line);
   
   // ask whether a read passes the rule
-  bool isValid(BamAlignment &a);
-
-  //unordered_map<string, Flag> flags;
+  bool isValid(Read &r);
 
   friend ostream& operator<<(ostream &out, const FlagRule &fr);
 
@@ -187,6 +200,11 @@ class AbstractRule {
 
  public:
 
+  AbstractRule() {}
+  ~AbstractRule() {
+    free(atm);
+  }
+
   string name = "";
   Range isize = {-1, -1, true, "isize"}; // include all
   Range mapq =  {-1, -1, true, "mapq"}; 
@@ -195,26 +213,32 @@ class AbstractRule {
   Range phred = {-1, -1, true, "phred"};
   Range nm = {-1, -1, true, "nm"};
   Range nbases = {-1,-1,true, "nbases"};
+  Range ins = {-1,-1,true, "ins"};
+  Range del = {-1,-1,true, "del"};
   unordered_map<string,bool> orientation;
 
-  AC_AUTOMATA_t * atm;
+  AC_AUTOMATA_t * atm = 0;
   string atm_file;
   bool atm_inv = false;
   size_t atm_count = 0;
+  
+  int subsample = 100;
 
   bool none = false;
   // set to true if you want a read to belong to the region if its mate does
   //bool mate = false; 
 
-  string rule_line;
-
   FlagRule fr;
 
-  bool isValid(BamAlignment &a);
-  
+  bool isValid(Read &r);
+
   void parseRuleLine(string line);
 
+  void parseSubLine(string line);
+
   bool ahomatch(const string& seq);
+
+  bool ahomatch(const char * seq, unsigned len);
 
   void parseSeqLine(string line);
 
@@ -229,7 +253,8 @@ class AbstractRule {
     nm.setEvery();
     nbases.setEvery();
     fr.setEvery();
-    atm_file = "";
+    atm = NULL;
+    subsample = 100;
   }
   
   void setNone() { 
@@ -246,7 +271,7 @@ class AbstractRule {
 
   // return if this rule accepts all reads
   bool isEvery() const {
-    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && nbases.isEvery() && fr.isEvery() && (atm_file.length() == 0);
+    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && nbases.isEvery() && fr.isEvery() && (atm != 0) && (subsample == 100);
   }
 
   // return if this rule accepts no reads
@@ -269,11 +294,11 @@ class MiniRules {
   ~MiniRules() {}
   //MiniRules(const MiniRules * mr); // transfer defaults from one to another
     
-  bool isValid(BamAlignment &a);
+  bool isValid(Read &r);
    
   void setIntervalTreeMap(string file);
 
-  bool isOverlapping(BamAlignment &a);
+  bool isOverlapping(Read &r);
 
   friend ostream& operator<<(ostream& out, const MiniRules &mr);
  
@@ -290,7 +315,7 @@ class MiniRules {
   int m_level = -1;
   int m_width = 0;
   int pad = 0; // how much should we pad the region?
-  
+
   vector<AbstractRule> m_abstract_rules;
 
   // rule applies to mate too
@@ -306,11 +331,15 @@ class MiniRulesCollection {
 
  public: 
   MiniRulesCollection() {}
-  ~MiniRulesCollection() {}
+  ~MiniRulesCollection() {
+    for (auto& i : m_regions)
+      delete(i);
+    
+  }
   MiniRulesCollection(string file);
 
-  string isValid(BamAlignment &a);
-
+  string isValid(Read &r);
+  
   friend ostream& operator<<(ostream& out, const MiniRulesCollection &mr);
   
   void sendToBed(string file);

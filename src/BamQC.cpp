@@ -1,5 +1,13 @@
 #include "BamQC.h"
-#include "VariantBamReader.h"
+
+#define MAX_MAPQ 60
+#define MAX_NM 100
+#define MAX_ISIZE 2000
+#define MAX_CLIP 100
+#define MAX_AS 100
+#define MAX_XP 100
+#define MAX_LEN 250
+#define MAX_PHRED 60
 
 template <typename T> void printQCVec(ostream &out, const vector<T> &vec) {
   for (auto it = vec.begin(); it != vec.end(); it++)
@@ -10,14 +18,14 @@ template <typename T> void printQCVec(ostream &out, const vector<T> &vec) {
 // instantiate a new read group
 BamQCReadGroup::BamQCReadGroup() {
 
-  mapq = vector<size_t>(61,0); // 60 elems of 0
-  nm   = vector<size_t>(102,0); // 101 elems of 0
-  isize= vector<size_t>(2001,0); // (everything above 2000 is inter)
-  clip = vector<size_t>(102,0); 
-  as   = vector<size_t>(102,0);
-  xp   = vector<size_t>(102,0);
-  len  = vector<size_t>(102,0);
-  phred= vector<size_t>(61, 0);
+  mapq = vector<size_t>(MAX_MAPQ + 1,0); // 60 elems of 0
+  nm   = vector<size_t>(MAX_NM + 1,0); // 101 elems of 0
+  isize= vector<size_t>(MAX_ISIZE + 1,0); // (everything above 2000 is inter)
+  clip = vector<size_t>(MAX_CLIP + 1,0); 
+  as   = vector<size_t>(MAX_AS + 1,0);
+  xp   = vector<size_t>(MAX_XP + 1,0);
+  len  = vector<size_t>(MAX_LEN + 1,0);
+  phred= vector<size_t>(MAX_PHRED+1, 0);
 }
 
 // make the output
@@ -72,68 +80,63 @@ std::ostream& operator<<(std::ostream& out, const BamQCReadGroup& rg) {
 }
 
 // add an addional alignment
-void BamQC::addRead(BamTools::BamAlignment &a) {
+void BamQC::addRead(Read &r) {
 
   try {
 
-    if (a.Name == "")
-      	a.BuildCharData();
       string rgroup;
-      if (!a.GetTag("RG",rgroup))
-	cerr << "Failed to read rgroup" << endl;
+      r_get_Z_tag(r, "RG", rgroup);
       
-      int this_isize = a.InsertSize;
-      this_isize = (a.MateRefID != a.RefID || this_isize > 2000) ? 2000 : this_isize;
+      int this_isize = r_isize(r);
+      this_isize = (r_mid(r) != r_id(r) || this_isize > 2000) ? 2000 : this_isize;
       
       // get clip num
-      unsigned clipnum = VariantBamReader::getClipCount(a);
+      unsigned clipnum;
+      r_get_clip(r, clipnum);
+      //int clipnum = VariantBamReader::getClipCount(a);
       
       // get the mean phred quality
-      size_t i = 0;
-      int phred = 0;
-      while(i < a.Qualities.length()) {
-        phred += char2phred(a.Qualities[i]);
-	i++;
-      }
-      if (a.Qualities.length() > 0)
-	phred = static_cast<int>(floor(static_cast<float>(phred) / a.Qualities.length()));
-      
+      //size_t i = 0;
+      //int phred = 0;
+      //while(i < a.Qualities.length()) {
+      //  phred += char2phred(a.Qualities[i]);
+//	i++;
+ //     }
+   //   if (a.Qualities.length() > 0)
+	//phred = static_cast<int>(floor(static_cast<float>(phred) / a.Qualities.length()));
+
       // get the NM tag
-      uint32_t nm;
-      if (a.GetTag("NM", nm)) {} else { nm = 0; }
-      
-      assert(a.MapQuality <= 60);
-      assert(clipnum <= 101);
-      //assert(as <= 101);
-      //assert(xp <= 101);
-      assert(a.Length <= 101 && a.Length  >= 0);
-      assert(phred <= 60 && phred  >= 0);
-      assert(nm <= 101);
-      
+      int32_t nm;
+      r_get_int32_tag(r, "NM", nm);
+      //if (a.GetTag("NM", nm)) {} else { nm = 0; }
+      int nmr = nm;
+
+      int mapqr = r_mapq(r);
+
       // discordant
-      bool FR_f = !a.IsReverseStrand() && (a.Position < a.MatePosition) && (a.RefID == a.MateRefID) &&  a.IsMateReverseStrand();
-      bool FR_r =  a.IsReverseStrand() && (a.Position > a.MatePosition) && (a.RefID == a.MateRefID) && !a.IsMateReverseStrand();
+      bool FR_f = !r_is_rev(r) && (r_pos(r) < r_mpos(r)) && (r_id(r) == r_mid(r)) && r_is_mrev(r) && r_is_pmapped(r);
+      bool FR_r = r_is_rev(r) && (r_pos(r) > r_mpos(r)) && (r_id(r) == r_mid(r)) && !r_is_mrev(r) && r_is_pmapped(r);
       bool FR = FR_f || FR_r;
-      if (a.InsertSize > 0 && this_isize <= 2000 && a.IsPaired() && FR ) // only count "proper" reads 
+      if (r_isize(r) > 0 && this_isize <= 2000 && r_is_pmapped(r) && FR ) // only count "proper" reads 
 	map[rgroup].isize[this_isize]++;
       
       // all the rest
       //map[rgroup].xp[xp]++;
-      map[rgroup].len[a.Length]++;
+      map[rgroup].len[min(r_length(r), MAX_LEN)]++;
       //map[rgroup].as[as]++;
-      map[rgroup].clip[clipnum]++;
-      map[rgroup].phred[phred]++;
+      map[rgroup].clip[min((int)clipnum,MAX_CLIP)]++;
+      //map[rgroup].phred[min(phred, MAX_PHRED)]++;
       map[rgroup].num_reads++;
-      map[rgroup].mapq[a.MapQuality]++;
-      map[rgroup].nm[nm]++;
+      map[rgroup].mapq[min(mapqr, MAX_MAPQ)]++;
+      map[rgroup].nm[min(nmr, MAX_NM)]++;
       
-      if (!a.IsMapped())
+      if (!r_is_mapped(r))
 	map[rgroup].unmap++;
-      if (a.IsFailedQC()) 
+      if (r_is_qc_fail(r)) 
 	map[rgroup].qcfail++;
-      if (a.IsDuplicate())
+      if (r_is_dup(r))
 	map[rgroup].duplicate++;
-      if (!a.IsPrimaryAlignment())
+      if (!r_is_primary(r))
 	map[rgroup].supp++;
       
   } catch (...) {
@@ -146,3 +149,4 @@ void BamQC::addRead(BamTools::BamAlignment &a) {
   }
   
 }
+

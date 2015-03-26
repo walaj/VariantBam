@@ -9,6 +9,10 @@
 #include "VarUtils.h"
 #include "MiniRules.h"
 #include "VariantBamReader.h"
+#include "gzstream.h"
+#include "reads.h"
+
+//#define HAVE_BAMTOOLS
 
 //
 //bamt=/broad/software/free/Linux/redhat_5_x86_64/pkgs/pezmaster31_bamtools-6708a21
@@ -30,7 +34,8 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
 "  -r, --rules                          A script for the rules. If specified multiple times, will be applied in same order as -g\n"
 "  -f, --rules-script                   A file (script) for the rules and regions/sequences. If specified, ignores -r and -g flags.\n"
-"  -k, --proc-regions-file              csv file of regions to proess reads from, of format chr,pos1,pos2 eg 11,2232423,2235000. Default: Whole genome\n"
+  //"  -k, --proc-regions-file              csv file of regions to proess reads from, of format chr,pos1,pos2 eg 11,2232423,2235000. Default: Whole genome\n"
+"  -t, --two-pass                       If set, will pass through BAM second time and retrieve reads AND MATES of reads satisfying a rule. Currently unbounded memory usage...\n"
   //" Read Filters\n"
   //"  -w, --min-mapq                       Minimum mapping quality a read must have to be included. Default 0\n"
   //"  -c, --min-clip                       Minimum number of bases clipped bases to considered clipped. Default: 5\n"
@@ -61,6 +66,8 @@ namespace opt {
   static bool skip_cent = false;
   static string proc_regions = "";
 
+  static bool twopass = false;
+
   //static int perc_limit = 30;
 
   //static bool no_pileup_check = false;
@@ -70,12 +77,13 @@ namespace opt {
   static vector<string> region_vec;
 }
 
-static const char* shortopts = "hv:qejb:i:o:w:n:p:s:r:m:z:c:k:u:x:f:g:";
+static const char* shortopts = "hv:qejb:i:o:w:n:p:s:r:m:z:c:k:u:x:f:g:tc:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, 'h' },
   { "verbose",                    required_argument, NULL, 'v' },
   { "input-bam",                  required_argument, NULL, 'i' },
   { "output-bam",                 required_argument, NULL, 'o' },
+  { "two-pass",                   required_argument, NULL, 't' },
   //{ "min-mapq",                 required_argument, NULL, 'w' },
   //{ "min-clip",                 required_argument, NULL, 'c' },
   //{ "nm-limit",                 required_argument, NULL, 'n' },
@@ -85,6 +93,7 @@ static const struct option longopts[] = {
   { "rules-file",                 required_argument, NULL, 'k' },
   { "rules",                 required_argument, NULL, 'r' },
   { "region",                 required_argument, NULL, 'g' },
+  { "region-with-mates",                   required_argument, NULL, 'c' },
   { "proc-regions-file",                 required_argument, NULL, 'k' },
   //  { "min-length",                 required_argument, NULL, 'm' },
   // { "min-phred",                 required_argument, NULL, 'z' },
@@ -108,6 +117,7 @@ int main(int argc, char** argv) {
 
   parseVarOptions(argc, argv);
 
+  /*
   // convert the region / rules vecs into rules
   if (!VarUtils::existTest(opt::rules_file) && opt::rules_vec.size() == 0) {
     cerr << "Rules / regions not read in. Rules file not found: " << opt::rules_file << endl;;
@@ -120,22 +130,28 @@ int main(int argc, char** argv) {
       opt::rules = "region@" + opt::region_vec[0] + "%" + opt::rules_vec[0];
     else
       opt::rules += "%region@" + opt::region_vec[i] + "%" + opt::rules_vec[i];
-  }
+      }*/
 
   if (opt::verbose > 0) {
     cout << "Input BAM:  " << opt::bam << endl;
     cout << "Output BAM: " << opt::out << endl;
-    cout << "Input rules and regions: " << opt::rules << endl;
+    cout << "Input rules and regions: " << opt::rules_file << endl;
     cout << "Input proc regions file: " << opt::proc_regions << endl;
+    cout << "TWO-PASS solution?:      " << (opt::twopass ? "ON" : "OFF") << endl;
+#ifdef HAVE_BAMTOOLS
+    cout << "RUNNING AS BAMTOOLS" << endl;
+#else
+    cout << "RUNNING AS HTS" << endl;
+#endif
   }
 
   // make the mini rules collection from the rules file
   // this also calls function to parse the BED files
   MiniRulesCollection * mr;
-  if (opt::rules.length() > 0)
-    mr = new MiniRulesCollection(opt::rules);
-  else
-    mr = new MiniRulesCollection(opt::rules_file);
+  //if (opt::rules.length() > 0)
+  //  mr = new MiniRulesCollection(opt::rules);
+  //else
+  mr = new MiniRulesCollection(opt::rules_file);
   // check that it's valid
   if (mr->size() == 0) {
     cerr << "No rules or regions specified. Provide via a script and pass with -r flag." << endl;
@@ -196,17 +212,21 @@ int main(int argc, char** argv) {
   if (grv_proc_regions.size() > 0)
     sort(grv_proc_regions.begin(), grv_proc_regions.end());      
 
-  BamAlignment a;
   BamQC qc; 
 
   VariantBamReader sv_reader(opt::bam, opt::out, mr, opt::verbose);
   sv_reader.start = start;
 
   // dummy vector to store reads. Won't be used because writer is != NULL
-  BamAlignmentVector bav;
+  ReadVec bav;
+ 
+  sv_reader.twopass = opt::twopass;
 
-  if (runWholeGenome)
+  if (runWholeGenome) {
+    // first pass
+    //sv_reader.writeVariantBam(qc, bav);
     sv_reader.writeVariantBam(qc, bav);
+  }
 
   // loop through the process regions and extract files
   for (auto it = grv_proc_regions.begin(); it != grv_proc_regions.end(); it++) {
@@ -216,12 +236,38 @@ int main(int argc, char** argv) {
     if (opt::verbose > 0)
       cout << "Running region: "  << (*it) << endl;
 
+    //sv_reader.writeVariantBam(qc, bav);
+
     sv_reader.writeVariantBam(qc, bav);
 
   }
 
+  sv_reader.rewind();
+
+  // second pass
+  if (sv_reader.twopass && runWholeGenome) {
+
+    sv_reader.writeVariantBamFromHash();
+
+  } else if (sv_reader.twopass) {
+    
+    // loop through the process regions and extract files
+    for (auto it = grv_proc_regions.begin(); it != grv_proc_regions.end(); it++) {
+      sv_reader.setBamRegion(*it);
+      if (opt::verbose > 0)
+	cout << "Running region: "  << (*it) << endl;
+      sv_reader.writeVariantBamFromHash();
+    }
+
+  }
+
+  // clean up
+  delete mr;
+
   // index it
+#ifdef HAVE_BAMTOOLS
   sv_reader.MakeIndex();
+#endif
 
   // write out the stats
   ofstream stats_out;
@@ -232,7 +278,6 @@ int main(int argc, char** argv) {
     VarUtils::displayRuntime(start);
     cout << endl;
   }
-
   
   return 0;
 }
@@ -244,42 +289,67 @@ void parseVarOptions(int argc, char** argv) {
   if (argc < 2) 
     die = true;
 
-
-  string tmp;
   for (char c; (c = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1;) {
     istringstream arg(optarg != NULL ? optarg : "");
     switch (c) {
     case 'h': die = true; break;
     case 'v': arg >> opt::verbose; break;
+    case 't': opt::twopass = true; break;
     case 'i': arg >> opt::bam; break;
     case 'o': arg >> opt::out; break;
     case 'w': arg >> opt::mapq; break;
     case 'g': 
-      tmp = "";
-      arg >> tmp;
-      if (tmp.length() == 0)
-	break;
-      opt::region_vec.push_back(tmp);
-      //      if (opt::rules.length() > 0)
-      //	opt::rules += "%region@" + tmp;
-      //else
-      //	opt::rules = "region@" + tmp;
+      {
+	string tmp;
+	arg >> tmp;
+	if (tmp.length() == 0)
+	  break;
+	if (opt::rules_file.length())
+	  opt::rules_file += "%";
+	opt::rules_file += "region@" + tmp;
+      }
       break;
-      //case 'n': arg >> opt::nmlim; break;
-      //case 'u': arg >> opt::mutect_callstats; break;
-      //case 'x': arg >> opt::mutect2_regions; break;
-      //case 'p': arg >> opt::perc_limit; break;
-      //case 's': arg >> opt::isize; break;
-      //case 'q': opt::qc_only = true; break;
+    case 'c':  // call stats hack
+      {
+	string tmp;
+	arg >> tmp;
+	if (tmp.length() == 0)
+	  break;
+	if (opt::rules_file.length())
+	  opt::rules_file += "%";
+	opt::rules_file += "region@" + tmp + ";mate";
+      }
+      break;
+
     case 'r': 
-      tmp = "";
-      arg >> tmp;
-      if (tmp.length() == 0)
-	break;
-      opt::rules_vec.push_back(tmp);
+      {
+	string tmp;
+	arg >> tmp;
+	if (tmp.length() == 0)
+	  break;
+	if (opt::rules_file.length())
+	  opt::rules_file += "%";
+	else 
+	  opt::rules_file = "region@WG%"; // need to specify a region
+	opt::rules_file += tmp;
+      }
       break;
     case 'k': arg >> opt::proc_regions; break;
-    case 'f': arg >> opt::rules_file; break;
+    case 'f': 
+      {
+	string file;
+	arg >> file;
+	
+	string line;
+	igzstream iss(file.c_str());
+	while(getline(iss,line, '\n')) {
+	  if (opt::rules_file.length() && line.length())
+	    opt::rules_file += "%";
+	  if (line.length())
+	    opt::rules_file += line;
+	}
+      }
+      break;
       //case 'm': arg >> opt::min_length; break;
       //case 'z': arg >> opt::min_phred; break;
       //case 'c': arg >> opt::min_clip; break;
@@ -287,6 +357,11 @@ void parseVarOptions(int argc, char** argv) {
     case 'b': opt::skip_cent = true; break;
     }
   }
+
+  if (opt::bam == "")
+    die = true;
+  if (opt::out == "")
+    die = true;
 
   // dont stop the run for bad bams for quality checking only
   //opt::perc_limit = opt::qc_only ? 101 : opt::perc_limit;
