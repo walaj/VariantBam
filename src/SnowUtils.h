@@ -5,14 +5,12 @@
 #include <time.h>
 #include <ctime>
 #include <vector>
-#include "GenomicRegion.h"
-
-#include "api/BamReader.h"
-#include "api/BamWriter.h"
-
-#include "reads.h"
-
-typedef std::vector<BamTools::CigarOp> CigarOpVec;
+#include <sstream>
+#include <cmath>
+#include <algorithm>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <iostream>
 
 namespace SnowUtils {
 
@@ -25,31 +23,16 @@ std::string AddCommas(T data) {
    return s;
 }
 
-using std::ifstream;
-inline bool existTest (const std::string& name) {
-  ifstream f(name.c_str());
-  if (f.good()) {
-    f.close();
-    return true;
-  } else {
-    f.close();
-    return false;
-  }   
+inline bool exist_test (const std::string& name) {
+  struct stat buffer;   
+  return (stat (name.c_str(), &buffer) == 0); 
 }
 
-// clean an output directory
-/* inline std::string getDirPath(std::string dir) {
- 
-  // get the basepath from directory
-  // check if it is a directory
-  struct stat sb;
-  std::string odir = dir;
-  if (stat(dir.c_str(), &sb) == 0 && !S_ISDIR(sb.st_mode)) // it is successful, but not directory
-     odir  = dir.substr(0, dir.find_last_of('/'));
+inline bool read_access_test (const std::string& name) {
+  return (access (name.c_str(), R_OK) == 0); 
+}
 
-  return odir;
- 
-  }*/
+
 
 inline void displayRuntime(const timespec start) {
 
@@ -106,63 +89,6 @@ inline void rcomplement(std::string &a) {
    return toscrub;
  }
 
- // get a file name + extension
- // https://www.safaribooksonline.com/library/view/c-cookbook/0596007612/ch10s16.html
- /* inline std::string getFileName(const std::string& s) {
-
-   char sep = '/';
-
-   #ifdef _WIN32
-     sep = '\\';
-   #endif
-
-   size_t i = s.rfind(sep, s.length());
-   if (i != std::string::npos && ( (i+1) < s.length()) ) {
-     return(s.substr(i+1, s.length()));
-   }
-
-   return(s);
-   }*/
-
- /*! @function parse a tag storing multiple strings separated by 'x' character
-  * @param Read containing tag to be parsed
-  * @param tag to parse
-  * @return all of the strings from the tag
-  */
- std::vector<std::string> GetStringTag(const Read& a, const std::string tag);
-
- /*! @function parse a tag storing multiple integers separated by 'x' character
-  * @param Read containing tag to be parsed
-  * @param tag to parse
-  * @return all of the integers from the tag
-  */
- std::vector<int> GetIntTag(const Read& a, const std::string tag);
-
- // add a tag, and if its already there separate by "x"
- void SmartAddTag(Read &a, const std::string tag, const std::string val);
-
- /*! @function Convert a CigarOpVec to a string for printing
-  * @param Cigar vec to be read
-  * @return CIGAR string
-  */
- std::string cigarToString(const CigarOpVec &cig);
-
- /*! @function Flip the cigar so that is in opposite orientation
-  * @param cigar to be flipped in place
-  */
- void flipCigar(CigarOpVec &cig);
-
- /*! @function Parse a cigar string into a vector<CigarOp>
-  * @param CIGAR string to be parsed
-  * @return parsed CIGAR in vector format from BamTools package
-  */
- CigarOpVec stringToCigar(const std::string& val);
-
- /*! @function Parse tags from a SAM alignment and add to a BamAlignment
-  * @param tag to be parsed (e.g. XA:Z:...)
-  * @param alignment object to be modified
-  */
- void parseTags(const std::string& val, BamTools::BamAlignment &a);
 
 }
 

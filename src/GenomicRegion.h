@@ -4,17 +4,14 @@
 #include <vector>
 #include <regex>
 #include <iostream>
-#include "api/BamReader.h"
-#include "api/BamWriter.h"
 #include <unordered_map>
-#include "VarUtils.h"
 #include "IntervalTree.h"
+#include "assert.h"
 
 #include <utility>
 #include <list>
 
 using namespace std;
-using namespace BamTools;
 
 typedef signed long long slong;
 

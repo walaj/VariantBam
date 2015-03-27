@@ -91,7 +91,7 @@ void BamQC::addRead(Read &r) {
       this_isize = (r_mid(r) != r_id(r) || this_isize > 2000) ? 2000 : this_isize;
       
       // get clip num
-      unsigned clipnum;
+      unsigned clipnum = 0;
       r_get_clip(r, clipnum);
       //int clipnum = VariantBamReader::getClipCount(a);
       

@@ -2,24 +2,16 @@
 #include <vector>
 #include <getopt.h>
 #include <iostream>
+#include "assert.h"
 #include "GenomicRegion.h"
-#include "api/BamReader.h"
-#include "api/BamWriter.h"
 #include "BamQC.h"
-#include "VarUtils.h"
 #include "MiniRules.h"
 #include "VariantBamReader.h"
 #include "gzstream.h"
 #include "reads.h"
-
-//#define HAVE_BAMTOOLS
-
-//
-//bamt=/broad/software/free/Linux/redhat_5_x86_64/pkgs/pezmaster31_bamtools-6708a21
-//./configure --with-bamtools=$bamt
+#include "SnowUtils.h"
 
 using namespace std;
-using namespace BamTools;
 
 static const char *VARIANT_BAM_USAGE_MESSAGE =
 "Usage: varbam -i <input.bam> -o <output.bam> [OPTIONS] \n\n"
@@ -275,7 +267,7 @@ int main(int argc, char** argv) {
   stats_out << qc;
 
   if (opt::verbose > 0) {
-    VarUtils::displayRuntime(start);
+    SnowUtils::displayRuntime(start);
     cout << endl;
   }
   

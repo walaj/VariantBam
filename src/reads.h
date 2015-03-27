@@ -77,12 +77,15 @@ typedef std::vector<Read> ReadVec;
 
 #ifdef HAVE_BAMTOOLS
 
+#include "api/BamReader.h"
+#include "api/BamWriter.h"
+
 typedef BamTools::BamAlignment RawRead;
 typedef std::shared_ptr<BamTools::BamAlignment> Read;
 typedef std::vector<BamTools::BamAlignment> BamAlignmentVector;
 typedef std::vector<Read> ReadVec;
-#define r_is_rev(b) ((b)->IsReverse())
-#define r_is_mrev(b) ((b)->IsMateReverse())
+#define r_is_rev(b) ((b)->IsReverseStrand())
+#define r_is_mrev(b) ((b)->IsMateReverseStrand())
 #define r_pos(b) ((b)->Position)
 #define r_mpos(b) ((b)->MatePosition)
 #define r_id(b) ((b)->RefID)
@@ -113,7 +116,7 @@ typedef std::vector<Read> ReadVec;
 #define r_get_Z_tag(b, t, v) if (!(b)->GetTag(t, v)) v = ""
 #define r_get_SR(b, v) assert((b)->GetTag("SR", v))
 
-#define GET_READ(x) BamTools::BamAlignment a; if (!reader->GetNextAlignment(a)) break; x = std::shared_ptr<BamTools::BamAlignment>(new BamTools::BamAlignment(a)) 
+#define GET_READ(x) BamTools::BamAlignment a; if (!m_reader->GetNextAlignment(a)) break; x = std::shared_ptr<BamTools::BamAlignment>(new BamTools::BamAlignment(a)) 
 
 #define r_remove_tag(b, t) (b)->RemoveTag(t);
 #define r_add_Z_tag(b, t, v) ((b)->AddTag(t, "Z", v))

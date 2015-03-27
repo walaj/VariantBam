@@ -4,18 +4,12 @@
 #include "MiniRules.h"
 #include "GenomicRegion.h"
 #include "BamQC.h"
-//#include "api/BamReader.h"
-//#include "api/BamWriter.h"
 #include <time.h>
 #include "reads.h"
-
-//#include "hts.h"                                                                                                                                                                                                    
-//#include "sam.h"                                                                                                                                                                                                    
-//#include "bgzf.h"                                                                                                                                                                                                   
-//#include "kstring.h"
+#include "SnowUtils.h"
+#include "assert.h"
 
 using namespace std;
-//using namespace BamTools;
 
 // Phred score transformations
 inline int char2phred(char b) {
@@ -33,16 +27,16 @@ struct ReadCount {
   int total = 0;
   
   int percent () const {
-    int perc  = VarUtils::percentCalc<int>(keep, total); 
+    int perc  = SnowUtils::percentCalc<int>(keep, total); 
     return perc;
   }
 
   string totalString() const {
-    return VarUtils::AddCommas<int>(total);
+    return SnowUtils::AddCommas<int>(total);
   }
 
   string keepString() const {
-    return VarUtils::AddCommas<int>(keep);
+    return SnowUtils::AddCommas<int>(keep);
   }
 
 };
@@ -84,7 +78,7 @@ class VariantBamReader {
   //static unsigned getClipCount(BamAlignment a);
   static void qualityTrimRead(int qualTrim, string &seq, string &qual);
 
-  static int32_t qualityTrimRead(int qualTrim, int32_t &startpoint, shared_ptr<bam1_t> &b);
+  static int32_t qualityTrimRead(int qualTrim, int32_t &startpoint, Read &r);
 
   //bool writeVariantBam(BamQC &qc, bool qc_only);
   //bool writeVariantBam(BamQC &qc, BamAlignmentVector &bav);
@@ -115,8 +109,8 @@ class VariantBamReader {
   string m_bam;
   string m_out;
 #ifdef HAVE_BAMTOOLS
-  BamReader * m_reader;
-  BamWriter * m_writer;
+  BamTools::BamReader * m_reader;
+  BamTools::BamWriter * m_writer;
 #endif
   GenomicRegion m_region;
   MiniRulesCollection * m_mr;

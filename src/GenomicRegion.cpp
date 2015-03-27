@@ -1,5 +1,7 @@
 #include "GenomicRegion.h"
+#include "SnowUtils.h"
 #include "gzstream.h"
+
 
 static const GenomicRegionVector centromeres =
 {
@@ -105,7 +107,7 @@ int GenomicRegion::getOverlap(const GenomicRegion gr) const {
 // write genomic region to a string
 string GenomicRegion::toString() const {
   stringstream out;
-  out << chrToString(chr)  << ":" << VarUtils::AddCommas<int>(pos1) << "-" << VarUtils::AddCommas<int>(pos2) << "(" << strand << ")"; 
+  out << chrToString(chr)  << ":" << SnowUtils::AddCommas<int>(pos1) << "-" << SnowUtils::AddCommas<int>(pos2) << "(" << strand << ")"; 
   return out.str();
 }
 
@@ -134,13 +136,13 @@ std::ostream& operator<<(std::ostream& out, const GenomicRegion& gr) {
 
 // constructor for GenomicRegion that takes strings. Assumes chr string is in 
 // natural (1, ..., X) or (chr1, ..., chrX) format. That is, it converts to
-// BamTools format with a -1 operation.
+// htslib format with a -1 operation.
 GenomicRegion::GenomicRegion(string t_chr, string t_pos1, string t_pos2) {
 
   chr = GenomicRegion::chrToNumber(t_chr);
   try {
-    t_pos1 = VarUtils::scrubString(t_pos1, ",");
-    t_pos2 = VarUtils::scrubString(t_pos2, ",");
+    t_pos1 = SnowUtils::scrubString(t_pos1, ",");
+    t_pos2 = SnowUtils::scrubString(t_pos2, ",");
     pos1 = stoi(t_pos1);
     pos2 = stoi(t_pos2);
   } catch (...) { 
@@ -178,11 +180,11 @@ int GenomicRegion::chrToNumber(string ref) {
   }
 
   //assert(out > 0);
-  return (out-1); // offset by one becuase chr1 = 0 in BamAlignment coords
+  return (out-1); // offset by one becuase chr1 = 0
 }
 
 // convert a chromosome number to a string. Assumes 
-// a natural ordering (1, ...), not BamTools ordering (0, ...)
+// a natural ordering (1, ...), not hts ordering (0, ...)
 string GenomicRegion::chrToString(int ref) {
   string ref_id;
   if (ref == 22)
@@ -214,8 +216,8 @@ bool GenomicRegion::isEmpty() const {
 GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
 
   igzstream iss(file.c_str());
-  if (!iss || file.length() == 0) { 
-    cerr << "Region file does not exist: " << file << endl;
+  if (!SnowUtils::read_access_test(file)) { 
+    cerr << "Region file does not exist or is not readable: " << file << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -231,7 +233,7 @@ GenomicRegionVector GenomicRegion::regionFileToGRV(string file, int pad) {
   ////////////////////////////////////
   // MUTECT CALL STATS
   ////////////////////////////////////
-  if (header.find("MuTect") != string::npos) { 
+  if (header.find("Tect") != string::npos ) { 
 
     cout << "Reading MuTect CallStats"  << endl;
     string curr_chr = "dum";

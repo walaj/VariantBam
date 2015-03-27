@@ -1,23 +1,29 @@
 #include "VariantBamReader.h"
 
-//#include <boost/archive/text_oarchive.hpp>
-//#include <boost/archive/text_iarchive.hpp>
-
-
 using namespace std;
 
 // Trim the sequence by removing low quality bases from either end
-int32_t VariantBamReader::qualityTrimRead(int qualTrim, int32_t &startpoint, shared_ptr<bam1_t> &b) {
+int32_t VariantBamReader::qualityTrimRead(int qualTrim, int32_t &startpoint, Read &r) {
 
     int endpoint = -1; //seq.length();
     startpoint = 0;
     int i = 0; 
-    
-    uint8_t * qual = bam_get_qual(b.get());
-    
+
+#ifdef HAVE_HTSLIB    
+    uint8_t * qual = bam_get_qual(r.get());
+#endif
+
     // get the start point (loop forward)
-    while(i < b->core.l_qseq) {
-      if (qual[i] >= qualTrim) {
+#ifdef HAVE_HTSLIB
+    while(i < r->core.l_qseq) {
+      int ps = qual[i];
+#endif
+#ifdef HAVE_BAMTOOLS
+      int thislen = r->Qualities.length();
+      while(i < thislen) {
+      int ps = char2phred(r->Qualities[i]);
+#endif
+      if (ps >= qualTrim) {
           startpoint = i;
           break;
 	}
@@ -25,9 +31,20 @@ int32_t VariantBamReader::qualityTrimRead(int qualTrim, int32_t &startpoint, sha
     }
 
     // get the end point (loop backwards)
-    i = b->core.l_qseq - 1; //seq.length() - 1;
+#ifdef HAVE_HTSLIB
+    i = r->core.l_qseq - 1; //seq.length() - 1;
+#endif
+#ifdef HAVE_BAMTOOLS
+    i = r->Qualities.length() - 1; //core.l_qseq - 1; //seq.length() - 1;
+#endif
     while(i >= 0) {
-        if (qual[i] >= qualTrim) { //ps >= qualTrim) {
+#ifdef HAVE_HTSLIB
+      int ps = qual[i];
+#endif
+#ifdef HAVE_BAMTOOLS
+      int ps = char2phred(r->Qualities[i]);
+#endif
+        if (ps >= qualTrim) { //ps >= qualTrim) {
 	  endpoint = i + 1; // endpoint is one past edge
           break;
 	}
@@ -41,16 +58,6 @@ int32_t VariantBamReader::qualityTrimRead(int qualTrim, int32_t &startpoint, sha
       //qual = "";
       return 0;
     }
-
-
-    // Clip the read
-    /*    uint8_t * query_seq = bam_get_seq(b);
-    for (int i = startpoint; i < (endpoint - startpoint); i++) {
-      cout << bam_seqi(query_seq, i) << endl;
-      trimmed_seq[i] = BASES[bam_seqi(query_seq, i)];
-      }*/
-    //    seq =   seq.substr(startpoint, endpoint);
-    //qual = qual.substr(startpoint, endpoint)
 
     return (endpoint - startpoint);
 
@@ -117,7 +124,7 @@ VariantBamReader::VariantBamReader(string in, string out, MiniRulesCollection *m
 
 #ifdef HAVE_BAMTOOLS
   // open the reader
-  m_reader = new BamReader();
+  m_reader = new BamTools::BamReader();
   if (!m_reader->Open(in)) {
     cerr << "Error: Cannot open " << in << " for reading" << endl;
     exit(EXIT_FAILURE);
@@ -160,7 +167,7 @@ VariantBamReader::VariantBamReader(string in, string out, MiniRulesCollection *m
     // try finding it manually
     string bai = in;
     if (!m_reader->OpenIndex(bai + ".bai")) {
-      bai = VarUtils::scrubString(bai, ".bam");
+      bai = SnowUtils::scrubString(bai, ".bam");
       bai += ".bai";
       if (!m_reader->OpenIndex(bai)) {
 	cerr << "Error: Cannot locate index file for " << in << endl;
@@ -171,7 +178,7 @@ VariantBamReader::VariantBamReader(string in, string out, MiniRulesCollection *m
   }
 
   // open the writer
-  m_writer = new BamWriter();
+  m_writer = new BamTools::BamWriter();
   if (!m_writer->Open(out, m_reader->GetHeaderText(), m_reader->GetReferenceData())) {
     cerr << "Error: Cannot open BAM for writing " << out << endl;
     exit(EXIT_FAILURE);
@@ -197,13 +204,13 @@ VariantBamReader::VariantBamReader(string in, string out, MiniRulesCollection *m
 void VariantBamReader::printMessage(const ReadCount &rc_main, const Read &r) const {
 
   char buffer[100];
-  string posstring = VarUtils::AddCommas<int>(r_pos(r));
+  string posstring = SnowUtils::AddCommas<int>(r_pos(r));
   sprintf (buffer, "Reading read %11s at position %2s:%-11s. Kept %11s (%2d%%) [running count across whole BAM]",  
 	   rc_main.totalString().c_str(), GenomicRegion::chrToString(r_id(r)).c_str(), posstring.c_str(),  
 	   rc_main.keepString().c_str(), rc_main.percent());
   
   printf ("%s | ",buffer);
-  VarUtils::displayRuntime(start);
+  SnowUtils::displayRuntime(start);
   cout << endl;
   
 }
@@ -215,7 +222,7 @@ void VariantBamReader::writeVariantBamFromHash() {
   twopass = false;
 
   ReadCount rc_main;
-
+  /*
   while (m_reader->GetNextAlignment(a)) {
 
     rc_main.total++;
@@ -228,6 +235,7 @@ void VariantBamReader::writeVariantBamFromHash() {
       printMessage(rc_main, a);
     
   }
+  */
 #else
   /*
   void* dum;
@@ -256,13 +264,13 @@ void VariantBamReader::writeVariantBamFromHash() {
     
     if (++count % 2000000 == 0) {
       char buffer[100];
-      string posstring = VarUtils::AddCommas<int>(b->core.pos);
+      string posstring = SnowUtils::AddCommas<int>(b->core.pos);
       sprintf (buffer, "Writing read at position %2s:%-11s from hash. Kept %11d of %11d",  
 	       GenomicRegion::chrToString(b->core.tid).c_str(), posstring.c_str(),  
 	       keep_count, count);
       
       printf ("%s | ",buffer);
-      VarUtils::displayRuntime(start);
+      SnowUtils::displayRuntime(start);
       cout << endl;
     }
 
@@ -281,7 +289,7 @@ void VariantBamReader::printRuleCounts(unordered_map<string, size_t> &rm) const 
   for (auto& i : rm)
     total += i.second;
   for (auto& i : rm) {
-    cout << "  " << i.first << ":" << i.second << "(" << VarUtils::percentCalc<size_t>(i.second, total) << "%)" << endl;
+    cout << "  " << i.first << ":" << i.second << "(" << SnowUtils::percentCalc<size_t>(i.second, total) << "%)" << endl;
   }
   
 }
@@ -301,7 +309,7 @@ void VariantBamReader::saveAlignment(Read &r) {
 #endif
 
 #ifdef HAVE_BAMTOOLS
-    m_writer->SaveAlignment(r);
+    m_writer->SaveAlignment(*(r.get()));
 #endif
     //bam_destroy1(b); // its written, so remove from heap
 
@@ -332,6 +340,7 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, ReadVec &bav) {
     
     Read r;
     GET_READ(r);
+
     /*    bam1_t * b = bam_init1();
     if (hts_itr == 0) { // whole genome
       if (bam_read1(fp, b) < 0)
@@ -362,7 +371,7 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, ReadVec &bav) {
 	rule_count[rule_pass] = 1;
       
       // keep track of pile
-      if (b->core.qual == 0) 
+      if (r_mapq(r) == 0) 
 	pileup++;
       
       r_add_Z_tag(r, "RL", rule_pass);

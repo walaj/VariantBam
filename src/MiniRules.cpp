@@ -6,6 +6,7 @@
 
 using namespace std;
 
+
   // define what is a valid condition
 static const unordered_map<string,bool> valid = 
   { 
@@ -194,7 +195,13 @@ void MiniRules::setIntervalTreeMap(string file) {
  
   size_t grv_size = m_grv.size();
   if (grv_size == 0) {
-    cerr << "Warning: No regions dected in file: " << file << endl;
+    cerr << "!!!!!!!!!!!!!!!!!!" << endl;
+    cerr << "!!!!!!!!!!!!!!!!!!" << endl;
+    cerr << "!!!!!!!!!!!!!!!!!!" << endl;
+    cerr << "Warning: No regions detected in file: " << file << endl;
+    cerr << "!!!!!!!!!!!!!!!!!!" << endl;
+    cerr << "!!!!!!!!!!!!!!!!!!" << endl;
+    cerr << "!!!!!!!!!!!!!!!!!!" << endl;
     return;
   }
 
@@ -374,7 +381,7 @@ MiniRulesCollection::MiniRulesCollection(string file) {
   
 }
 
-// print the MiniRulesCollectoin
+// print the MiniRulesCollection
 ostream& operator<<(ostream &out, const MiniRulesCollection &mr) {
 
   cout << "----------MiniRulesCollection-------------" << endl;
@@ -608,7 +615,7 @@ bool AbstractRule::isValid(Read &r) {
     uint32_t imax = 0;
     uint32_t dmax = 0;
 
-    for (int i = 0; i < r_cig_size(r); i++) {
+    for (size_t i = 0; i < r_cig_size(r); i++) {
       if (r_cig_type(r, i) == 'I')
 	imax = max(r_cig_len(r, i), imax);
       else if (r_cig_type(r, i) == 'D')
@@ -622,10 +629,9 @@ bool AbstractRule::isValid(Read &r) {
   }
   
   // if we dont need to because everything is pass, just just pass it
-  bool need_to_continue = !nm.isEvery() || !clip.isEvery() || !len.isEvery() || !nbases.isEvery();
+  bool need_to_continue = !nm.isEvery() || !clip.isEvery() || !len.isEvery() || !nbases.isEvery() || atm_file.length();
   if (!need_to_continue)
     return true;
-
   //cout << "ins pass " << r_pos(r) << endl;
 
   // now check if we need to build char if all we want is clip
@@ -700,11 +706,11 @@ bool AbstractRule::isValid(Read &r) {
   if (!clip.isValid(new_clipnum))
     return false;
 
-  /*  if (atm_file.length()) {
-    bool m = ahomatch(r_seq(r));
-    if ( (!m && !atm_inv) || (m && atm_inv) )
+  if (atm_file.length()) {
+    bool m = ahomatch(r);
+     if ( (!m && !atm_inv) || (m && atm_inv) )
       return false;
-      }*/
+  }
 
   return true;
 }
@@ -734,7 +740,7 @@ bool FlagRule::isValid(Read &r) {
     if (r_cig_size(r) > 1) {
       //if (a.CigarData.size() > 1) { // check that its not simple
       bool ishclipped = false;
-      for (int i = 0; i < r_cig_size(r); i++) //auto& cig : a.CigarData)
+      for (size_t i = 0; i < r_cig_size(r); i++) //auto& cig : a.CigarData)
 	if (r_cig_type(r, i) == 'H') {
 	  ishclipped = true;
 	  break;
@@ -786,7 +792,8 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
   if (ar.isEvery()) {
     out << "  KEEPING ALL" << endl;
   } else if (ar.isNone()) {
-    out << "  KEEPING NONE" << endl;  } else {
+    out << "  KEEPING NONE" << endl;  
+  } else {
     if (!ar.isize.isEvery())
       out << "isize:" << ar.isize << " -- " ;
     if (!ar.mapq.isEvery())
@@ -807,7 +814,6 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
       out << "del:" << ar.del << " -- ";
     if (ar.subsample != 100)
       out << "sub:" << ar.subsample << " -- ";
-
     if (ar.atm_file != "")
       out << "matching on " << ar.atm_count << " subsequences from file " << ar.atm_file << " -- ";
     out << ar.fr;
@@ -947,9 +953,12 @@ bool Flag::parseRuleLine(string &val, regex &reg) {
 }
 
 // check if a string contains a substring using Aho Corasick algorithm
-bool AbstractRule::ahomatch(const string& seq) {
+//bool AbstractRule::ahomatch(const string& seq) {
+bool AbstractRule::ahomatch(Read &r) {
 
   // make into Ac strcut
+  string seq;
+  r_seq(r, seq);
   AC_TEXT_t tmp_text = {seq.c_str(), static_cast<unsigned>(seq.length())};
   ac_automata_settext (atm, &tmp_text, 0);
 
@@ -997,10 +1006,10 @@ void AbstractRule::parseSeqLine(string line) {
   } else {
     return;
   }
-  
+
   // open the sequence file
   igzstream iss(line.c_str());
-  if (!iss) {
+  if (!iss || !SnowUtils::read_access_test(line)) {
     cerr << "ERROR: Cannot read the sequence file: " << line << endl;
     exit(EXIT_FAILURE);
   }
@@ -1013,7 +1022,7 @@ void AbstractRule::parseSeqLine(string line) {
   }
 
   // initialize it
-  atm = ac_automata_init();
+  atm = ac_automata_init(); //atm_ptr(ac_automata_init(), atm_free_delete);
   
   // make the Aho-Corasick key
   cout << "...generating Aho-Corasick key"  << inv << " from file " << atm_file << endl;

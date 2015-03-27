@@ -41,7 +41,7 @@ struct BamQC {
   bool use = true; // hack so that you can pass qc but not use, in case you want to speed of bam processing without the BuildCharData
 
   // count an additional read
-  void addRead(Read &a);
+  void addRead(Read &r);
   
 };
 

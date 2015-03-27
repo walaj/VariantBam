@@ -19,16 +19,22 @@
 
 #include <string>
 #include <vector>
-//#include "api/BamReader.h"
-//#include "api/BamWriter.h"
 #include "GenomicRegion.h"
 #include <unordered_map>
 #include "ahocorasick.h"
 
 #include "reads.h"
+#include <memory.h>
 
 //using namespace BamTools;
 using namespace std;
+
+// custom deleter
+struct atm_free_delete {
+  void operator()(void* x) { free((AC_AUTOMATA_t*)x); }
+};
+
+typedef unique_ptr<AC_AUTOMATA_t> atm_ptr;
 
 class Flag {
   
@@ -201,9 +207,7 @@ class AbstractRule {
  public:
 
   AbstractRule() {}
-  ~AbstractRule() {
-    free(atm);
-  }
+  ~AbstractRule() {}
 
   string name = "";
   Range isize = {-1, -1, true, "isize"}; // include all
@@ -217,6 +221,7 @@ class AbstractRule {
   Range del = {-1,-1,true, "del"};
   unordered_map<string,bool> orientation;
 
+  //atm_ptr atm;
   AC_AUTOMATA_t * atm = 0;
   string atm_file;
   bool atm_inv = false;
@@ -236,7 +241,7 @@ class AbstractRule {
 
   void parseSubLine(string line);
 
-  bool ahomatch(const string& seq);
+  bool ahomatch(Read &r);
 
   bool ahomatch(const char * seq, unsigned len);
 
@@ -253,7 +258,7 @@ class AbstractRule {
     nm.setEvery();
     nbases.setEvery();
     fr.setEvery();
-    atm = NULL;
+    atm_file = "";
     subsample = 100;
   }
   
@@ -271,7 +276,7 @@ class AbstractRule {
 
   // return if this rule accepts all reads
   bool isEvery() const {
-    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && nbases.isEvery() && fr.isEvery() && (atm != 0) && (subsample == 100);
+    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && nbases.isEvery() && fr.isEvery() && (atm_file.length() == 0) && (subsample == 100);
   }
 
   // return if this rule accepts no reads
