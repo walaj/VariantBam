@@ -28,9 +28,11 @@ AC_SEARCH_LIBS([clock_gettime], [rt], [AC_DEFINE([HAVE_CLOCK_GETTIME], [1], [clo
 AC_ARG_WITH(bamtools, AS_HELP_STRING([--with-bamtools=PATH],
 	[specify directory containing the bamtools library (http://github.com/pezmaster31/bamtools)]))
 
+bamtools_libs=""
 if test "$with_bamtools" -a -d "$with_bamtools"; then
     bamtools_ldflags="-Wl,-rpath,$with_bamtools/lib -L$with_bamtools/lib -Wl,-rpath,$with_bamtools/lib/bamtools -L$with_bamtools/lib/bamtools"
     bamtools_include="-I$with_bamtools/include -I$with_bamtools/include/bamtools"
+    bamtools_libs="-lbamtools"
     # Make sure the bamtools headers can be found
     AC_CHECK_HEADERS([api/BamReader.h],,[AC_MSG_ERROR([The bamtools library must be installed (http://github.com/pezmaster31/bamtools). You can specify its path with the --with-bamtools=PATH option])])
 fi
@@ -63,7 +65,7 @@ AC_SUBST(CPPFLAGS, "$CPPFLAGS $bamtools_include $hts_include")
 AC_SUBST(LDFLAGS, "$bamtools_ldflags $hts_ldflags $LDFLAGS -L.")
 
 # We always need to specify to link in bamtools and ahocorasick
-AC_SUBST(LIBS, "$LIBS -lbamtools -lahocorasick htslib-1.1/libhts.a -lpthread")
+AC_SUBST(LIBS, "$LIBS $bamtools_libs -lahocorasick htslib-1.1/libhts.a -lpthread")
 
 # Make sure the bamtools headers can be found
 AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
