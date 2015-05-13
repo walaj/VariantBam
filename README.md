@@ -5,8 +5,7 @@ VariantBam: One-pass extraction of sequencing reads from a BAM file using cascad
 
 Installation
 ------------
-Installation requires 3 libraries: htslib, aho-corasick and SnowTools.
-Get the HTStools, SnowTools and aho-corasick libraries
+Installation requires 3 libraries: htslib, aho-corasick and SnowTools. A modern C++ compiler is also required. We built succesfull with GCC-4.9.
 ```
 ## install htslib
 git clone https://github.com/samtools/htslib.git
