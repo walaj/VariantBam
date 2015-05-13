@@ -321,6 +321,10 @@ void VariantBamReader::saveAlignment(Read &r) {
 
 }
 
+
+
+
+
 bool VariantBamReader::writeVariantBam(BamQC &qc, ReadVec &bav) {
 
   ReadCount rc_main;
@@ -335,15 +339,16 @@ bool VariantBamReader::writeVariantBam(BamQC &qc, ReadVec &bav) {
   for (;;) { 
     
     Read r;
+    GET_READ(r);
 
-    bam1_t * b = bam_init1();
+    /*    bam1_t * b = bam_init1();
     if (hts_itr == 0) { // whole genome
       if (bam_read1(fp, b) < 0)
 	break;
     } else { // region
       if (hts_itr_next(fp, hts_itr, b, dum) <= 0)
 	  break;
-    }
+	  }*/
     
     // pre-process it
     rc_this.total++;

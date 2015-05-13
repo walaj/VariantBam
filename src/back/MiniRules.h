@@ -22,6 +22,7 @@
 #include "GenomicRegion.h"
 #include <unordered_map>
 #include "ahocorasick.h"
+#include "SnowUtils.h"
 
 #include "reads.h"
 #include <memory.h>
@@ -227,7 +228,8 @@ class AbstractRule {
   bool atm_inv = false;
   size_t atm_count = 0;
   
-  int subsample = 100;
+  uint32_t subsam_seed = 999;
+  double subsam_frac = 1;
 
   bool none = false;
   // set to true if you want a read to belong to the region if its mate does
@@ -259,7 +261,7 @@ class AbstractRule {
     nbases.setEvery();
     fr.setEvery();
     atm_file = "";
-    subsample = 100;
+    subsam_frac = 1;
   }
   
   void setNone() { 
@@ -276,7 +278,7 @@ class AbstractRule {
 
   // return if this rule accepts all reads
   bool isEvery() const {
-    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && nbases.isEvery() && fr.isEvery() && (atm_file.length() == 0) && (subsample == 100);
+    return isize.isEvery() && mapq.isEvery() && len.isEvery() && clip.isEvery() && phred.isEvery() && nm.isEvery() && nbases.isEvery() && fr.isEvery() && (atm_file.length() == 0) && (subsam_frac >= 1);
   }
 
   // return if this rule accepts no reads

@@ -2,12 +2,11 @@
 #include "VariantBamReader.h"
 #include <regex>
 #include "gzstream.h"
-#include "SnowUtils.h"
+#include "htslib/khash.h"
 
 using namespace std;
 
-
-  // define what is a valid condition
+// define what is a valid condition
 static const unordered_map<string,bool> valid = 
   { 
   {"duplicate",     true},
@@ -72,25 +71,6 @@ bool MiniRules::isOverlapping(Read &r) {
   
 }
 
-/*bool MiniRules::isOverlapping(bam1_t * b) {
-
-  // if this is a whole genome rule, it overlaps
-  if (m_whole_genome)
-    return true;
-
-  // TODO fix r_mpos(r) + r_length(r) is using wrong length
-
-  // check whether a read (or maybe its mate) hits a rule
-  GenomicIntervalVector grv;
-  if (m_tree.count(b->core.tid) == 1) // check that we have a tree for this chr
-    m_tree[b->core.tid].findOverlapping(b->core.pos, b->core.pos + b->core.l_qseq, grv);
-  if (m_tree.count(b->core.mtid) == 1 && m_applies_to_mate) // check that we have a tree for this chr
-    m_tree[b->core.mtid].findOverlapping (b->core.mtid, b->core.mpos + b->core.l_qseq, grv);
-  return grv.size() > 0;
-  
-  }*/
-
-
 // checks which rule a read applies to (using the hiearchy stored in m_regions).
 // if a read does not satisfy a rule it is excluded.
 string MiniRulesCollection::isValid(Read &r) {
@@ -134,52 +114,6 @@ string MiniRulesCollection::isValid(Read &r) {
   return out; 
   
 }
-
-// checks which rule a read applies to (using the hiearchy stored in m_regions).
-// if a read does not satisfy a rule it is excluded.
-/*
-string MiniRulesCollection::isValid(bam1_t *b) {
-
-  if (m_regions.size() == 0) {
-    cerr << "Empty MiniRules" << endl;
-    exit(EXIT_FAILURE);
-  }
-
-  size_t which_region = 0;
-  size_t which_rule = 0;
-  
-  // find out which rule it is a part of
-  // lower number rules dominate
-
-  for (auto it : m_regions) {
-    which_rule = 0;
-    bool rule_hit = false;
-    if (it->isOverlapping(b)) // read overlaps a region
-      for (auto& jt : it->m_abstract_rules) { // loop rules in that region
-	if (jt.isValid(b)) {
-	  rule_hit = true;
-	  break;
-	}
-	which_rule++;
-      }
-
-    // found a hit in a rule
-    if (rule_hit)
-      break;
-    // didnt find hit, move it up one
-    which_region++;
-  }
-  
-  // isn't in a rule or it never satisfied one. Remove
-  if (which_region >= m_regions.size())
-    return ""; 
-
-  string out = "rg" + to_string(++which_region) + "rl" + to_string(++which_rule);
-
-  return out; 
-  
-}
-*/
 
 // convert a region BED file into an interval tree map
 void MiniRules::setIntervalTreeMap(string file) {
@@ -574,22 +508,21 @@ void Range::parseRuleLine(string line) {
 // main function for determining if a read is valid
 bool AbstractRule::isValid(Read &r) {
 
-  //debug
-  //if (debug_count++)
-  //  return false;
-
   // check if its keep all or none
   if (isEvery())
     return true;
 
   // check if it is a subsample
-  if (subsample < 100) {
+  if (subsam_frac < 1) {
+    uint32_t k = __ac_Wang_hash(__ac_X31_hash_string(bam_get_qname(r.get())) ^ subsam_seed);
+    if ((double)(k&0xffffff) / 0x1000000 >= subsam_frac) 
+      return false;
+  }
+  /*if (subsample < 100) {
     int randn = (rand() % 100); // random number between 1 and 100
     if (subsample < randn)
       return false;
-  }
-
-  //cout << "sub pass " << r_pos(r) << endl;
+      }*/
 
   // check if is discordant
   bool isize_pass = isize.isValid(abs(r_isize(r)));
@@ -812,8 +745,8 @@ ostream& operator<<(ostream &out, const AbstractRule &ar) {
       out << "ins:" << ar.ins << " -- ";
     if (!ar.del.isEvery())
       out << "del:" << ar.del << " -- ";
-    if (ar.subsample != 100)
-      out << "sub:" << ar.subsample << " -- ";
+    if (ar.subsam_frac < 1)
+      out << "sub:" << ar.subsam_frac << " -- ";
     if (ar.atm_file != "")
       out << "matching on " << ar.atm_count << " subsequences from file " << ar.atm_file << " -- ";
     out << ar.fr;
@@ -1050,7 +983,7 @@ void AbstractRule::parseSubLine(string line) {
   smatch match;
   if (regex_search(line, match, reg)) {
     try {
-      subsample = stoi(match[1].str());
+      subsam_frac = stod(match[1].str());
     } catch (...) {
       cerr << "ERROR parsing string for subsample. Line is: " << line << endl;
       exit(EXIT_FAILURE);
@@ -1060,249 +993,6 @@ void AbstractRule::parseSubLine(string line) {
   }
 
   // check that it is valid
-  assert(subsample >= 0 && subsample <= 100);
+  assert(subsam_frac >= 0 && subsam_frac <= 1);
 
 }
-
-
-
-// main function for determining if a read is valid
-/*
-bool AbstractRule::isValid(bam1_t *b) {
-  
-  // check if its keep all or none
-  if (isEvery())
-    return true;
-
-  // check if it is a subsample
-  if (subsample < 100) {
-    int r = (rand() % 100); // random number between 1 and 100
-    if (subsample < r)
-      return false;
-  }
-
-  // check if is discordant
-  //bool isize_pass = isize.isValid(abs(a.InsertSize));
-  bool isize_pass = isize.isValid(abs(b->core.isize));
-
-  if (!isize_pass) {
-    return false;
-  }
-
-  // check for valid mapping quality
-  if (!mapq.isEvery())
-    if (!mapq.isValid(b->core.qual)) 
-      return false;
-
-  // check for valid flags
-  if (!fr.isValid(b))
-    return false;
-
-  // check the CIGAR
-  uint32_t clipnum = 0;
-  if (!ins.isEvery() || !del.isEvery() || !clip.isEvery()) {
-    uint32_t imax = 0;
-    uint32_t dmax = 0;
-
-
-    uint32_t *cig = bam_get_cigar(b);
-    for (int i = 0; i < b->core.n_cigar; i++) {
-      if (cig[i] & BAM_CINS)
-	imax = max(bam_cigar_oplen(cig[i]), imax);
-      else if (cig[i] & BAM_CDEL) 
-	dmax = max(bam_cigar_oplen(cig[i]), dmax);
-      else if ((cig[i] & BAM_CSOFT_CLIP) || (cig[i] & BAM_CHARD_CLIP))
-	clipnum += bam_cigar_oplen(cig[i]);
-    }
-    
-    if (!ins.isValid(imax))
-      return false;
-    if (!del.isValid(dmax))
-      return false;
-  }
-  
-  // if we dont need to because everything is pass, just just pass it
-  //bool need_to_continue = !nm.isEvery() || !clip.isEvery() || !len.isEvery() || !nbases.isEvery();
-  //if (!need_to_continue)
-  //  return true;
-
-  // now check if we need to build char if all we want is clip
-  if (!clip.isEvery()) {
-    //clipnum = VariantBamReader::getClipCount(a);
-    if (nm.isEvery() && len.isEvery() && !clip.isValid(clipnum)) // if clip fails, its not going to get better by trimming. kill it now before building teh char data
-      return false;
-  }
-
-  //if (a.Name == "") {// only build once 
-  //  //cout << *this << endl;
-  //  a.BuildCharData();
-  // }
-
-  // check for valid NM
-  const char NM[] = "NM";
-  uint8_t * nmr = bam_aux_get(b, NM);
-  int nm_val = 0;
-  if (nmr)
-    nm_val = bam_aux2i(nmr);
-  
-  if (!nm.isEvery()) {
-    if (!nm.isValid(nm_val))
-      return false;
-  }
-
-  
-  // trim the read, then check length
-  //int new_len = a.QueryBases.length();
-  int new_clipnum = clipnum;
-  int32_t new_len = b->core.l_qseq;
-
-  if (!phred.isEvery()) {
-
-    uint8_t * tsp = bam_aux_get(b, TS);
-    uint8_t * tlp = bam_aux_get(b, TL);
-    int32_t start;
-    if (tsp && tlp) {
-      //new_len = bam_aux2i(tlp);
-      //trimmed_seq = bam_aux2Z(tsp);
-    }
-    else { // need to do the trimming
-      new_len = VariantBamReader::qualityTrimRead(phred.min, start, b);
-      //uint8_t* s   = bam_get_seq(b);
-      bam_aux_append(b, "TS", 'i', 4, (uint8_t*)&start);
-      bam_aux_append(b, "TL", 'i', 4, (uint8_t*)&new_len);
-    }
-
-    // all the bases are trimmed away 
-    if (new_len == 0)
-      return false;
-
-    new_clipnum = max(0, static_cast<int>(clipnum - (b->core.l_qseq - new_len)));
-
-    // check the N
-    if (!nbases.isEvery()) {
-      size_t n = 0;
-      uint8_t* s   = bam_get_seq(b);
-      for (int i = start; i < (start+new_len); i++)
-	if (s[i] == 15)
-	  n++;
-      if (!nbases.isValid(n))
-    	return false;
-    }
-
-  }
-
-  // check the N if we didn't do phred trimming
-
-  if (!nbases.isEvery() && phred.isEvery()) {
-    size_t n = 0;
-    uint8_t * s = bam_get_seq(b);
-    for (int i = 0; i < b->core.l_qseq; i++)
-      if (s[i] == 15)
-	n++;
-    if (!nbases.isValid(n))
-     return false;
-  }
-
-  // check for valid length
-  if (!len.isValid(new_len))
-    return false;
-
-  // check for valid clip
-  if (!clip.isValid(new_clipnum))
-    return false;
-
-  if (atm_file.length()) {
-    uint8_t * s = bam_get_seq(b);
-    char sseq[b->core.l_qseq];
-    for (int i = 0; i < b->core.l_qseq; i++)
-      sseq[i] = BASES[bam_seqi(s, i)];
-    bool m = ahomatch(sseq, b->core.l_qseq);
-    if ( (!m && !atm_inv) || (m && atm_inv) )
-      return false;
-      }
-
-  return true;
-}
-*/
-
-/*
-bool FlagRule::isValid(bam1_t * b) {
-  
-  if (isEvery())
-    return true;
-
-  if (!flagCheck(dup,  b, BAM_FDUP,           false)) return false;
-  if (!flagCheck(supp, b, BAM_FSUPPLEMENTARY, false)) return false;
-  if (!flagCheck(supp, b, BAM_FQCFAIL,        false)) return false;
-  if (!flagCheck(supp, b, BAM_FUNMAP,         true)) return false; // invert because rule is check for mapped
-  if (!flagCheck(supp, b, BAM_FMUNMAP,        true)) return false; // invert because rule is check for mapped
-
-  
-//   if (!dup.isNA()) {
-//     bool isdup = 
-//     if ((dup.isOff() && a.IsDuplicate()) || (dup.isOn() && !a.IsDuplicate()))
-//       return false;
-//   }
-//   if (!supp.isNA()) 
-//     if ((supp.isOff() && !a.IsPrimaryAlignment()) || (supp.isOn() && a.IsPrimaryAlignment()))
-//       return false;
-//   if (!qcfail.isNA())
-//     if ((qcfail.isOff() && a.IsFailedQC()) || (qcfail.isOn() && !a.IsFailedQC()))
-//       return false;
-//   if (!mapped.isNA())
-//     if ( (mapped.isOff() && a.IsMapped()) || (mapped.isOn() && !a.IsMapped()) )
-//       return false;
-//   if (!mate_mapped.isNA())
-//     if ( (mate_mapped.isOff() && a.IsMateMapped()) || (mate_mapped.isOn() && !a.IsMateMapped()) )
-//       return false;
-
-  // check for hard clips
-  if (!hardclip.isNA()) {
-    uint32_t * cig = bam_get_cigar(b);
-    bool ishclipped = false;
-    for (int i = 0; i < b->core.n_cigar; i++) 
-      if (cig[i] & BAM_CHARD_CLIP) {
-	ishclipped = true;
-	break;
-      }  
-    if ( (ishclipped && hardclip.isOff()) || (!ishclipped && hardclip.isOn()) )
-      return false;
-  }
-  
-  // check for orientation
-  // check first if we need to even look for orientation
-  bool ocheck = !ff.isNA() || !fr.isNA() || !rf.isNA() || !rr.isNA() || !ic.isNA();
-  if ( ocheck ) {
-
-    //bool first = r_pos(r) < r_mpos(r);
-    bool rev = b->core.flag & BAM_FREVERSE;
-    bool mrev = b->core.flag & BAM_FMREVERSE;
-    bool first = b->core.pos < b->core.mpos;
-    bool bfr = (first && (!rev && mrev) )|| (!first &&  rev && !mrev);
-    bool brr = rev && mrev;
-    bool brf = (first &&  (rev && !mrev)) || (!first && !rev &&  mrev);
-    bool bff = !rev && !mrev;
-      
-    bool bic = b->core.tid != b->core.mtid; //r_mid(r) != r_id(r);
-
-    // its FR and it CANT be FR (off) or its !FR and it MUST be FR (ON)
-    // orienation not defined for inter-chrom, so exclude these with !ic
-    if (!bic) { // PROCEED IF INTRA-CHROMOSOMAL
-      if ( (bfr && fr.isOff()) || (!bfr && fr.isOn())) 
-	return false;
-      // etc....
-      if ( (brr && rr.isOff()) || (!brr && rr.isOn())) 
-	return false;
-      if ( (brf && rf.isOff()) || (!brf && rf.isOn())) 
-	return false;
-      if ( (bff && ff.isOff()) || (!bff && ff.isOn())) 
-	return false;
-    }
-    if ( (bic && ic.isOff()) || (!bic && ic.isOn()))
-      return false;
-      
-  }
-  return true;
-  
-}
-	*/
