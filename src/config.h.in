@@ -6,6 +6,9 @@
 /* clock_getttime found */
 #undef HAVE_CLOCK_GETTIME
 
+/* Define to 1 if you have the <htslib/hts.h> header file. */
+#undef HAVE_HTSLIB_HTS_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
