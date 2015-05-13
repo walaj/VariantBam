@@ -3,6 +3,26 @@ VariantBam: One-pass extraction of sequencing reads from a BAM file using cascad
 
 **License:** [GNU GPLv3][license]
 
+Installation
+------------
+Installation requires 3 libraries: htslib, aho-corasick and SnowTools.
+Get the HTStools, SnowTools and aho-corasick libraries
+```
+## install htslib
+git clone https://github.com/samtools/htslib.git
+cd htslib && make
+
+## install snowtools
+git clone https://github.com/jwalabroad/SnowTools.git
+cd SnowTools && ./configure --with-htslib=<path_to_htslib_folder> && make
+
+## install aho-corasick (not required if not doing motif-matching)
+## Download from http://sourceforge.net/projects/multifast/
+cd multifast/ahocorasick && make
+
+## install variant-bam
+git clone https://github.com/broadinstitute/variant-bam.git
+cd variant-bam && ./configure --with-snowtools=<path_to_snowtools_srcdir> --with-ahocorasick=<path_to_multifast_dir> && make
 
 Description
 -----------

@@ -74,17 +74,17 @@ else
     aholib="-lahocorasick"
 fi   
 
-AC_ARG_WITH(hts, AS_HELP_STRING([--with-hts=PATH],
-	[specify directory containing the HTS library (https://github.com/samtools/htslib)]))
+#AC_ARG_WITH(hts, AS_HELP_STRING([--with-hts=PATH],
+#	[specify directory containing the HTS library (https://github.com/samtools/htslib)]))
 
-if test "$with_hts" -a -d "$with_hts"; then
-    hts_ldflags="-Wl,-rpath,$with_hts -L$with_hts"
-    hts_include="-I$with_hts"
-else
-    htsloc="/xchip/gistic/Jeremiah/GIT/htslib"
-    hts_ldflags="-Wl,-rpath,$htsloc,-L$htsloc"
-    hts_include="-I$htsloc"
-fi
+#if test "$with_hts" -a -d "$with_hts"; then
+#    hts_ldflags="-Wl,-rpath,$with_hts -L$with_hts"
+#    hts_include="-I$with_hts"
+#else
+#    htsloc="/xchip/gistic/Jeremiah/GIT/htslib"
+#    hts_ldflags="-Wl,-rpath,$htsloc,-L$htsloc"
+#    hts_include="-I$htsloc"
+#fi
 
 
 # Only fail on warnings when the --enable-development flag is passed into configure
@@ -105,7 +105,7 @@ AC_SUBST(LDFLAGS, "$aho_ldflags $hts_ldflags $snowtools_ldflags $LDFLAGS -L.")
 AC_SUBST(LIBS, "$LIBS $aholib $snowtools_libs -lhts -lpthread")
 
 # Make sure the bamtools headers can be found
-AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
+#AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
 
 ## Make sure the snowtools headers can be found
 AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
