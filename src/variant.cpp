@@ -185,8 +185,10 @@ void parseVarOptions(int argc, char** argv) {
 
   bool die = false;
 
-  if (argc < 2) 
-    die = true;
+  if (argc < 2) {
+    std::cerr << "\n" << VARIANT_BAM_USAGE_MESSAGE;
+    exit(EXIT_FAILURE);
+  }
 
   opt::bam = std::string(argv[1]);
 

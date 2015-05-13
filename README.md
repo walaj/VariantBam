@@ -14,7 +14,7 @@ cd htslib && make
 
 ## install snowtools
 git clone https://github.com/jwalabroad/SnowTools.git
-cd SnowTools && ./configure --with-htslib=<path_to_htslib_folder> && make
+cd SnowTools/src && ./configure --with-htslib=<path_to_htslib_folder> && make
 
 ## install aho-corasick (not required if not doing motif-matching)
 ## Download from http://sourceforge.net/projects/multifast/
@@ -22,7 +22,8 @@ cd multifast/ahocorasick && make
 
 ## install variant-bam
 git clone https://github.com/broadinstitute/variant-bam.git
-cd variant-bam && ./configure --with-snowtools=<path_to_snowtools_srcdir> --with-ahocorasick=<path_to_multifast_dir> && make
+cd variant-bam/src && ./configure --with-snowtools=<path_to_snowtools_srcdir> --with-ahocorasick=<path_to_multifast_dir> --with-htslib=<path_to_htslib> && make
+```
 
 Description
 -----------
