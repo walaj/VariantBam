@@ -4347,7 +4347,6 @@ if test "$with_snowtools" -a -d "$with_snowtools"; then
     snowtools_include="-Iwith_snowtools"
     snowtools_libs="-lsnowtools"
 else
-    snowstable="SnowToolsStable/src"
     snowcurrent="/xchip/gistic/Jeremiah/GIT/SnowTools/src"
     snowtools_ldflags="-L$snowcurrent"
     snowtools_include="-I$snowcurrent"
@@ -4375,7 +4374,7 @@ if test "$with_aho" -a -d "$with_aho"; then
 ##    aho_ldflags="-L ThirdParty/multifast-v1.4.2/ahocorasick/build"
 ##    aholib="-lahocorasick"
 else
-    aho=/xchip/gistic/Jeremiah/GIT/isva/ThirdParty/multifast-v1.4.2
+    aho="../ThirdParty/multifast-v1.4.2"
     aho_include="-I$aho"
     aho_ldflags="-L$aho/ahocorasick/build"
     aholib="-lahocorasick"
