@@ -41,7 +41,7 @@ AC_ARG_WITH(snowtools, AS_HELP_STRING([--with-snowtools=PATH],
 	[specify directory containing the SnowTools library]))
 if test "$with_snowtools" -a -d "$with_snowtools"; then
     snowtools_ldflags="-L$with_snowtools"
-    snowtools_include="-Iwith_snowtools"
+    snowtools_include="-I$with_snowtools"
     snowtools_libs="-lsnowtools"
 else
     snowcurrent="/xchip/gistic/Jeremiah/GIT/SnowTools/src"
@@ -73,12 +73,12 @@ else
     aholib="-lahocorasick"
 fi   
 
-AC_ARG_WITH(hts, AS_HELP_STRING([--with-hts=PATH],
+AC_ARG_WITH(hts, AS_HELP_STRING([--with-htslib=PATH],
 	[specify directory containing the HTS library (https://github.com/samtools/htslib)]))
 
-if test "$with_hts" -a -d "$with_hts"; then
-    hts_ldflags="-Wl,-rpath,$with_hts -L$with_hts"
-    hts_include="-I$with_hts"
+if test "$with_htslib" -a -d "$with_htslib"; then
+    hts_ldflags="-Wl,-rpath,$with_htslib -L$with_htslib"
+    hts_include="-I$with_htslib"
 else
     htsloc="/xchip/gistic/Jeremiah/GIT/htslib"
     hts_ldflags="-Wl,-rpath,$htsloc,-L$htsloc"

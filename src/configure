@@ -869,7 +869,7 @@ Optional Packages:
   --with-aho=PATH         specify directory containing the AhoCorasick string
                           matching algorithm C code
                           (http://sourceforge.net/projects/multifast/)
-  --with-hts=PATH         specify directory containing the HTS library
+  --with-htslib=PATH      specify directory containing the HTS library
                           (https://github.com/samtools/htslib)
 
 Some influential environment variables:
@@ -4344,7 +4344,7 @@ if test "${with_snowtools+set}" = set; then
 fi;
 if test "$with_snowtools" -a -d "$with_snowtools"; then
     snowtools_ldflags="-L$with_snowtools"
-    snowtools_include="-Iwith_snowtools"
+    snowtools_include="-I$with_snowtools"
     snowtools_libs="-lsnowtools"
 else
     snowcurrent="/xchip/gistic/Jeremiah/GIT/SnowTools/src"
@@ -4387,9 +4387,9 @@ if test "${with_hts+set}" = set; then
 
 fi;
 
-if test "$with_hts" -a -d "$with_hts"; then
-    hts_ldflags="-Wl,-rpath,$with_hts -L$with_hts"
-    hts_include="-I$with_hts"
+if test "$with_htslib" -a -d "$with_htslib"; then
+    hts_ldflags="-Wl,-rpath,$with_htslib -L$with_htslib"
+    hts_include="-I$with_htslib"
 else
     htsloc="/xchip/gistic/Jeremiah/GIT/htslib"
     hts_ldflags="-Wl,-rpath,$htsloc,-L$htsloc"
