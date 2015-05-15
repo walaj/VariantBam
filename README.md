@@ -12,6 +12,7 @@ git clone https://github.com/samtools/htslib.git
 cd htslib && make
 
 ## install snowtools
+
 git clone https://github.com/jwalabroad/SnowTools.git
 cd SnowTools/src && ./configure --with-htslib=<path_to_htslib_folder> && make
 

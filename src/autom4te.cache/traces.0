@@ -688,8 +688,8 @@ m4trace:configure.ac:97: -1- AC_SUBST([AM_CXXFLAGS], ["-g -std=c++11 -Wall -Wext
 m4trace:configure.ac:98: -1- AC_SUBST([CXXFLAGS], ["-O3"])
 m4trace:configure.ac:99: -1- AC_SUBST([CFLAGS], ["-O3"])
 m4trace:configure.ac:100: -1- AC_SUBST([CPPFLAGS], ["$CPPFLAGS $aho_include $hts_include $snowtools_include"])
-m4trace:configure.ac:101: -1- AC_SUBST([LDFLAGS], ["$aho_ldflags $hts_ldflags $snowtools_ldflags $LDFLAGS -L."])
-m4trace:configure.ac:104: -1- AC_SUBST([LIBS], ["$LIBS $aholib $snowtools_libs -lhts -lpthread"])
+m4trace:configure.ac:101: -1- AC_SUBST([LDFLAGS], ["$snowtools_ldflags $aho_ldflags $hts_ldflags $LDFLAGS -L."])
+m4trace:configure.ac:104: -1- AC_SUBST([LIBS], ["$LIBS $snowtools_libs $aholib -lhts -lpthread"])
 m4trace:configure.ac:107: -1- AC_CHECK_HEADERS([htslib/hts.h], [], [AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
 m4trace:configure.ac:107: -1- AH_OUTPUT([HAVE_HTSLIB_HTS_H], [/* Define to 1 if you have the <htslib/hts.h> header file. */
 #undef HAVE_HTSLIB_HTS_H])

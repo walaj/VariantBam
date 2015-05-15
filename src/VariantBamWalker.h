@@ -22,5 +22,6 @@ class VariantBamWalker: public SnowTools::BamWalker
   
   SnowTools::BamStats m_stats;
 
+
 };
 #endif

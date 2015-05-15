@@ -10,16 +10,17 @@ void VariantBamWalker::writeVariantBam()
 
   ReadCount rc_main;
   Read r;
-  std::string rule;
+  bool rule;
 
   while (GetNextRead(r, rule))
     {
       
       TrackSeenRead(r);
       // read is valid
-      if (rule.length()) {
+      if (rule) {
 	++rc_main.keep;
-	WriteAlignment(r);
+	if (fop) // if we specified an output file, write it
+	  WriteAlignment(r);
       } 
 
       if (++rc_main.total % 1000000 == 0 && m_verbose)

@@ -98,10 +98,10 @@ AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
 AC_SUBST(CPPFLAGS, "$CPPFLAGS $aho_include $hts_include $snowtools_include")
-AC_SUBST(LDFLAGS, "$aho_ldflags $hts_ldflags $snowtools_ldflags $LDFLAGS -L.")
+AC_SUBST(LDFLAGS, "$snowtools_ldflags $aho_ldflags $hts_ldflags $LDFLAGS -L.")
 
 # We always need to specify to link in bamtools and ahocorasick
-AC_SUBST(LIBS, "$LIBS $aholib $snowtools_libs -lhts -lpthread")
+AC_SUBST(LIBS, "$LIBS $snowtools_libs $aholib -lhts -lpthread")
 
 # Make sure the bamtools headers can be found
 AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])

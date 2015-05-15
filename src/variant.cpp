@@ -21,6 +21,8 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 " General options\n"
 "      --help                           Display this help and exit\n"
 "  -v, --verbose                        Verbose output\n"
+"  -c, --counts-file                    File to place read counts per rule / region\n"
+"  -x, --counts-file-only               Same as -c, but does counting only (no output BAM)\n"
 " Output options\n"
 "  -o, --output-bam                     Output BAM file to write instead of SAM-format stdout\n"
 "  -C, --cram                           Output file should be in CRAM format\n"
@@ -31,6 +33,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 " Filtering options\n"
 "  -q, --qc-only                        Loop through the BAM, but only to make the QC file\n"
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
+"  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
 "  -k, --proc-regions-file              BED file of regions to proess reads from\n"
 "\n";
@@ -48,15 +51,20 @@ namespace opt {
   static std::string reference = SnowTools::REFHG19;
   static bool strip_all_tags = false;
   static std::string tag_list = "";
+  static std::string counts_file = "";
+  static bool counts_only = false;
 }
 
 enum {
   OPT_HELP
 };
 
-static const char* shortopts = "hvqji:o:r:ck:g:Cf:s:ST:";
+static const char* shortopts = "hvqji:o:r:k:g:Cf:s:ST:l:c:x:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
+  { "linked-region",              required_argument, NULL, 'l' },
+  { "counts-file",                required_argument, NULL, 'c' },
+  { "counts-file-only",           required_argument, NULL, 'x' },
   { "cram",                       no_argument, NULL, 'C' },
   { "strip-all-tags",             no_argument, NULL, 'S' },
   { "strip-tags",                 required_argument, NULL, 's' },
@@ -147,8 +155,13 @@ int main(int argc, char** argv) {
     return 1;
     }*/
 
+  // should we count all rules (slower)
+  if (opt::counts_only || opt::counts_file.length())
+    walk.setCountAllRules();
+
   // open the output file
-  walk.OpenWriteBam(opt::out);
+  if (!opt::counts_only)
+    walk.OpenWriteBam(opt::out);
 
   // print out some info
   if (opt::verbose) 
@@ -162,6 +175,9 @@ int main(int argc, char** argv) {
   if (opt::verbose)
     std::cerr << "...starting filtering" << std::endl;
   walk.writeVariantBam();
+
+  // display the rule counts
+  walk.MiniRulesToFile(opt::counts_file);
 
   // make a bed file
   //if (opt::verbose > 0)
@@ -205,6 +221,17 @@ void parseVarOptions(int argc, char** argv) {
       //case 't': opt::twopass = true; break;
     case 'i': arg >> opt::bam; break;
     case 'o': arg >> opt::out; break;
+    case 'l': 
+      {
+	std::string tmp;
+	arg >> tmp;
+	if (tmp.length() == 0)
+	  break;
+	if (opt::rules.length())
+	  opt::rules += "%";
+	opt::rules += "mlregion@" + tmp;
+      }
+      break;
     case 'g': 
       {
 	std::string tmp;
@@ -216,18 +243,8 @@ void parseVarOptions(int argc, char** argv) {
 	opt::rules += "region@" + tmp;
       }
       break;
-      /* case 'c':  // call stats hack
-      {
-	std::string tmp;
-	arg >> tmp;
-	if (tmp.length() == 0)
-	  break;
-	if (opt::rules.length())
-	  opt::rules += "%";
-	opt::rules += "region@" + tmp + ";mate";
-      }
-      break;
-      */
+    case 'c': arg >> opt::counts_file; break;
+    case 'x': arg >> opt::counts_file; opt::counts_only = true; break;
     case 'r': 
       {
 	std::string tmp;

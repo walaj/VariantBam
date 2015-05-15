@@ -4416,11 +4416,11 @@ CFLAGS="-O3"
 
 CPPFLAGS="$CPPFLAGS $aho_include $hts_include $snowtools_include"
 
-LDFLAGS="$aho_ldflags $hts_ldflags $snowtools_ldflags $LDFLAGS -L."
+LDFLAGS="$snowtools_ldflags $aho_ldflags $hts_ldflags $LDFLAGS -L."
 
 
 # We always need to specify to link in bamtools and ahocorasick
-LIBS="$LIBS $aholib $snowtools_libs -lhts -lpthread"
+LIBS="$LIBS $snowtools_libs $aholib -lhts -lpthread"
 
 
 # Make sure the bamtools headers can be found
