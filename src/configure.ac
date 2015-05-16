@@ -41,7 +41,7 @@ AC_ARG_WITH(snowtools, AS_HELP_STRING([--with-snowtools=PATH],
 	[specify directory containing the SnowTools library]))
 if test "$with_snowtools" -a -d "$with_snowtools"; then
     snowtools_ldflags="-L$with_snowtools/src"
-    snowtools_include="-I$with_snowtools/src"
+    snowtools_include="-I$with_snowtools/src -I$with_snowtools/src/multifast-v1.4.2"
     snowtools_libs="-lsnowtools"
 else
     with_snowtools="/xchip/gistic/Jeremiah/GIT/SnowTools"
@@ -100,7 +100,6 @@ AC_SUBST(CFLAGS, "-O3")
 AC_SUBST(CPPFLAGS, "$CPPFLAGS $aho_include $hts_include $snowtools_include")
 AC_SUBST(LDFLAGS, "$snowtools_ldflags $hts_ldflags $LDFLAGS -L.")
 
-# We always need to specify to link in bamtools and ahocorasick
 AC_SUBST(LIBS, "$LIBS $snowtools_libs -lhts -lpthread")
 
 # Make sure the bamtools headers can be found
