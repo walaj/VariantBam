@@ -40,51 +40,51 @@ AC_SEARCH_LIBS([clock_gettime], [rt], [AC_DEFINE([HAVE_CLOCK_GETTIME], [1], [clo
 AC_ARG_WITH(snowtools, AS_HELP_STRING([--with-snowtools=PATH],
 	[specify directory containing the SnowTools library]))
 if test "$with_snowtools" -a -d "$with_snowtools"; then
-    snowtools_ldflags="-L$with_snowtools"
-    snowtools_include="-I$with_snowtools"
+    snowtools_ldflags="-L$with_snowtools/src"
+    snowtools_include="-I$with_snowtools/src"
     snowtools_libs="-lsnowtools"
 else
-    snowcurrent="/xchip/gistic/Jeremiah/GIT/SnowTools/src"
-    snowtools_ldflags="-L$snowcurrent"
-    snowtools_include="-I$snowcurrent"
+    with_snowtools="/xchip/gistic/Jeremiah/GIT/SnowTools"
+    snowtools_ldflags="-L$with_snowtools/src"
+    snowtools_include="-I$with_snowtools/src"
     snowtools_libs="-lsnowtools"
-fi  
+fi
 
 ########
 ### CHECK FOR AHO-CORASICK LIBRARY
 ########
 # Check for the aho library paths
-AC_ARG_WITH(aho, AS_HELP_STRING([--with-aho=PATH],
-        [specify directory containing the AhoCorasick string matching algorithm C code (http://sourceforge.net/projects/multifast/)]))
+#AC_ARG_WITH(aho, AS_HELP_STRING([--with-aho=PATH],
+#        [specify directory containing the AhoCorasick string matching algorithm C code (http://sourceforge.net/projects/multifast/)]))
 
-aholib=""
+#aholib=""
 if test "$with_aho" -a -d "$with_aho"; then
     aho_include="-I$with_aho"
     aho_ldflags="-L$with_aho/ahocorasick/build"
     aholib="-lahocorasick"
-##else
-##    aho_include="-I ThirdParty/multifast-v1.4.2"
-##    aho_ldflags="-L ThirdParty/multifast-v1.4.2/ahocorasick/build"
-##    aholib="-lahocorasick"
 else
-    aho="../ThirdParty/multifast-v1.4.2"
-    aho_include="-I$aho"
-    aho_ldflags="-L$aho/ahocorasick/build"
+    aho_include="-I$with_snowtools/src/multifast-v1.4.2"
+    aho_ldflags="-L$with_snowtools/src/multifast-v1.4.2/ahocorasick/build"
     aholib="-lahocorasick"
-fi   
+fi
+#else
+#    aho="../ThirdParty/multifast-v1.4.2"
+#    aho_include="-I$aho"
+#    aho_ldflags="-L$aho/ahocorasick/build"
+#    aholib="-lahocorasick"
+#fi   
 
-AC_ARG_WITH(hts, AS_HELP_STRING([--with-htslib=PATH],
-	[specify directory containing the HTS library (https://github.com/samtools/htslib)]))
+#AC_ARG_WITH(hts, AS_HELP_STRING([--with-htslib=PATH],
+#	[specify directory containing the HTS library (https://github.com/samtools/htslib)]))#
 
 if test "$with_htslib" -a -d "$with_htslib"; then
     hts_ldflags="-Wl,-rpath,$with_htslib -L$with_htslib"
     hts_include="-I$with_htslib"
 else
-    htsloc="/xchip/gistic/Jeremiah/GIT/htslib"
+    htsloc="$with_snowtools/src/htslib"
     hts_ldflags="-Wl,-rpath,$htsloc,-L$htsloc"
     hts_include="-I$htsloc"
 fi
-
 
 # Only fail on warnings when the --enable-development flag is passed into configure
 AC_ARG_ENABLE(development, AS_HELP_STRING([--enable-development],

@@ -7,22 +7,14 @@ Installation
 ------------
 Installation requires 3 libraries: htslib, aho-corasick and SnowTools. A modern C++ compiler is also required. We built succesfull with GCC-4.9.
 ```
-## install htslib
-git clone https://github.com/samtools/htslib.git
-cd htslib && make
-
-## install snowtools
-
-git clone https://github.com/jwalabroad/SnowTools.git
-cd SnowTools/src && ./configure --with-htslib=<path_to_htslib_folder> && make
-
-## install aho-corasick (not required if not doing motif-matching)
-## Download from http://sourceforge.net/projects/multifast/
-cd multifast/ahocorasick && make
+## install SnowTools (will come with htslib, bwalib, ahocorasick)
+curl -L https://github.com/jwalabroad/SnowTools/archive/v0.1.1.tar.gz | tar xz
+cd SnowTools-0.1.1/src && ./configure && make
+cd ../../
 
 ## install variant-bam
 git clone https://github.com/broadinstitute/variant-bam.git
-cd variant-bam/src && ./configure --with-snowtools=<path_to_snowtools_srcdir> --with-ahocorasick=<path_to_multifast_dir> --with-htslib=<path_to_htslib> && make
+cd variant-bam/src && ./configure --with-snowtools=../../SnowTools-0.1.1 --with-htslib=../../SnowTools-0.1.1/src/htslib --with-ahocorasick=../../SnowTools-0.1.1/src/multifast-v1.4.2 && make
 ```
 
 Description

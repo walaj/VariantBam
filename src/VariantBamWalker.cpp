@@ -5,8 +5,10 @@ using SnowTools::ReadCount;
 void VariantBamWalker::writeVariantBam() 
 {
 
+#ifndef __APPLE__
   // start the timer
   clock_gettime(CLOCK_MONOTONIC, &start);
+#endif
 
   ReadCount rc_main;
   Read r;

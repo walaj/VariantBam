@@ -90,8 +90,10 @@ void parseVarOptions(int argc, char** argv);
 
 int main(int argc, char** argv) {
 
+#ifndef __APPLE__
   // start the timer
   clock_gettime(CLOCK_MONOTONIC, &start);
+#endif
 
   // parse the command line
   parseVarOptions(argc, argv);
