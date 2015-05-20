@@ -5,16 +5,22 @@ VariantBam: One-pass extraction of sequencing reads from a BAM file using cascad
 
 Installation
 ------------
-Installation requires 3 libraries: htslib, aho-corasick and SnowTools. A modern C++ compiler is also required. We built succesfull with GCC-4.9.
+Installation requires 3 libraries: htslib, aho-corasick and SnowTools. A modern C++ compiler is also required. We built succesfully with GCC-4.9. 
+You can download and compile these three libraries in one step by installing SnowTools. 
+
 ```
-## install SnowTools (will come with htslib, bwalib, ahocorasick)
-curl -L https://github.com/jwalabroad/SnowTools/archive/v0.1.1.tar.gz | tar xz
-cd SnowTools-0.1.1/src && ./configure && make
+## install SnowTools (will come with htslib, bwalib, ahocorasick) (-k is for no certifate checking, might be needed)
+curl -L -k https://github.com/jwalabroad/SnowTools/archive/v0.1.1.tar.gz | tar xz
+cd SnowTools-0.1.1/src
+./configure
+make
 cd ../../
 
 ## install variant-bam
 git clone https://github.com/broadinstitute/variant-bam.git
-cd variant-bam/src && ./configure --with-snowtools=../../SnowTools-0.1.1 --with-htslib=../../SnowTools-0.1.1/src/htslib --with-ahocorasick=../../SnowTools-0.1.1/src/multifast-v1.4.2 && make
+cd variant-bam/src
+./configure --with-snowtools=../../SnowTools-0.1.1 --with-htslib=../../SnowTools-0.1.1/src/htslib
+make
 ```
 
 Description
@@ -39,31 +45,17 @@ In situations where the sequencing or library preparation quality is low, it may
 to remove poor quality reads before starting the analysis train. VariantBam handles this by optionally taking into
 account Phred base-qualities when making a decision whether to keep a sequencing read. For instance, one might 
 only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be 
-setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass.
+setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
 
-
-VariantBam is implemented in C++ and relies on the BamTools [API] (Derek Barnett, (c) 2009) for BAM I/O. 
-Note that the capabilities of the [BamTools] command line ``bamtools filter``  
-may provide a solution more suitable your needs than VariantBam. Briefly, ``bamtools filter`` allows you to 
-specify a set of filters in JSON format to be applied to a BAM. See the Bamtools documentation for more detail. 
-
-The question then is under what situations would you use ``bamtools filter``, and when would you use VariantBam? 
-Below are a list of scenarios that we feel addresses the different domains of the two tools:
-
-> 1. Extract all MAPQ 0 reads from a BAM - Either tool (prefer ``bamtools filter``)
-> 2. Extract all reads in read group A - ``bamtools filter``
-> 3. Extract all reads with NM tag >= 4 - Either tool (prefer ``bamtools filter``)
-> 4. Extract all reads with NM tag >= 4 in exons - VariantBam.
-> 5. Remove all reads with insert sizes between 100 and 600 bp - VariantBam
-> 6. Extract all reads and mate within 1000bp of a variant or set of genes - VariantBam
-> 7. Extract only high-quality reads with N bases beyong phred score X - VariantBam
-> 8. Reduce a BAM to only high quality reads around your MAFs, VCFs and BED files - VariantBam
-
-Thus, the main additions of VariantBam are three-fold:
+In comparing with other avaiable BAM filtering tools, VariantBam provides the following novel features:
 
 > 1. The ability to filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality.
 > 2. Use of interval trees to efficiently determine if a read or read mate overlaps a region.
 > 3. The ability to provide different rules for different regions, and the ability to provide these regions as common variant files (VCF, MAF, BED)
+> 4. Selecting reads by motif matching
+> 5. Ability to count numbers of reads that satisfy any number of user-defined properties
+> 6. Read and write CRAM files
+> 7. Selectively strip alignment tags
 
 Example
 -------
@@ -75,10 +67,14 @@ options=(
     --input-bam         big.bam
     --output-bam        small.bam
     --rules-file        rules.vb
+    --verbose        	
+    --strip-tags	OQ,BI     
     --proc-regions-file small_chr1_mask.bed
 )
 variant ${options[*]}
 ```
+
+To get a full list of options, run ``variant --help``.
 
 Syntax
 ------
@@ -101,18 +97,17 @@ treated such that they will include any read who overlaps it, even partially. Op
 you can specify that your region of interest is a bit bigger than is actually in the file. You can do this by "padding"
 the regions around the sites. For example:
 
-``region@myvcf.vcf;pad[1000]``
+``pad[1000];region@myvcf.vcf``
 
-You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does.
+You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does (called "mate-linking"). Note that this only applies to the ``all`` target.
+This is particularly useful for extracting all read PAIRS that cover a variant site.
 
-``region@myvcf;pad[1000];mate``
+``pad[1000];mlregion@myvcf``
 
-Note that the syntax is such that you must specify the file immediately after the @, following by other options
-in any order. 
+Note that the syntax is such that you must specify the file immediately after the @. 
 
 ##### Rules
 
-The next two lines specify a pair of rules, marked with the ``rule@`` tag. 
 The default rule is to include every read, and the conditions within the rule are to be  
 thought of as exclusion criteria. Note that you can take the complement of a condition 
 by prefixing with a ``!``. For example:
@@ -197,11 +192,12 @@ set, and then add more fine-mapped regions later.
 
 The usual method of inputing rules is with a VariantBam script as a text file (passed to
 VariantBam with the ``-r`` flag). However, sometimes it is useful to not have to write an intermediate
-file and just feed rules directly in. In that case, just pass a string literal to the -r flag, and VariantBam
-will parse directly. Just separate lines with either a new ``-r`` flag or with a ``%``. For instance, you might run something like the following:
+file and just feed rules directly in. In that case, just pass a string literal to the ``-r, -g, -l`` flags, and VariantBam
+will parse directly. ``-r`` will append a new rule, ``-g`` will append a new region and ``-l`` will append a new mate-linke regions. 
+You can separate rule lines with either a new ``-r`` flag or with a ``%``. For instance, you might run something like the following:
 
 ```bash
-variant -i big.bam -o small.bam -r 'global@!hardclip' -r 'region@WG%!isize[0,600];%clip[10,101];mapq[1,60]' -r 'region@myvcf.vcf'
+variant -i big.bam -o small.bam -r 'global@!hardclip' -g WG -r '!isize[0,600];%clip[10,101];mapq[1,60]' -l 'myvcf.vcf' 
 ```
 
 Note the single quotes so that it is interpreted as a string literal in BASH.
@@ -211,10 +207,11 @@ Full list of available rules
 
 ```
     #RULE           #EXAMPLE             #DESCRIPTION OF EXAMPLE / FLAG 
-    seq	            seq[/home/seqs.txt]  File containing substrings that must be present in the sequence.
+    motif           motif[seqs.txt]  	 File containing substrings that must be present in the sequence.
     ins             ins[5,101]           Number of inserted bases on the reads (from parsed CIGAR string)
     del             del[10,101]          Number of deleted bases relative to reference (from parsed CIGAR string). 
     nm              nm[0,4]              NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
+    xp              xp[0,4]              Number of supplementary aligments, with XP or XA tag from BAM (hold identity of supplementary alignments)
     isize           isize[100,500]       Insert size, where all insert sizes are converted to positive.
     len             len[80,101]          Length of the read following phred trimming
     clip            clip[0,5]            Number of clipped bases following phred trimming

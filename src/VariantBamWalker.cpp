@@ -21,6 +21,7 @@ void VariantBamWalker::writeVariantBam()
       // read is valid
       if (rule) {
 	++rc_main.keep;
+
 	if (fop) // if we specified an output file, write it
 	  WriteAlignment(r);
       } 
