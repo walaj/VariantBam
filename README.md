@@ -89,7 +89,7 @@ options=(
     --rules-file        rules.vb
     --verbose        	
     --strip-tags	OQ,BI     
-    --proc-regions-file small_chr1_mask.bed
+    --proc-regions-file example.bed
 )
 variant ${options[*]}
 ```
