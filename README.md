@@ -31,39 +31,33 @@ disk space and I/O, one may not want to store an entire BAM on disk. In many cas
 reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (eg breakpoints), many 
 reads can be removed without losing the information relevant to the problem. 
 
-Example Use 1
--------------
+##### Example Use 1
 Whole-genome analysis has been conducted on a BAM, generating VCF and MAF files. Ideally, these regions could be manually inspected
 or reanalyzed without having to keep the entire BAM. Running VariantBam to extract only reads that overlap these events will allow
 these regions to be rapidly queried, without having to keep the full BAM record.
 
-Example Use 2
--------------
+##### Example Use 2
 In situations where the sequencing or library preparation quality is low, it may be advantageous
 to remove poor quality reads before starting the analysis train. VariantBam handles this by optionally taking into
 account Phred base-qualities when making a decision whether to keep a sequencing read. For instance, one might 
 only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be 
 setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
 
-Example Use 3
--------------
+##### Example Use 3
 An NGS tool operates only on a subset of the reads (eg. structural variant caller using only clipped/discordant reads). Running VariantBam
 to keep only these reads allows the tool to run much faster. This is particurlaly useful for facilitating a more rapid "build/test" cycle.
 
-Example Use 4
--------------
+##### Example Use 4
 A user wants to profile a BAM for quality. They would like to count the number of clipped reads in a BAM file, so long
 as those reads have sufficient optical quality and mapping quality. VariantBam run with the -x flag for "counting only" 
 will accomplish this.
 
-Example Use 5
--------------
+##### Example Use 5
 A team is only interested in variant in known cancer genes, and would like to analyze thousands of exomes and genomes. Running 
 VariantBam to extract reads from only these genes, and sending the BAM files to compressed CRAM provides sufficient data reduction
 to allow all of the relevant data to be stored on disk.
 
-Example Use 6
--------------
+##### Example Use 6
 A research team would like to extract only reads matching a certain motifs, but only if they have high optical quality. 
 VariantBam with the ``motif`` rule will accomplish this with rapid O(n) efficiency for an arbitrarily large motif dictionary (where ``n`` is
 the length of a read)
