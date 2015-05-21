@@ -1,4 +1,4 @@
-VariantBam: One-pass extraction of sequencing reads from a BAM file using cascading rules
+VariantBam: One-pass extraction and counting of sequencing reads from a BAM file using cascading rules
 =========================================================================================
 
 **License:** [GNU GPLv3][license]
@@ -26,26 +26,50 @@ make
 Description
 -----------
 
-VariantBam is a tool to extract interesting sequencing reads from a BAM file. To save money, 
-diskspace and future I/O, one may not want to store an entire BAM on disk after all the relevant VCF, 
-MAFs, etc have been created. Instead it would be more efficient to store only those read-pairs 
-who intersect some region around the variant locations. Ideally, these regions could be manually inspected
-or reanalyzed without having to keep the entire BAM. Having small BAMs is also important in the tool development, where
-access to small test files can facilitate a more rapid "build/test" cycle. 
+VariantBam is a tool to extract/count specific sets of sequencing reads from NGS sequencing files. To save money, 
+disk space and I/O, one may not want to store an entire BAM on disk. In many cases, it would be more efficient to store only those read-pairs or
+reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (eg breakpoints), many 
+reads can be removed without losing the information relevant to the problem. 
 
-VariantBam was developed as a one-pass solution for the needs of different NGS tools. For instance, after
-initial processing, an indel tool might be interested in storing MAPQ > 0 reads in 30k candidate regions of interest.
-A separate SNP tool might find a different 20k regions, while a structural variation tool 
-might be interested in only discordant or high-quality clipped reads across the BAM. Alternatively, 
-one may want to extract all clipped reads from a BAM while avoiding any reads that lie within LINE/SINE elements. 
-VariantBam uses a series of rules defined on distinct regions in order to handle 
-all of these situations with a single pass through the BAM.
+Example Use 1
+-------------
+Whole-genome analysis has been conducted on a BAM, generating VCF and MAF files. Ideally, these regions could be manually inspected
+or reanalyzed without having to keep the entire BAM. Running VariantBam to extract only reads that overlap these events will allow
+these regions to be rapidly queried, without having to keep the full BAM record.
 
+Example Use 2
+-------------
 In situations where the sequencing or library preparation quality is low, it may be advantageous
 to remove poor quality reads before starting the analysis train. VariantBam handles this by optionally taking into
 account Phred base-qualities when making a decision whether to keep a sequencing read. For instance, one might 
 only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be 
 setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
+
+Example Use 3
+-------------
+An NGS tool operates only on a subset of the reads (eg. structural variant caller using only clipped/discordant reads). Running VariantBam
+to keep only these reads allows the tool to run much faster. This is particurlaly useful for facilitating a more rapid "build/test" cycle.
+
+Example Use 4
+-------------
+A user wants to profile a BAM for quality. They would like to count the number of clipped reads in a BAM file, so long
+as those reads have sufficient optical quality and mapping quality. VariantBam run with the -x flag for "counting only" 
+will accomplish this.
+
+Example Use 5
+-------------
+A team is only interested in variant in known cancer genes, and would like to analyze thousands of exomes and genomes. Running 
+VariantBam to extract reads from only these genes, and sending the BAM files to compressed CRAM provides sufficient data reduction
+to allow all of the relevant data to be stored on disk.
+
+Example Use 6
+-------------
+A research team would like to extract only reads matching a certain motifs, but only if they have high optical quality. 
+VariantBam with the ``motif`` rule will accomplish this with rapid O(n) efficiency for an arbitrarily large motif dictionary (where ``n`` is
+the length of a read)
+
+Tool comparison
+---------------
 
 In comparing with other avaiable BAM filtering tools, VariantBam provides the following novel features:
 
@@ -56,6 +80,8 @@ In comparing with other avaiable BAM filtering tools, VariantBam provides the fo
 > 5. Ability to count numbers of reads that satisfy any number of user-defined properties
 > 6. Read and write CRAM files
 > 7. Selectively strip alignment tags
+
+VariantBam is implemented in C++ and uses the HTSlibrary from Heng Li, a highly optimized C library used as the core of Samtools and BCFtools.
 
 Example
 -------
@@ -76,7 +102,7 @@ variant ${options[*]}
 
 To get a full list of options, run ``variant --help``.
 
-Syntax
+Rules Script Syntax
 ------
 
 This section will describe the syntax used by VariantBam to specify the cascades of rules and regions 
@@ -108,8 +134,9 @@ Note that the syntax is such that you must specify the file immediately after th
 
 ##### Rules
 
-The default rule is to include every read, and the conditions within the rule are to be  
-thought of as exclusion criteria. Note that you can take the complement of a condition 
+
+Rules are supplied as a list of criteria that a read must satisfy.
+Note that you can take the complement of a condition 
 by prefixing with a ``!``. For example:
 
 ```bash
@@ -142,7 +169,7 @@ and apply rules separately to them.
     ### use the "mate" keyword to specify that pairs whose mate falls in the region belong to this rule
     region@/home/unix/jwala/myvcf.vcf;mate;pad[1000]
     #### I want to keep all the reads (this the default). Ill be explicit with the "every" keyword
-    every
+    all
     #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads
     region@/home/unix/jwala/myexonlist.bed 
     ## keep discordant reads
@@ -180,7 +207,7 @@ which is equivalent to
     !hardclip;!duplicate;!qcfail;!supplementary
 ```
 	
-The global tag will apply through all of the regions. If you want to reset it for everything, just add ``global@every`` 
+The global tag will apply through all of the regions. If you want to reset it for everything, just add ``global@all`` 
 back onto the stack.
 
 To make things run a little faster, you can set the order so that the more inclusive regions / rules are first. This only
@@ -197,10 +224,37 @@ will parse directly. ``-r`` will append a new rule, ``-g`` will append a new reg
 You can separate rule lines with either a new ``-r`` flag or with a ``%``. For instance, you might run something like the following:
 
 ```bash
-variant -i big.bam -o small.bam -r 'global@!hardclip' -g WG -r '!isize[0,600];%clip[10,101];mapq[1,60]' -l 'myvcf.vcf' 
+variant big.bam -o small.bam -r 'global@!hardclip' -g WG -r '!isize[0,600];%clip[10,101];mapq[1,60]' -l 'myvcf.vcf' 
 ```
 
 Note the single quotes so that it is interpreted as a string literal in BASH.
+
+Full list of options
+--------------------
+```
+Usage: variant <input.bam> -g <regions> -r <rules> [OPTIONS] 
+
+Description: Filter a BAM/CRAM file according to hierarchical rules
+
+ General options
+      --help                           Display this help and exit
+  -v, --verbose                        Verbose output
+  -c, --counts-file                    File to place read counts per rule / region
+  -x, --counts-file-only               Same as -c, but does counting only (no output BAM)
+ Output options
+  -o, --output-bam                     Output BAM file to write instead of SAM-format stdout
+  -C, --cram                           Output file should be in CRAM format
+  -T, --reference                      Path to reference. Required for reading/writing CRAM
+  -h, --include-header                 When outputting to stdout, include the header.
+  -s, --strip-tags                     Remove the specified tags, separated by commas. eg. -s RG,MD
+  -S, --strip-all-tags                 Remove all alignment tags
+ Filtering options
+  -q, --qc-only                        Loop through the BAM, but only to make the QC file
+  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple
+  -l, --linked-region                  Same as -g, but turns on mate-linking
+  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g
+  -k, --proc-regions-file              BED file of regions to proess reads from
+```
 
 Full list of available rules
 ----------------------------

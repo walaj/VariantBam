@@ -106,14 +106,14 @@ int main(int argc, char** argv) {
     //std::cerr << "TWO-PASS solution?:      " << (opt::twopass ? "ON" : "OFF") << std::endl;
   }
 
+  // setup the walker
+  VariantBamWalker walk(opt::bam);
+
   // set which regions to run
   GRC grv_proc_regions;
   if (opt::proc_regions.length())
-    grv_proc_regions.regionFileToGRV(opt::proc_regions);
+    grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
   grv_proc_regions.createTreeMap();
-
-  // setup the walker
-  VariantBamWalker walk(opt::bam);
   
   // should it print to stdout?
   if (opt::to_stdout) {
