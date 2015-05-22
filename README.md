@@ -349,8 +349,14 @@ mapq[1,100];del[1,100]
 
 Attributions
 ------------
-VariantBam is developed and maintained by Jeremiah Wala (jwala@broadinstitute.org), a member of Rameen Berkoukhim's lab at Dana Farber, Boston, MA. This project was developed in collaboration with the Cancer Genome Analysis
-team at the Broad Institute. Particular thanks to Cheng-Zhong Zhang, Marcin Imielinski, Gad Getz, Mara Rosenberg, Esther Rheinbay and Gordon Saksena.
+* VariantBam is developed and maintained by Jeremiah Wala (jwala@broadinstitute.org) --  Rameen Berkoukhim's lab -- Dana Farber Cancer Institute, Boston, MA. 
+* This project was developed in collaboration with the Cancer Genome Analysis team at the Broad Institute. Particular thanks to:
+..* Cheng-Zhong Zhang
+..* Marcin Imielinski
+..* Gad Getz
+..* Mara Rosenberg
+..* Esther Rheinbay 
+..* Gordon Saksena.
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
 
