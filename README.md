@@ -96,6 +96,9 @@ variant ${options[*]}
 
 To get a full list of options, run ``variant --help``.
 
+NEW: Can provide samtools-style syntax for regions:
+```variant <bam> -g 7:145,000,000-146,000,000 -r mapq[10,100]```
+
 Rules Script Syntax
 ------
 
