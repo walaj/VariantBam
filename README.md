@@ -5,13 +5,13 @@ VariantBam: One-pass extraction and counting of sequencing reads from a BAM file
 
 Installation
 ------------
-Installation requires 3 libraries: htslib, aho-corasick and SnowTools. A modern C++ compiler is also required. We built succesfully with GCC-4.9. 
+Installation requires 3 libraries: [htslib][hlib], [Aho-Corasick][aho] and [SnowTools][snowt]. A modern C++ compiler is also required. We built succesfully with GCC-4.9. 
 You can download and compile these three libraries in one step by installing SnowTools. 
 
 ```
 ## install SnowTools (will come with htslib, bwalib, ahocorasick) (-k is for no certifate checking, might be needed)
-curl -L -k https://github.com/jwalabroad/SnowTools/archive/v0.1.1.tar.gz | tar xz
-cd SnowTools-0.1.1/src
+curl -L -k https://github.com/jwalabroad/SnowTools/archive/v0.1.3.tar.gz | tar xz
+cd SnowTools-0.1.3/src
 ./configure
 make
 cd ../../
@@ -19,7 +19,7 @@ cd ../../
 ## install variant-bam
 git clone https://github.com/broadinstitute/variant-bam.git
 cd variant-bam/src
-./configure --with-snowtools=../../SnowTools-0.1.1 --with-htslib=../../SnowTools-0.1.1/src/htslib
+./configure --with-snowtools=../../SnowTools-0.1.3 --with-htslib=../../SnowTools-0.1.3/src/htslib
 make
 ```
 
@@ -364,3 +364,8 @@ Attributions
 
 [API]: http://pezmaster31.github.io/bamtools/annotated.html
 
+[hlib]: https://github.com/samtools/htslib
+
+[snowt]: https://github.com/jwalabroad/SnowTools
+
+[aho]: http://sourceforge.net/projects/multifast/
