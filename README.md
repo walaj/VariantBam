@@ -9,6 +9,9 @@ Installation requires 3 libraries: [htslib][hlib], [Aho-Corasick][aho] and [Snow
 You can download and compile these three libraries in one step by installing SnowTools. 
 
 ```
+### if on broad servers, add GCC-4.9
+reuse -q GCC-4.9
+
 ## install SnowTools (will come with htslib, bwalib, ahocorasick) (-k is for no certifate checking, might be needed)
 curl -L -k https://github.com/jwalabroad/SnowTools/archive/v0.1.3.tar.gz | tar xz
 cd SnowTools-0.1.3/src
@@ -16,9 +19,9 @@ cd SnowTools-0.1.3/src
 make
 cd ../../
 
-## install variant-bam
-git clone https://github.com/broadinstitute/variant-bam.git
-cd variant-bam/src
+## install variant-bam (RELEASE VERSION)
+curl -L -k https://github.com/jwalabroad/VariantBam/archive/v1.0.0.tar.gz | tar xz 
+cd VariantBam-1.0.0/src
 ./configure --with-snowtools=../../SnowTools-0.1.3 --with-htslib=../../SnowTools-0.1.3/src/htslib
 make
 
