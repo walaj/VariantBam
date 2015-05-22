@@ -163,7 +163,7 @@ m4trace:configure.ac:20: -1- AH_OUTPUT([HAVE_CLOCK_GETTIME], [/* clock_getttime 
 m4trace:configure.ac:97: -1- AC_SUBST([AM_CXXFLAGS], ["-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas"])
 m4trace:configure.ac:98: -1- AC_SUBST([CXXFLAGS], ["-O3"])
 m4trace:configure.ac:99: -1- AC_SUBST([CFLAGS], ["-O3"])
-m4trace:configure.ac:100: -1- AC_SUBST([CPPFLAGS], ["$CPPFLAGS $aho_include $hts_include $snowtools_include"])
+m4trace:configure.ac:100: -1- AC_SUBST([CPPFLAGS], ["$CPPFLAGS $hts_include $snowtools_include"])
 m4trace:configure.ac:101: -1- AC_SUBST([LDFLAGS], ["$snowtools_ldflags $hts_ldflags $LDFLAGS -L."])
 m4trace:configure.ac:103: -1- AC_SUBST([LIBS], ["$LIBS $snowtools_libs -lhts -lpthread"])
 m4trace:configure.ac:106: -1- AC_CHECK_HEADERS([htslib/hts.h], [], [AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])

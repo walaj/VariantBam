@@ -46,7 +46,7 @@ if test "$with_snowtools" -a -d "$with_snowtools"; then
 else
     with_snowtools="/xchip/gistic/Jeremiah/GIT/SnowTools"
     snowtools_ldflags="-L$with_snowtools/src"
-    snowtools_include="-I$with_snowtools/src"
+    snowtools_include="-I$with_snowtools/src -I$with_snowtools/src/multifast-v1.4.2"
     snowtools_libs="-lsnowtools"
 fi
 
@@ -97,7 +97,7 @@ fi
 AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
-AC_SUBST(CPPFLAGS, "$CPPFLAGS $aho_include $hts_include $snowtools_include")
+AC_SUBST(CPPFLAGS, "$CPPFLAGS $hts_include $snowtools_include")
 AC_SUBST(LDFLAGS, "$snowtools_ldflags $hts_ldflags $LDFLAGS -L.")
 
 AC_SUBST(LIBS, "$LIBS $snowtools_libs -lhts -lpthread")

@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
   if (opt::proc_regions.length())
     grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
   grv_proc_regions.createTreeMap();
-  
+
   // should it print to stdout?
   if (opt::to_stdout) {
     walk.setStdout();
@@ -141,6 +141,7 @@ int main(int argc, char** argv) {
   // set the regions to run
   if (grv_proc_regions.size())
     walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
+
 
   /*SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
   rules_rg.createTreeMap();
