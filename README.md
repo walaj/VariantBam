@@ -30,7 +30,7 @@ PATH=$PATH:$(pwd)
 
 ## quick start
 mkdir -p tmp && cd tmp
-variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c counts.tsv -o mini.bam
+variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c counts.tsv -o mini.bam -v
 ```
 
 Description
