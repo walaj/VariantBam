@@ -137,13 +137,12 @@ int main(int argc, char** argv) {
   if (opt::verbose)
     std::cerr << "...rules: " << opt::rules << std::endl;
   walk.SetMiniRulesCollection(opt::rules);
-
+  
   // set the regions to run
   if (grv_proc_regions.size())
     walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
 
-
-  /*SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
+  SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
   rules_rg.createTreeMap();
 
   if (grv_proc_regions.size() && rules_rg.size()) // intersect rules regions with mask regions
@@ -156,7 +155,7 @@ int main(int argc, char** argv) {
   } else if (!rules_rg.size() && grv_proc_regions.size() > 0) {
     std::cerr << "No regions with possibility of reads. This error occurs if no regions in -g are in -k." << std::endl;
     return 1;
-    }*/
+  }
 
   // should we count all rules (slower)
   if (opt::counts_only || opt::counts_file.length())
