@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
   if (opt::counts_only || opt::counts_file.length())
     walk.setCountAllRules();
 
-  // open the output file
+  // open the output BAM/CRAM. If we already set SAM, this does nothing
   if (!opt::counts_only)
     walk.OpenWriteBam(opt::out);
 
