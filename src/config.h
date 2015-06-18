@@ -4,6 +4,9 @@
 /* Define to 1 if you have the <ahocorasick/ahocorasick.h> header file. */
 #define HAVE_AHOCORASICK_AHOCORASICK_H 1
 
+/* Define to 1 if you have the <boost/icl/interval_set.hpp> header file. */
+#define HAVE_BOOST_ICL_INTERVAL_SET_HPP 1
+
 /* clock_getttime found */
 #define HAVE_CLOCK_GETTIME 1
 

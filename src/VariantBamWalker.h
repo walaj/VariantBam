@@ -3,6 +3,7 @@
 
 #include "SnowTools/BamWalker.h"
 #include "SnowTools/BamStats.h"
+#include "SnowTools/BamRead.h"
 
 class VariantBamWalker: public SnowTools::BamWalker
 {
@@ -14,9 +15,9 @@ class VariantBamWalker: public SnowTools::BamWalker
 
   void writeVariantBam();
   
-  void TrackSeenRead(Read &r);
+  void TrackSeenRead(SnowTools::BamRead &r);
   
-  void printMessage(const SnowTools::ReadCount &rc_main, const BamRead &r) const;
+  void printMessage(const SnowTools::ReadCount &rc_main, const SnowTools::BamRead &r) const;
 
  private:
   

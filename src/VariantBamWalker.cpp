@@ -11,7 +11,7 @@ void VariantBamWalker::writeVariantBam()
 #endif
 
   ReadCount rc_main;
-  Read r;
+  SnowTools::BamRead r;
   bool rule;
 
   while (GetNextRead(r, rule))
@@ -32,18 +32,18 @@ void VariantBamWalker::writeVariantBam()
     }
 }
 
-void VariantBamWalker::TrackSeenRead(Read &r)
+void VariantBamWalker::TrackSeenRead(SnowTools::BamRead &r)
 {
   m_stats.addRead(r);
 }
 
-void VariantBamWalker::printMessage(const ReadCount &rc_main, const Read &r) const 
+void VariantBamWalker::printMessage(const ReadCount &rc_main, const SnowTools::BamRead &r) const 
 {
   
   char buffer[100];
-  std::string posstring = SnowTools::AddCommas<int>(r_pos(r));
+  std::string posstring = SnowTools::AddCommas<int>(r.Position());
   std::sprintf (buffer, "Reading read %11s at position %2s:%-11s. Kept %11s (%2d%%) [running count across whole BAM]",  
-		rc_main.totalString().c_str(), SnowTools::GenomicRegion::chrToString(r_id(r)).c_str(), posstring.c_str(),  
+		rc_main.totalString().c_str(), SnowTools::GenomicRegion::chrToString(r.ChrID()).c_str(), posstring.c_str(),  
 		rc_main.keepString().c_str(), rc_main.percent());
   buffer[99] = '\0';
   std::string outr(buffer);

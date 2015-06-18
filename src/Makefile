@@ -89,7 +89,7 @@ AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -O3
-CPPFLAGS =  -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/htslib -I/xchip/gistic/Jeremiah/GIT/SnowTools/src -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/multifast-v1.4.2
+CPPFLAGS =  -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/htslib -I/xchip/gistic/Jeremiah/GIT/SnowTools/src -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/multifast-v1.4.2 -I/xchip/gistic/Jeremiah/boost_1_58_0
 CXX = g++
 CXXCPP = g++ -E
 CXXDEPMODE = depmode=gcc3
