@@ -45,6 +45,10 @@ reads can be removed without losing the information relevant to the problem.
 Whole-genome analysis has been conducted on a BAM, generating VCF and MAF files. Ideally, these regions could be manually inspected
 or reanalyzed without having to keep the entire BAM. Running VariantBam to extract only reads that overlap these events will allow
 these regions to be rapidly queried, without having to keep the full BAM record.
+```
+### Extract all read PAIRS that interset with a variant from a VCF
+variant $bam -l myvcf.vcf -r all -o mini.bam
+```
 
 ##### Example Use 2
 In situations where the sequencing or library preparation quality is low, it may be advantageous
@@ -52,26 +56,41 @@ to remove poor quality reads before starting the analysis train. VariantBam hand
 account Phred base-qualities when making a decision whether to keep a sequencing read. For instance, one might 
 only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be 
 setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
-
+```
+### Extract only high quality reads with >= 50 bases of phred >=4 and MAPQ >= 1 and not duplicated/hardclip/qcfail
+variant $bam -r 'phred[4,100];length[50,1000];mapq[1,60];!duplicate;!hardclip!qcfail' -o mini.bam
+```
 ##### Example Use 3
 An NGS tool operates only on a subset of the reads (eg. structural variant caller using only clipped/discordant reads). Running VariantBam
 to keep only these reads allows the tool to run much faster. This is particurlaly useful for facilitating a more rapid "build/test" cycle.
-
+```
+### Extract clipped, discordant, unmapped and indel reads
+variant $bam  -r 'global@nbases[0,0];!hardclip;!supplementary;!duplicate;!qcfail;phred[4,100];%region@WG%discordant[0,1000];mapq[1,1000]%mapq[1,1000];clip[5,1000]%ins[1,1000];mapq[1,100]%del[1,1000];mapq[1,1000]' -o mini.bam
+```
 ##### Example Use 4
 A user wants to profile a BAM for quality. They would like to count the number of clipped reads in a BAM file, so long
 as those reads have sufficient optical quality and mapping quality. VariantBam run with the -x flag for "counting only" 
 will accomplish this.
-
+```
+### 
+variant $bam -r 'clip[5,100];phred[4,100];mapq[10,100]' -x counts.tsv
+```
 ##### Example Use 5
-A team is only interested in variant in known cancer genes, and would like to analyze thousands of exomes and genomes. Running 
+A team is only interested in variants in known cancer genes, and would like to analyze thousands of exomes and genomes. Running 
 VariantBam to extract reads from only these genes, and sending the BAM files to compressed CRAM provides sufficient data reduction
 to allow all of the relevant data to be stored on disk.
-
+```
+### Grab only reads from predefined regions. Strip unneccessary tags and convert to CRAM for maximum compression
+variant $bam -g mygenes.bed -r all -C -o mini.cram -s BI,OQ
+```
 ##### Example Use 6
 A research team would like to extract only reads matching a certain motifs, but only if they have high optical quality. 
 VariantBam with the ``motif`` rule will accomplish this with rapid O(n) efficiency for an arbitrarily large motif dictionary (where ``n`` is
 the length of a read)
-
+```
+### 
+variant $bam -r 'motif[mymotifs.txt];phred[4,100];length[20,1000]' -o mini.bam
+```
 Tool comparison
 ---------------
 
