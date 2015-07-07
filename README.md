@@ -13,16 +13,16 @@ You can download and compile these three libraries in one step by installing Sno
 reuse -q GCC-4.9
 
 ## install SnowTools (will come with htslib, bwalib, ahocorasick) (-k is for no certifate checking, might be needed)
-curl -L -k https://github.com/jwalabroad/SnowTools/archive/v0.1.6.tar.gz | tar xz
-cd SnowTools-0.1.6/src
+curl -L -k https://github.com/jwalabroad/SnowTools/archive/v0.2.0.tar.gz | tar xz
+cd SnowTools-0.2.0/src
 ./configure
 make
 cd ../../
 
 ## install variant-bam (RELEASE VERSION)
-curl -L -k https://github.com/jwalabroad/VariantBam/archive/v1.0.2.tar.gz | tar xz 
-cd VariantBam-1.0.2/src
-./configure --with-snowtools=../../SnowTools-0.1.6 --with-htslib=../../SnowTools-0.1.6/src/htslib
+curl -L -k https://github.com/jwalabroad/VariantBam/archive/v1.1.0.tar.gz | tar xz 
+cd VariantBam-1.1.0/src
+./configure --with-snowtools=../../SnowTools-0.2.0 --with-htslib=../../SnowTools-0.2.0/src/htslib
 make
 
 ## add variant binary to path
