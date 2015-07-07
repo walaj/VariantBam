@@ -4412,6 +4412,7 @@ fi
 # Set compiler flags.
 AM_CXXFLAGS="-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas"
 
+##AC_SUBST(AM_CXXFLAGS, "-g -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 CXXFLAGS="-O3"
 
 CFLAGS="-O3"

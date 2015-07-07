@@ -53,13 +53,14 @@ namespace opt {
   static std::string tag_list = "";
   static std::string counts_file = "";
   static bool counts_only = false;
+  static std::string bam_qcfile = "";
 }
 
 enum {
   OPT_HELP
 };
 
-static const char* shortopts = "hvqji:o:r:k:g:Cf:s:ST:l:c:x:";
+static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:x:q:Q:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
@@ -73,7 +74,8 @@ static const struct option longopts[] = {
   { "include-header",             no_argument, NULL, 'h' },
   { "input",                      required_argument, NULL, 'i' },
   { "output-bam",                 required_argument, NULL, 'o' },
-  { "qc-only",                    no_argument, NULL, 'q' },
+  { "qc-file",                    no_argument, NULL, 'q' },
+  { "qc-only-file",               no_argument, NULL, 'Q' },
   { "rules",                      required_argument, NULL, 'r' },
   { "region",                     required_argument, NULL, 'g' },
   { "region-with-mates",          required_argument, NULL, 'c' },
@@ -165,6 +167,9 @@ int main(int argc, char** argv) {
   if (!opt::counts_only)
     walk.OpenWriteBam(opt::out);
 
+  // if counts or qc only, dont write output
+  //walk.fop = nullptr;
+
   // print out some info
   if (opt::verbose) 
     std::cerr << walk << std::endl;
@@ -177,6 +182,14 @@ int main(int argc, char** argv) {
   if (opt::verbose)
     std::cerr << "...starting filtering" << std::endl;
   walk.writeVariantBam();
+
+  // dump the stats file
+  if (opt::bam_qcfile.length()) {
+    std::ofstream ofs;
+    ofs.open(opt::bam_qcfile);
+    ofs << walk.m_stats;
+    ofs.close();
+  }
 
   // display the rule counts
   walk.MiniRulesToFile(opt::counts_file);
@@ -247,6 +260,8 @@ void parseVarOptions(int argc, char** argv) {
       break;
     case 'c': arg >> opt::counts_file; break;
     case 'x': arg >> opt::counts_file; opt::counts_only = true; break;
+    case 'q': arg >> opt::bam_qcfile; break;
+    case 'Q': arg >> opt::bam_qcfile; opt::counts_only = true; break;
     case 'r': 
       {
 	std::string tmp;
@@ -302,7 +317,7 @@ void parseVarOptions(int argc, char** argv) {
 
   if (opt::bam == "")
     die = true;
-  if (opt::out == "")
+  if (opt::out == "" && !opt::counts_only)
     opt::to_stdout = true;
 
   // dont stop the run for bad bams for quality checking only

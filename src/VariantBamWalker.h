@@ -18,11 +18,8 @@ class VariantBamWalker: public SnowTools::BamWalker
   void TrackSeenRead(SnowTools::BamRead &r);
   
   void printMessage(const SnowTools::ReadCount &rc_main, const SnowTools::BamRead &r) const;
-
- private:
   
   SnowTools::BamStats m_stats;
-
 
 };
 #endif

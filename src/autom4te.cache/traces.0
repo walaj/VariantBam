@@ -685,25 +685,25 @@ m4trace:configure.ac:20: -1- AC_DEFINE_TRACE_LITERAL([HAVE_CLOCK_GETTIME])
 m4trace:configure.ac:20: -1- AH_OUTPUT([HAVE_CLOCK_GETTIME], [/* clock_getttime found */
 #undef HAVE_CLOCK_GETTIME])
 m4trace:configure.ac:107: -1- AC_SUBST([AM_CXXFLAGS], ["-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas"])
-m4trace:configure.ac:108: -1- AC_SUBST([CXXFLAGS], ["-O3"])
-m4trace:configure.ac:109: -1- AC_SUBST([CFLAGS], ["-O3"])
-m4trace:configure.ac:110: -1- AC_SUBST([CPPFLAGS], ["$CPPFLAGS $hts_include $snowtools_include $boost_include"])
-m4trace:configure.ac:111: -1- AC_SUBST([LDFLAGS], ["$snowtools_ldflags $hts_ldflags $LDFLAGS -L."])
-m4trace:configure.ac:113: -1- AC_SUBST([LIBS], ["$LIBS $snowtools_libs -lhts -lpthread"])
-m4trace:configure.ac:116: -1- AC_CHECK_HEADERS([htslib/hts.h], [], [AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
-m4trace:configure.ac:116: -1- AH_OUTPUT([HAVE_HTSLIB_HTS_H], [/* Define to 1 if you have the <htslib/hts.h> header file. */
+m4trace:configure.ac:109: -1- AC_SUBST([CXXFLAGS], ["-O3"])
+m4trace:configure.ac:110: -1- AC_SUBST([CFLAGS], ["-O3"])
+m4trace:configure.ac:111: -1- AC_SUBST([CPPFLAGS], ["$CPPFLAGS $hts_include $snowtools_include $boost_include"])
+m4trace:configure.ac:112: -1- AC_SUBST([LDFLAGS], ["$snowtools_ldflags $hts_ldflags $LDFLAGS -L."])
+m4trace:configure.ac:114: -1- AC_SUBST([LIBS], ["$LIBS $snowtools_libs -lhts -lpthread"])
+m4trace:configure.ac:117: -1- AC_CHECK_HEADERS([htslib/hts.h], [], [AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
+m4trace:configure.ac:117: -1- AH_OUTPUT([HAVE_HTSLIB_HTS_H], [/* Define to 1 if you have the <htslib/hts.h> header file. */
 #undef HAVE_HTSLIB_HTS_H])
-m4trace:configure.ac:119: -1- AC_CHECK_HEADERS([boost/icl/interval_set.hpp], [], [AC_MSG_WARN([The Boost library must be installed for a few of the interval operations. NOT REQUIRED for VariantBam. Specify its path with the --with-boostxs=PATH option])])
-m4trace:configure.ac:119: -1- AH_OUTPUT([HAVE_BOOST_ICL_INTERVAL_SET_HPP], [/* Define to 1 if you have the <boost/icl/interval_set.hpp> header file. */
+m4trace:configure.ac:120: -1- AC_CHECK_HEADERS([boost/icl/interval_set.hpp], [], [AC_MSG_WARN([The Boost library must be installed for a few of the interval operations. NOT REQUIRED for VariantBam. Specify its path with the --with-boostxs=PATH option])])
+m4trace:configure.ac:120: -1- AH_OUTPUT([HAVE_BOOST_ICL_INTERVAL_SET_HPP], [/* Define to 1 if you have the <boost/icl/interval_set.hpp> header file. */
 #undef HAVE_BOOST_ICL_INTERVAL_SET_HPP])
-m4trace:configure.ac:122: -1- AC_CHECK_HEADERS([SnowTools/SnowTools.h], [], [AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
-m4trace:configure.ac:122: -1- AH_OUTPUT([HAVE_SNOWTOOLS_SNOWTOOLS_H], [/* Define to 1 if you have the <SnowTools/SnowTools.h> header file. */
+m4trace:configure.ac:123: -1- AC_CHECK_HEADERS([SnowTools/SnowTools.h], [], [AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
+m4trace:configure.ac:123: -1- AH_OUTPUT([HAVE_SNOWTOOLS_SNOWTOOLS_H], [/* Define to 1 if you have the <SnowTools/SnowTools.h> header file. */
 #undef HAVE_SNOWTOOLS_SNOWTOOLS_H])
-m4trace:configure.ac:125: -1- AC_CHECK_HEADERS([ahocorasick/ahocorasick.h], [], [AC_MSG_WARN([The Aho-Corasick library must be installed (http://sourceforge.net/projects/multifast/), to do string matching rules. Can specify --with-aho=PATH option])])
-m4trace:configure.ac:125: -1- AH_OUTPUT([HAVE_AHOCORASICK_AHOCORASICK_H], [/* Define to 1 if you have the <ahocorasick/ahocorasick.h> header file. */
+m4trace:configure.ac:126: -1- AC_CHECK_HEADERS([ahocorasick/ahocorasick.h], [], [AC_MSG_WARN([The Aho-Corasick library must be installed (http://sourceforge.net/projects/multifast/), to do string matching rules. Can specify --with-aho=PATH option])])
+m4trace:configure.ac:126: -1- AH_OUTPUT([HAVE_AHOCORASICK_AHOCORASICK_H], [/* Define to 1 if you have the <ahocorasick/ahocorasick.h> header file. */
 #undef HAVE_AHOCORASICK_AHOCORASICK_H])
-m4trace:configure.ac:127: -1- AC_CONFIG_FILES([Makefile])
-m4trace:configure.ac:129: -1- AC_SUBST([LIB@&t@OBJS], [$ac_libobjs])
-m4trace:configure.ac:129: -1- AC_SUBST([LTLIBOBJS], [$ac_ltlibobjs])
-m4trace:configure.ac:129: -1- _AC_AM_CONFIG_HEADER_HOOK([$ac_file])
-m4trace:configure.ac:129: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:128: -1- AC_CONFIG_FILES([Makefile])
+m4trace:configure.ac:130: -1- AC_SUBST([LIB@&t@OBJS], [$ac_libobjs])
+m4trace:configure.ac:130: -1- AC_SUBST([LTLIBOBJS], [$ac_ltlibobjs])
+m4trace:configure.ac:130: -1- _AC_AM_CONFIG_HEADER_HOOK([$ac_file])
+m4trace:configure.ac:130: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
