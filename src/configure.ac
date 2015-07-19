@@ -88,11 +88,12 @@ fi
 #	[specify directory containing the HTS library (https://github.com/samtools/htslib)]))#
 
 if test "$with_htslib" -a -d "$with_htslib"; then
-    hts_ldflags="-Wl,-rpath,$with_htslib -L$with_htslib"
+    ##hts_ldflags="-Wl,-rpath,$with_htslib -L$with_htslib"
+    hts_ldflags="-L$with_htslib"
     hts_include="-I$with_htslib"
 else
     htsloc="$with_snowtools/src/htslib"
-    hts_ldflags="-Wl,-rpath,$htsloc,-L$htsloc"
+    hts_ldflags="-L$htsloc"
     hts_include="-I$htsloc"
 fi
 
