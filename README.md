@@ -14,18 +14,20 @@ reuse -q GCC-4.9
 ################# DOWNLOAD VARIANT BAM ########################
 ## Get the stable version
 curl -L -k https://github.com/jwalabroad/VariantBam/archive/v1.1.0.tar.gz | tar xz 
-cd VariantBam-1.1.0/src
+cd VariantBam-1.1.0
 
 ## OR get the latest development version
-git clone https://github.com/jwalabroad/VariantBam.git
-cd VariantBam/src
+git clone --recursive https://github.com/jwalabroad/VariantBam.git
+cd VariantBam
 
 ################ COMPILE AND INSTALL #########################
 ./configure
 make
+make install
 
-## add variant binary to path
-PATH=$PATH:$(pwd)
+## NOTE: If not installing as root, (local install), run ./configure with "--prefix=<my file location>" and then add 
+that to location to the path with somthing like, prefereably in something like .bashrc or .my.bashrc
+PATH=$PATH:$(<my file location>)
 
 ############### QUICK START ##################################
 mkdir -p tmp && cd tmp

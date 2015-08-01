@@ -11,6 +11,4 @@ variant_LDADD = \
 	$(top_builddir)/SnowTools/src/bwa/libbwa.a \
 	$(top_builddir)/SnowTools/src/htslib/libhts.a 
 
-variant_LDFLAGS = -pthread
-
 variant_SOURCES = variant.cpp VariantBamWalker.cpp
