@@ -1,10 +1,9 @@
 VariantBam: One-pass extraction and counting of sequencing reads from a BAM file using cascading rules
 ======================================================================================================
 
-**License:** [GNU GPLv3][license]
+<div style="text-align:center"><img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="150"></div>
 
-<img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="48">
-![alt tag](https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png)
+**License:** [GNU GPLv3][license]
 
 Installation
 ------------
