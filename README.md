@@ -1,35 +1,32 @@
 VariantBam: One-pass extraction and counting of sequencing reads from a BAM file using cascading rules
 ======================================================================================================
 
-<div style="text-align:center"><img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="150"></div>
+<div style="text-align:center"><img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="200"></div>
 
 **License:** [GNU GPLv3][license]
 
 Installation
 ------------
+I have succesfully built on Unix with gcc 4.9 and on Mac with Clang 6.0
+
 ```
-### if on broad servers, add GCC-4.9
+### if on Broad Institute servers, add GCC-4.9
 reuse -q GCC-4.9
 
-################# DOWNLOAD VARIANT BAM ########################
-## Get the stable version
-curl -L -k https://github.com/jwalabroad/VariantBam/archive/v1.1.0.tar.gz | tar xz 
-cd VariantBam-1.1.0
-
-## OR get the latest development version
+############### DOWNLOAD VARIANT BAM ############### 
 git clone --recursive https://github.com/jwalabroad/VariantBam.git
 cd VariantBam
 
-################ COMPILE AND INSTALL #########################
+############### COMPILE AND INSTALL ###############
 ./configure
 make
 make install
 
-## NOTE: If not installing as root, (local install), run ./configure with "--prefix=<my file location>" and then add 
-that to location to the path with somthing like, prefereably in something like .bashrc or .my.bashrc
-PATH=$PATH:$(<my file location>)
+## NOTE: If not installing as root, (local install):
+##   run ./configure with "--prefix=<my file location>" 
+##   add that to location to the path PATH=$PATH:<my file location>/bin
 
-############### QUICK START ##################################
+############### QUICK START ############### 
 mkdir -p tmp && cd tmp
 variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c counts.tsv -o mini.bam -v
 ```
