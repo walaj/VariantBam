@@ -89,7 +89,7 @@ AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -O3
-CPPFLAGS =  -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/htslib -I/xchip/gistic/Jeremiah/GIT/SnowTools/src -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/multifast-v1.4.2 -I/xchip/gistic/Jeremiah/boost_1_58_0
+CPPFLAGS =  -I/xchip/gistic/Jeremiah/GIT/SnowTools/src -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/multifast-v1.4.2 -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/htslib -I/xchip/gistic/Jeremiah/GIT/SnowTools/src/bwa -I/xchip/gistic/Jeremiah/boost_1_58_0
 CXX = g++
 CXXCPP = g++ -E
 CXXDEPMODE = depmode=gcc3
@@ -106,9 +106,9 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = ${SHELL} $(install_sh) -c -s
-LDFLAGS = -L/xchip/gistic/Jeremiah/GIT/SnowTools/src -L/xchip/gistic/Jeremiah/GIT/SnowTools/src/htslib  -L.
+LDFLAGS = -L/xchip/gistic/Jeremiah/GIT/SnowTools/src -L/xchip/gistic/Jeremiah/GIT/SnowTools/src/bwa -L/xchip/gistic/Jeremiah/GIT/SnowTools/src/multifast-v1.4.2/ahocorasick/build  -L.
 LIBOBJS = 
-LIBS = -lrt -lz  -lsnowtools -lhts -lpthread
+LIBS = -lrt -lz  -lsnowtools /xchip/gistic/Jeremiah/GIT/SnowTools/src/htslib/libhts.a -lbwa -lahocorasick -lpthread
 LTLIBOBJS = 
 MAKEINFO = ${SHELL} /xchip/gistic/Jeremiah/GIT/VariantBam/src/missing --run makeinfo
 OBJEXT = o

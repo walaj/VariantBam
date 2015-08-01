@@ -50,52 +50,14 @@ fi
 AC_ARG_WITH(snowtools, AS_HELP_STRING([--with-snowtools=PATH],
 	[specify directory containing the SnowTools library]))
 if test "$with_snowtools" -a -d "$with_snowtools"; then
-    snowtools_ldflags="-L$with_snowtools/src"
-    snowtools_include="-I$with_snowtools/src -I$with_snowtools/src/multifast-v1.4.2"
-    snowtools_libs="-lsnowtools"
+   a=1
 else
     with_snowtools="/xchip/gistic/Jeremiah/GIT/SnowTools"
-    snowtools_ldflags="-L$with_snowtools/src"
-    snowtools_include="-I$with_snowtools/src -I$with_snowtools/src/multifast-v1.4.2"
-    snowtools_libs="-lsnowtools"
 fi
 
-########
-### CHECK FOR AHO-CORASICK LIBRARY
-########
-# Check for the aho library paths
-#AC_ARG_WITH(aho, AS_HELP_STRING([--with-aho=PATH],
-#        [specify directory containing the AhoCorasick string matching algorithm C code (http://sourceforge.net/projects/multifast/)]))
-
-#aholib=""
-#if test "$with_aho" -a -d "$with_aho"; then
-#    aho_include="-I$with_aho"
-#    aho_ldflags="-L$with_aho/ahocorasick/build"
- #   aholib="-lahocorasick"
-#else
-#    aho_include="-I$with_snowtools/src/multifast-v1.4.2"
-#    aho_ldflags="-L$with_snowtools/src/multifast-v1.4.2/ahocorasick/build"
-#    aholib="-lahocorasick"
-#fi
-#else
-#    aho="../ThirdParty/multifast-v1.4.2"
-#    aho_include="-I$aho"
-#    aho_ldflags="-L$aho/ahocorasick/build"
-#    aholib="-lahocorasick"
-#fi   
-
-#AC_ARG_WITH(hts, AS_HELP_STRING([--with-htslib=PATH],
-#	[specify directory containing the HTS library (https://github.com/samtools/htslib)]))#
-
-if test "$with_htslib" -a -d "$with_htslib"; then
-    ##hts_ldflags="-Wl,-rpath,$with_htslib -L$with_htslib"
-    hts_ldflags="-L$with_htslib"
-    hts_include="-I$with_htslib"
-else
-    htsloc="$with_snowtools/src/htslib"
-    hts_ldflags="-L$htsloc"
-    hts_include="-I$htsloc"
-fi
+snowtools_ldflags="-L$with_snowtools/src -L$with_snowtools/src/bwa -L$with_snowtools/src/multifast-v1.4.2/ahocorasick/build"
+snowtools_include="-I$with_snowtools/src -I$with_snowtools/src/multifast-v1.4.2 -I$with_snowtools/src/htslib -I$with_snowtools/src/bwa"
+snowtools_libs="-lsnowtools $with_snowtools/src/htslib/libhts.a -lbwa -lahocorasick"
 
 # Only fail on warnings when the --enable-development flag is passed into configure
 AC_ARG_ENABLE(development, AS_HELP_STRING([--enable-development],
@@ -109,10 +71,10 @@ AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown
 ##AC_SUBST(AM_CXXFLAGS, "-g -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
-AC_SUBST(CPPFLAGS, "$CPPFLAGS $hts_include $snowtools_include $boost_include")
-AC_SUBST(LDFLAGS, "$snowtools_ldflags $hts_ldflags $LDFLAGS -L.")
+AC_SUBST(CPPFLAGS, "$CPPFLAGS $snowtools_include $boost_include")
+AC_SUBST(LDFLAGS, "$snowtools_ldflags $LDFLAGS -L.")
 
-AC_SUBST(LIBS, "$LIBS $snowtools_libs -lhts -lpthread")
+AC_SUBST(LIBS, "$LIBS $snowtools_libs -lpthread")
 
 # Make sure the bamtools headers can be found
 AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])

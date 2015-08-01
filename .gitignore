@@ -24,3 +24,8 @@ tabix
 htsfile
 bgzip
 back*
+*.m4
+*.bam
+variant
+stamp-h1
+config.status
