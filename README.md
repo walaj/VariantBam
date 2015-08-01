@@ -1,34 +1,33 @@
 VariantBam: One-pass extraction and counting of sequencing reads from a BAM file using cascading rules
-=========================================================================================
+======================================================================================================
 
 **License:** [GNU GPLv3][license]
 
+![alt tag](https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png)
+
 Installation
 ------------
-Installation requires 3 libraries: [htslib][hlib], [Aho-Corasick][aho] and [SnowTools][snowt]. A modern C++ compiler is also required. We built succesfully with GCC-4.9. 
-You can download and compile these three libraries in one step by installing SnowTools. 
-
 ```
 ### if on broad servers, add GCC-4.9
 reuse -q GCC-4.9
 
-## install SnowTools (will come with htslib, bwalib, ahocorasick) (-k is for no certifate checking, might be needed)
-curl -L -k https://github.com/jwalabroad/SnowTools/archive/v0.2.0.tar.gz | tar xz
-cd SnowTools-0.2.0/src
-./configure
-make
-cd ../../
-
-## install variant-bam (RELEASE VERSION)
+################# DOWNLOAD VARIANT BAM ########################
+## Get the stable version
 curl -L -k https://github.com/jwalabroad/VariantBam/archive/v1.1.0.tar.gz | tar xz 
 cd VariantBam-1.1.0/src
-./configure --with-snowtools=../../SnowTools-0.2.0 --with-htslib=../../SnowTools-0.2.0/src/htslib
+
+## OR get the latest development version
+git clone https://github.com/jwalabroad/VariantBam.git
+cd VariantBam/src
+
+################ COMPILE AND INSTALL #########################
+./configure
 make
 
 ## add variant binary to path
 PATH=$PATH:$(pwd)
 
-## quick start
+############### QUICK START ##################################
 mkdir -p tmp && cd tmp
 variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c counts.tsv -o mini.bam -v
 ```
