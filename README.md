@@ -3,6 +3,7 @@ VariantBam: One-pass extraction and counting of sequencing reads from a BAM file
 
 **License:** [GNU GPLv3][license]
 
+<img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="48">
 ![alt tag](https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png)
 
 Installation
