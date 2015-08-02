@@ -149,7 +149,7 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = SnowTools SnowTools/src src
+SUBDIRS = SnowTools SnowTools/src src 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
