@@ -75,7 +75,8 @@ AC_CHECK_HEADERS([boost/icl/interval_set.hpp],,[AC_MSG_WARN([The Boost library m
 #AC_CHECK_HEADERS([ahocorasick/ahocorasick.h],,[AC_MSG_WARN([The Aho-Corasick library must be installed (http://sourceforge.net/projects/multifast/), to do string matching rules. Can specify --with-aho=PATH option])])
 
 AC_CONFIG_FILES([Makefile
-	         src/Makefile
-	         SnowTools/src/Makefile])
+                 SnowTools/Makefile
+                 SnowTools/src/Makefile
+	         src/Makefile])
 
 AC_OUTPUT

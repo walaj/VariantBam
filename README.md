@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/jwalabroad/VariantBam.svg?branch=master)](https://travis-ci.org/jwalabroad/VariantBam)
+
 VariantBam: One-pass extraction and counting of sequencing reads from a BAM file using cascading rules
 ======================================================================================================
 
