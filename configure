@@ -4559,7 +4559,7 @@ done
 # Make sure the bamtools headers can be found
 #AC_CHECK_HEADERS([ahocorasick/ahocorasick.h],,[AC_MSG_WARN([The Aho-Corasick library must be installed (http://sourceforge.net/projects/multifast/), to do string matching rules. Can specify --with-aho=PATH option])])
 
-                                        ac_config_files="$ac_config_files Makefile SnowTools/Makefile SnowTools/src/Makefile src/Makefile"
+                              ac_config_files="$ac_config_files Makefile SnowTools/src/Makefile src/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -5126,7 +5126,6 @@ do
   case "$ac_config_target" in
   # Handling of arguments.
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-  "SnowTools/Makefile" ) CONFIG_FILES="$CONFIG_FILES SnowTools/Makefile" ;;
   "SnowTools/src/Makefile" ) CONFIG_FILES="$CONFIG_FILES SnowTools/src/Makefile" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
