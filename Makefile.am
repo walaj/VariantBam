@@ -1,2 +1,2 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = SnowTools SnowTools/src src 
+SUBDIRS = SnowTools/bwa SnowTools/htslib SnowTools/src src 
