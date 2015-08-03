@@ -17,7 +17,7 @@ before_install:
  - sudo update-alternatives --config g++
 
 script:
- - ./fix-timestamps.sh && ./configure && make
+ - ./configure && make
 
 branches:
     only:
