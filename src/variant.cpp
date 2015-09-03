@@ -113,9 +113,10 @@ int main(int argc, char** argv) {
 
   // set which regions to run
   GRC grv_proc_regions;
-  if (opt::proc_regions.length())
+  if (opt::proc_regions.length()) {
     grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
-  grv_proc_regions.createTreeMap();
+    grv_proc_regions.createTreeMap();
+  }
 
   // should it print to stdout?
   if (opt::to_stdout) {
@@ -149,8 +150,9 @@ int main(int argc, char** argv) {
 
   if (grv_proc_regions.size() && rules_rg.size()) // intersect rules regions with mask regions
     rules_rg = rules_rg.intersection(grv_proc_regions, true); // true -> ignore_strand
-  else if (grv_proc_regions.size())
+  else if (grv_proc_regions.size()) {
     rules_rg = grv_proc_regions; // rules is whole genome, so just make mask instead
+  }
 
   if (rules_rg.size()) {
     walk.setBamWalkerRegions(rules_rg.asGenomicRegionVector());
@@ -181,6 +183,10 @@ int main(int argc, char** argv) {
   // do the filtering
   if (opt::verbose)
     std::cerr << "...starting filtering" << std::endl;
+
+  ////////////
+  /// RUN THE WALKER
+  ////////////
   walk.writeVariantBam();
 
   // dump the stats file

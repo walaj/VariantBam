@@ -3,7 +3,6 @@ bin_PROGRAMS = variant
 variant_CPPFLAGS = \
      -I$(top_srcdir)/SnowTools/src \
      -I$(top_srcdir)/SnowTools/htslib \
-     -I$(top_srcdir)/SnowTools/bwa \
      -I$(top_srcdir)/SnowTools/multifast-v1.4.2
 
 variant_LDADD = \

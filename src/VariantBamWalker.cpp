@@ -16,7 +16,7 @@ void VariantBamWalker::writeVariantBam()
 
   while (GetNextRead(r, rule))
     {
-      
+
       TrackSeenRead(r);
       // read is valid
       if (rule) {
