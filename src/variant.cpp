@@ -108,13 +108,19 @@ int main(int argc, char** argv) {
     //std::cerr << "TWO-PASS solution?:      " << (opt::twopass ? "ON" : "OFF") << std::endl;
   }
 
+  std::cerr << "Rules script: " << opt::rules << std::endl;
+
   // setup the walker
   VariantBamWalker walk(opt::bam);
 
   // set which regions to run
   GRC grv_proc_regions;
   if (opt::proc_regions.length()) {
-    grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
+    if (SnowTools::read_access_test(opt::proc_regions)) {
+      grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
+    } else if (opt::proc_regions.find(":") != std::string::npos) {
+      grv_proc_regions.add(SnowTools::GenomicRegion(opt::proc_regions, walk.header()));
+    }
     grv_proc_regions.createTreeMap();
   }
 
@@ -142,8 +148,11 @@ int main(int argc, char** argv) {
   walk.SetMiniRulesCollection(opt::rules);
   
   // set the regions to run
-  if (grv_proc_regions.size())
+  if (grv_proc_regions.size()) {
+    std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
     walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
+  }
+
 
   SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
   rules_rg.createTreeMap();
@@ -155,7 +164,8 @@ int main(int argc, char** argv) {
   }
 
   if (rules_rg.size()) {
-    walk.setBamWalkerRegions(rules_rg.asGenomicRegionVector());
+    //walk.setBamWalkerRegions(rules_rg.asGenomicRegionVector());
+    //std::cerr << "...from rules, will run on " << rules_rg.size() << " regions" << std::endl;
   } else if (!rules_rg.size() && grv_proc_regions.size() > 0) {
     std::cerr << "No regions with possibility of reads. This error occurs if no regions in -g are in -k." << std::endl;
     return 1;
