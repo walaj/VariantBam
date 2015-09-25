@@ -22,7 +22,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "      --help                           Display this help and exit\n"
 "  -v, --verbose                        Verbose output\n"
 "  -c, --counts-file                    File to place read counts per rule / region\n"
-"  -x, --counts-file-only               Same as -c, but does counting only (no output BAM)\n"
+"  -x, --no-output                      Don't output reads (used for profiling with -q and/or counting with -c)\n"
 " Output options\n"
 "  -o, --output-bam                     Output BAM file to write instead of SAM-format stdout\n"
 "  -C, --cram                           Output file should be in CRAM format\n"
@@ -31,7 +31,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -s, --strip-tags                     Remove the specified tags, separated by commas. eg. -s RG,MD\n"
 "  -S, --strip-all-tags                 Remove all alignment tags\n"
 " Filtering options\n"
-"  -q, --qc-only                        Loop through the BAM, but only to make the QC file\n"
+"  -q, --qc-file                        Output a qc file that contains information about BAM\n"
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
 "  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
@@ -60,12 +60,12 @@ enum {
   OPT_HELP
 };
 
-static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:x:q:Q:";
+static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:xq:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
   { "counts-file",                required_argument, NULL, 'c' },
-  { "counts-file-only",           required_argument, NULL, 'x' },
+  { "no-output",                  no_argument, NULL, 'x' },
   { "cram",                       no_argument, NULL, 'C' },
   { "strip-all-tags",             no_argument, NULL, 'S' },
   { "strip-tags",                 required_argument, NULL, 's' },
@@ -75,7 +75,6 @@ static const struct option longopts[] = {
   { "input",                      required_argument, NULL, 'i' },
   { "output-bam",                 required_argument, NULL, 'o' },
   { "qc-file",                    no_argument, NULL, 'q' },
-  { "qc-only-file",               no_argument, NULL, 'Q' },
   { "rules",                      required_argument, NULL, 'r' },
   { "region",                     required_argument, NULL, 'g' },
   { "region-with-mates",          required_argument, NULL, 'c' },
