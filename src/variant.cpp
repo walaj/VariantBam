@@ -32,6 +32,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -S, --strip-all-tags                 Remove all alignment tags\n"
 " Filtering options\n"
 "  -q, --qc-file                        Output a qc file that contains information about BAM\n"
+"  -m, --max-coverage                   Maximum coverage of output file\n"
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
 "  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
@@ -42,6 +43,7 @@ namespace opt {
 
   static std::string bam;
   static std::string out;
+  static int max_cov = 0;
   static bool verbose = false;
   static std::string rules = "";
   static std::string proc_regions = "";
@@ -60,10 +62,11 @@ enum {
   OPT_HELP
 };
 
-static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:xq:";
+static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:xq:m:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
+  { "max-coverage",               required_argument, NULL, 'm' },
   { "counts-file",                required_argument, NULL, 'c' },
   { "no-output",                  no_argument, NULL, 'x' },
   { "cram",                       no_argument, NULL, 'C' },
@@ -107,7 +110,8 @@ int main(int argc, char** argv) {
     //std::cerr << "TWO-PASS solution?:      " << (opt::twopass ? "ON" : "OFF") << std::endl;
   }
 
-  std::cerr << "Rules script: " << opt::rules << std::endl;
+  if (opt::verbose) 
+    std::cerr << "Rules script: " << opt::rules << std::endl;
 
   // setup the walker
   VariantBamWalker walk(opt::bam);
@@ -145,10 +149,14 @@ int main(int argc, char** argv) {
   if (opt::verbose)
     std::cerr << "...rules: " << opt::rules << std::endl;
   walk.SetMiniRulesCollection(opt::rules);
+
+  // set max coverage
+  walk.max_cov = opt::max_cov;
   
   // set the regions to run
   if (grv_proc_regions.size()) {
-    std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
+    if (opt::verbose)
+      std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
     walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
   }
 
@@ -251,6 +259,7 @@ void parseVarOptions(int argc, char** argv) {
       //case 't': opt::twopass = true; break;
     case 'i': arg >> opt::bam; break;
     case 'o': arg >> opt::out; break;
+    case 'm': arg >> opt::max_cov; break;
     case 'l': 
       {
 	std::string tmp;

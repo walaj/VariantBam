@@ -4,6 +4,7 @@
 #include "SnowTools/BamWalker.h"
 #include "SnowTools/BamStats.h"
 #include "SnowTools/BamRead.h"
+#include "SnowTools/STCoverage.h"
 
 class VariantBamWalker: public SnowTools::BamWalker
 {
@@ -17,9 +18,20 @@ class VariantBamWalker: public SnowTools::BamWalker
   
   void TrackSeenRead(SnowTools::BamRead &r);
   
-  void printMessage(const SnowTools::ReadCount &rc_main, const SnowTools::BamRead &r) const;
+  void printMessage(const SnowTools::BamRead &r) const;
   
   SnowTools::BamStats m_stats;
+
+  SnowTools::STCoverage cov_a;
+  SnowTools::STCoverage cov_b;
+
+  int m_seed = 0;
+  
+  int max_cov = 0;
+
+  void subSampleWrite(SnowTools::BamReadVector& buff, const SnowTools::STCoverage& cov);
+
+  SnowTools::ReadCount rc_main;
 
 };
 #endif
