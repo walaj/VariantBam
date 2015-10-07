@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(optparse)
 #RLIBDIR = '/cga/meyerson/home/marcin/Software/R/x86_64-unknown-linux-gnu-library/3.1/'
 #GIT.HOME = '/cga/meyerson/home/marcin/DB/git'
@@ -66,10 +68,9 @@ if (is.null(opt$readgroup))
 
 cbbPalette <- rep(c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"), 50)
 
-
 g.mapq  <- ggplot(df.mapq, aes(x=as.numeric(Min), y=pmax(log10(Count),0), group=readgroup, color=readgroup)) + geom_line() + theme_bw() + scale_x_continuous(limits=c(0,max(df.mapq$Max)))    + ylab('Reads') + xlab('Mapping Quality') + scale_y_continuous(breaks=seq(0,log10(max(df.mapq$Count))), labels=parse(text=paste('10', seq(0,log10(max(df.mapq$Count))), sep='^')))  + scale_color_manual("Read Group", values=cbbPalette)
 #g.mapq  <- ggplot(df.mapq[df.mapq$readgroup %in% opt$readgroup, ], aes(x=Min, y=pmax(log(Count, 10),0), group=readgroup, color=readgroup, fill=readgroup)) + geom_bar(stat='identity', position='dodge') + theme_bw() + ylab('Reads') + xlab('Mapping Quality') + scale_y_continuous(breaks=seq(0,8), labels=parse(text=paste('10', seq(0,8), sep='^'))) 
-g.nm    <- ggplot(df.nm.m    <- melt(df.nm, id='readgroup'),    aes(x=as.numeric(variable), y=pmax(log(value,10),0), group=readgroup, color=readgroup)) + geom_line() + theme_bw() + scale_x_continuous(limits=c(0,10))     + ylab('Reads') + xlab('NM Tag') + scale_y_continuous(breaks=seq(0,8), labels=parse(text=paste('10', seq(0,8), sep='^'))) + scale_color_manual("Read Group", values=cbbPalette)
+g.nm    <- ggplot(df.nm.m    <- melt(df.nm, id='readgroup'),    aes(x=as.numeric(variable), y=pmax(log(value,10),0), group=readgroup, color=readgroup)) + geom_line() + theme_bw() + ylab('Reads') + xlab('NM Tag') + scale_y_continuous(breaks=seq(0,8), labels=parse(text=paste('10', seq(0,8), sep='^'))) + scale_color_manual("Read Group", values=cbbPalette) + scale_x_continuous(limits=c(0,10), breaks=seq(0,10))
 g.isize <- ggplot(df.isize[df.isize$readgroup %in% opt$readgroup, ], aes(x=Min, y=pmax(log(Count,10),0), group=readgroup, color=readgroup, fill=readgroup)) + geom_line() + theme_bw() + ylab('Reads') + xlab('InsertSize') + scale_y_continuous(breaks=seq(0,8), labels=parse(text=paste('10', seq(0,8), sep='^')))  + scale_color_manual("Read Group", values=cbbPalette) + theme(legend.position = 'none') + coord_cartesian(xlim=c(0,1200))
 #g.xp    <- ggplot(df.xp.m    <- melt(df.xp, id='readgroup'),    aes(x=as.numeric(variable), y=pmax(log(value,10),0), group=readgroup, color=readgroup)) + geom_line() + theme_bw() + scale_x_continuous(limits=c(0,100))    + ylab('Reads') + xlab('XP Tag') + scale_y_continuous(breaks=seq(0,8), labels=parse(text=paste('10', seq(0,8), sep='^'))) 
 #g.as    <- ggplot(df.as.m    <- melt(df.as, id='readgroup'),    aes(x=as.numeric(variable), y=pmax(log(value,10),0), group=readgroup, color=readgroup)) + geom_line() + theme_bw() + scale_x_continuous(limits=c(0,100))    + ylab('Reads') + xlab('AS Tag') + scale_y_continuous(breaks=seq(0,8), labels=parse(text=paste('10', seq(0,8), sep='^'))) 

@@ -36,7 +36,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
 "  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
-"  -k, --proc-regions-file              BED file of regions to proess reads from\n"
+"  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
 "\n";
 
 namespace opt {
