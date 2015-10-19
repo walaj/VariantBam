@@ -58,7 +58,7 @@ AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown
 ##AC_SUBST(AM_CXXFLAGS, "-g -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
-AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
+AC_SUBST(CPPFLAGS, "$CPPFLAGS")
 AC_SUBST(LDFLAGS, "$LDFLAGS -L.")
 
 AC_SUBST(LIBS, "$LIBS -lpthread")
@@ -67,7 +67,7 @@ AC_SUBST(LIBS, "$LIBS -lpthread")
 ##AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
 
 # Make sure the bamtools headers can be found
-AC_CHECK_HEADERS([boost/icl/interval_set.hpp],,[AC_MSG_WARN([The Boost library must be installed for a few of the interval operations. NOT REQUIRED for VariantBam. Specify its path with the --with-boostxs=PATH option])])
+##AC_CHECK_HEADERS([boost/icl/interval_set.hpp],,[AC_MSG_WARN([The Boost library must be installed for a few of the interval operations. NOT REQUIRED for VariantBam. Specify its path with the --with-boostxs=PATH option])])
 
 ## Make sure the snowtools headers can be found
 #AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
