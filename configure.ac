@@ -4,7 +4,7 @@ AC_INIT(variant, 0.0, jwala@broadinstitute.org)
 AM_INIT_AUTOMAKE(foreign)
 AC_CONFIG_SRCDIR([src/variant.cpp])
 AC_CONFIG_HEADER([config.h])
-AM_MAINTAINER_MODE([enable])
+AM_MAINTAINER_MODE([disable])
 
 # Checks for programs.
 AC_PROG_CXX ## test for cpp compiler
