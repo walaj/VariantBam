@@ -5,12 +5,10 @@ variant_CPPFLAGS = \
      -I$(top_srcdir)/SnowTools/htslib \
      -I$(top_srcdir)/SnowTools \
      -I$(top_srcdir)/SnowTools/multifast-v1.4.2 \
-     -I$(top_srcdir)/rapidjson/include \
-     -I$(top_srcdir)/modular-boost	
+     -I$(top_srcdir)/SnowTools/modular-boost	
 
 
 variant_LDADD = \
-	##$(top_builddir)/SnowTools/boost/libs/regex/src/libboostregex.a \
 	$(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
 	$(top_builddir)/SnowTools/htslib/libhts.a \
