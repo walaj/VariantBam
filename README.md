@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/jwalabroad/VariantBam.svg?branch=master)](https://travis-ci.org/jwalabroad/VariantBam)
 
-VariantBam: One-pass extraction and counting of sequencing reads from a BAM file using cascading rules
+VariantBam: Filtering and profiling of next-generational sequenc- ing data using region-specific rules
 ======================================================================================================
 
 <div style="text-align:center"><img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="200"></div>
@@ -30,10 +30,9 @@ VariantBam/src/variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c cou
 ## get help
 VariantBam/src/variant --help
 
-```
-
 ############## TL;DR ###################
-## extract all reads and their mate-pairs that overlap a SNP site
+
+## extract all reads and their mate-pairs that overlap SNP sites
 rfile=<BED file, samtools-style string (e.g. "1:1,000,000-1,000,010"), or VCF>
 variant <bam> -l $rfile -o mini.bam -v
 
@@ -42,6 +41,10 @@ variant <bam> -L $rfile -o mini.bam -v
 
 ## extract high-quality clipped reads
 variant <bam> -r 'phred[4,100];clip[5,1000]' -o mini.bam -v
+
+## subsample to max-coverage
+variant <bam> -m 100 -o mini.bam -v
+```
 
 Description
 -----------
@@ -414,14 +417,15 @@ mapq[1,100];del[1,100]
 
 Attributions
 ------------
-* VariantBam is developed and maintained by Jeremiah Wala (jwala@broadinstitute.org) --  Rameen Berkoukhim's lab -- Dana Farber Cancer Institute, Boston, MA. 
-* This project was developed in collaboration with the Cancer Genome Analysis team at the Broad Institute. Particular thanks to:
-... Cheng-Zhong Zhang
-... Marcin Imielinski
-... Gad Getz
-... Mara Rosenberg
-... Esther Rheinbay 
-... Gordon Saksena.
+VariantBam is developed and maintained by Jeremiah Wala (jwala@broadinstitute.org) --  Rameen Berkoukhim's lab -- Dana Farber Cancer Institute, Boston, MA. 
+
+This project was developed in collaboration with the Cancer Genome Analysis team at the Broad Institute. Particular thanks to:
+* Cheng-Zhong Zhang (Matthew Meyerson Lab)
+* Marcin Imielinski
+* Gad Getz
+* Mara Rosenberg
+* Esther Rheinbay 
+* Gordon Saksena.
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
 
