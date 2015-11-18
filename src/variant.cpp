@@ -34,13 +34,16 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -q, --qc-file                        Output a qc file that contains information about BAM\n"
 "  -m, --max-coverage                   Maximum coverage of output file\n"
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
+"  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple\n"
 "  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
+"  -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
 "\n";
 
 namespace opt {
 
+  static std::string blacklist;
   static std::string bam;
   static std::string out;
   static int max_cov = 0;
@@ -62,10 +65,12 @@ enum {
   OPT_HELP
 };
 
-static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:xq:m:";
+static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:xq:m:L:G:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
+  { "exclude-region",             required_argument, NULL, 'L' },
+  { "linked-exclude-region",      required_argument, NULL, 'G' },
   { "max-coverage",               required_argument, NULL, 'm' },
   { "counts-file",                required_argument, NULL, 'c' },
   { "no-output",                  no_argument, NULL, 'x' },
@@ -271,6 +276,17 @@ void parseVarOptions(int argc, char** argv) {
 	opt::rules += "mlregion@" + tmp;
       }
       break;
+    case 'L': 
+      {
+	std::string tmp;
+	arg >> tmp;
+	if (tmp.length() == 0)
+	  break;
+	if (opt::rules.length())
+	  opt::rules += "%";
+	opt::rules += "!mlregion@" + tmp;
+      }
+      break;
     case 'g': 
       {
 	std::string tmp;
@@ -280,6 +296,17 @@ void parseVarOptions(int argc, char** argv) {
 	if (opt::rules.length())
 	  opt::rules += "%";
 	opt::rules += "region@" + tmp;
+      }
+      break;
+    case 'G': 
+      {
+	std::string tmp;
+	arg >> tmp;
+	if (tmp.length() == 0)
+	  break;
+	if (opt::rules.length())
+	  opt::rules += "%";
+	opt::rules += "!region@" + tmp;
       }
       break;
     case 'c': arg >> opt::counts_file; break;

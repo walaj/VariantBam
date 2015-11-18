@@ -22,16 +22,26 @@ cd VariantBam
 ############### COMPILE AND INSTALL ###############
 ./configure
 make
-make install
-
-## NOTE: If not installing as root, (local install):
-##   run ./configure with "--prefix=<my file location>" 
-##   add that to location to the path PATH=$PATH:<my file location>/bin
 
 ############### QUICK START ############### 
 mkdir -p tmp && cd tmp
-variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c counts.tsv -o mini.bam -v
+VariantBam/src/variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c counts.tsv -o mini.bam -v
+
+## get help
+VariantBam/src/variant --help
+
 ```
+
+############## TL;DR ###################
+## extract all reads and their mate-pairs that overlap a SNP site
+rfile=<BED file, samtools-style string (e.g. "1:1,000,000-1,000,010"), or VCF>
+variant <bam> -l $rfile -o mini.bam -v
+
+## mask regions (exclude reads and their pair-mates that overlap)
+variant <bam> -L $rfile -o mini.bam -v
+
+## extract high-quality clipped reads
+variant <bam> -r 'phred[4,100];clip[5,1000]' -o mini.bam -v
 
 Description
 -----------
@@ -47,7 +57,7 @@ or reanalyzed without having to keep the entire BAM. Running VariantBam to extra
 these regions to be rapidly queried, without having to keep the full BAM record.
 ```
 ### Extract all read PAIRS that interset with a variant from a VCF
-variant $bam -l myvcf.vcf -r all -o mini.bam
+variant $bam -l myvcf.vcf -all -o mini.bam
 ```
 
 ##### Example Use 2
@@ -91,6 +101,23 @@ the length of a read)
 ### 
 variant $bam -r 'motif[mymotifs.txt];phred[4,100];length[20,1000]' -o mini.bam
 ```
+
+##### Example Use 7
+To reduce the size of the BAM, reads can be removed from centromeric and satellite repeat regions. These reads are rarely helpful for variant calling.
+To remove reads that intersect a region, set the region as an inverse-region. In a VariantBam script, use ``!region`` or ``!mlregion``. For 
+quick use on the command line, use ``-L`` or ``-G`` (opposites of ``-l`` and ``-g``).
+```
+### 
+variant $bam -L bad.bed -o out.bam -v
+```
+
+##### Example Use 8
+Massive read-pileups can occur at repetitive regions. These can reduced with VariantBam by subsampling to a max-coverage.
+```
+### 
+variant $bam -m 100 -o out.bam -v
+```
+
 Tool comparison
 ---------------
 
@@ -99,7 +126,7 @@ In comparing with other avaiable BAM filtering tools, VariantBam provides the fo
 > 1. The ability to filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality.
 > 2. Use of interval trees to efficiently determine if a read or read mate overlaps a region.
 > 3. The ability to provide different rules for different regions, and the ability to provide these regions as common variant files (VCF, MAF, BED)
-> 4. Selecting reads by motif matching
+> 4. Selecting reads by motif matching against a dictionary of any size
 > 5. Ability to count numbers of reads that satisfy any number of user-defined properties
 > 6. Read and write CRAM files
 > 7. Selectively strip alignment tags
@@ -158,8 +185,14 @@ This is particularly useful for extracting all read PAIRS that cover a variant s
 
 Note that the syntax is such that you must specify the file immediately after the @. 
 
-##### Rules
+A region can be inverted, so as to exclude any read that satisfies a rule on that region. In the rules-script, simply prepend the ``region`` with a !.
+```bash
+## exclude mapq = 0 reads and their mates in blacklist regions
+pad[1000];!mlregion@blacklist.bed
+mapq[0,0]
+```
 
+##### Rules
 
 Rules are supplied as a list of criteria that a read must satisfy.
 Note that you can take the complement of a condition 
@@ -275,11 +308,14 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -s, --strip-tags                     Remove the specified tags, separated by commas. eg. -s RG,MD
   -S, --strip-all-tags                 Remove all alignment tags
  Filtering options
-  -q, --qc-only                        Loop through the BAM, but only to make the QC file
+  -q, --qc-file                        Output a qc file that contains information about BAM
+  -m, --max-coverage                   Maximum coverage of output file
   -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple
+  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple
   -l, --linked-region                  Same as -g, but turns on mate-linking
+  -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
   -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g
-  -k, --proc-regions-file              BED file of regions to proess reads from
+  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from
 ```
 
 Full list of available rules
