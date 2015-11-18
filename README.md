@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/jwalabroad/VariantBam.svg?branch=master)](https://travis-ci.org/jwalabroad/VariantBam)
 
-VariantBam: Filtering and profiling of next-generational sequenc- ing data using region-specific rules
+VariantBam: Filtering and profiling of next-generational sequencing data using region-specific rules
 ======================================================================================================
 
 <div style="text-align:center"><img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="200"></div>
@@ -425,7 +425,7 @@ This project was developed in collaboration with the Cancer Genome Analysis team
 * Gad Getz
 * Mara Rosenberg
 * Esther Rheinbay 
-* Gordon Saksena.
+* Gordon Saksena
 
 [license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
 
