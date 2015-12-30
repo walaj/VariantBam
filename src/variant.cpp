@@ -15,7 +15,7 @@ using SnowTools::GenomicRegionCollection;
 using SnowTools::GRC;
 
 static const char *VARIANT_BAM_USAGE_MESSAGE =
-"Usage: variant <input.bam> -g <regions> -r <rules> [OPTIONS] \n\n"
+"Usage: variant <input.bam> [OPTIONS] \n\n"
 "  Description: Filter a BAM/CRAM file according to hierarchical rules\n"
 "\n"
 " General options\n"

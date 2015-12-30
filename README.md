@@ -294,7 +294,7 @@ Note the single quotes so that it is interpreted as a string literal in BASH.
 Full list of options
 --------------------
 ```
-Usage: variant <input.bam> -g <regions> -r <rules> [OPTIONS] 
+Usage: variant <input.bam> [OPTIONS] 
 
 Description: Filter a BAM/CRAM file according to hierarchical rules
 
