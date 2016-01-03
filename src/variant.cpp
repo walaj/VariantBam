@@ -65,7 +65,7 @@ enum {
   OPT_HELP
 };
 
-static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:xq:m:L:G:";
+static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:x:q:m:L:G:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
@@ -73,7 +73,7 @@ static const struct option longopts[] = {
   { "linked-exclude-region",      required_argument, NULL, 'G' },
   { "max-coverage",               required_argument, NULL, 'm' },
   { "counts-file",                required_argument, NULL, 'c' },
-  { "no-output",                  no_argument, NULL, 'x' },
+  { "no-output",                  required_argument, NULL, 'x' },
   { "cram",                       no_argument, NULL, 'C' },
   { "strip-all-tags",             no_argument, NULL, 'S' },
   { "strip-tags",                 required_argument, NULL, 's' },
@@ -107,6 +107,8 @@ int main(int argc, char** argv) {
   // parse the command line
   parseVarOptions(argc, argv);
 
+  bool has_ml_region = opt::rules.find("mlregion") != std::string::npos;
+  
   if (opt::verbose) {
     //std::cerr << "Input BAM:  " << opt::bam << std::endl;
     //std::cerr << "Output BAM: " << opt::out << std::endl;
@@ -117,6 +119,10 @@ int main(int argc, char** argv) {
 
   if (opt::verbose) 
     std::cerr << "Rules script: " << opt::rules << std::endl;
+
+  if (has_ml_region && opt::verbose) {
+    std::cerr << "...mate-linked region supplied. Defaulting to whole BAM run unless trimmed explicitly with -k flag" << std::endl;
+  }
 
   // setup the walker
   VariantBamWalker walk(opt::bam);
@@ -157,27 +163,34 @@ int main(int argc, char** argv) {
 
   // set max coverage
   walk.max_cov = opt::max_cov;
+  if (opt::max_cov > 0 && opt::verbose)
+    std::cerr << "--- Setting MAX coverage to: " << opt::max_cov << std::endl;
   
+
   // set the regions to run
   if (grv_proc_regions.size()) {
-    if (opt::verbose)
-      std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
+    //if (opt::verbose)
+    //  std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
     walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
   }
-
 
   SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
   rules_rg.createTreeMap();
 
-  if (grv_proc_regions.size() && rules_rg.size()) // intersect rules regions with mask regions
+  if (grv_proc_regions.size() && rules_rg.size()) { // intersect rules regions with mask regions. 
+
+    // dont incorporate rules regions if there are any mate-linked regions
     rules_rg = rules_rg.intersection(grv_proc_regions, true); // true -> ignore_strand
-  else if (grv_proc_regions.size()) {
+    std::cerr << "rules region " << rules_rg.size() << std::endl;
+  } else if (grv_proc_regions.size()) {
     rules_rg = grv_proc_regions; // rules is whole genome, so just make mask instead
   }
 
-  if (rules_rg.size()) {
-    //walk.setBamWalkerRegions(rules_rg.asGenomicRegionVector());
-    //std::cerr << "...from rules, will run on " << rules_rg.size() << " regions" << std::endl;
+  if (grv_proc_regions.size() > 0 && (rules_rg.size() || has_ml_region )) // explicitly gave regions
+    walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
+  else if (rules_rg.size() && !has_ml_region && grv_proc_regions.size() == 0) {
+    walk.setBamWalkerRegions(rules_rg.asGenomicRegionVector());
+    std::cerr << "...from rules, will run on " << rules_rg.size() << " regions" << std::endl;
   } else if (!rules_rg.size() && grv_proc_regions.size() > 0) {
     std::cerr << "No regions with possibility of reads. This error occurs if no regions in -g are in -k." << std::endl;
     return 1;
@@ -252,6 +265,7 @@ void parseVarOptions(int argc, char** argv) {
   opt::bam = std::string(argv[1]);
 
   for (char c; (c = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1;) {
+
     std::istringstream arg(optarg != NULL ? optarg : "");
     switch (c) {
     case OPT_HELP: die = true; break;

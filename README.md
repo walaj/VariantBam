@@ -25,7 +25,12 @@ make
 
 ############### QUICK START ############### 
 mkdir -p tmp && cd tmp
-VariantBam/src/variant <bam> -g 1:100,000,000-100,001,000 -r mapq[10,100] -c counts.tsv -o mini.bam -v
+
+## using the chromosome name (as in a Samtools region string)
+VariantBam/src/variant <bam> -g 'X:100,000,000-100,001,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
+
+## using the chromosome name (as in a Samtools region string)
+VariantBam/src/variant <bam> -g 'X:100,000,000-100,001,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
 
 ## get help
 VariantBam/src/variant --help

@@ -43,6 +43,17 @@ void VariantBamWalker::writeVariantBam()
 	  // clear buffer
 	  // pass back and forth between cov_a and cov_b.
 	  if (buffer.size()) {
+
+	    // error if BAM not sorted
+	    if (buffer[0].Position() - buffer.back().Position() > 0 && buffer[0].ChrID() == buffer.back().ChrID())
+	      {
+		std::cerr << "ERROR: BAM file is not sorted. " << std::endl;
+		std::cerr << " ------ Found read:  " << buffer[0] << std::endl;
+		std::cerr << " ------ before read: " << buffer.back() << std::endl;
+		std::cerr << " ------ BAM must be sorted if using the -m flag for max coverage. Exiting" << std::endl;
+		exit(EXIT_FAILURE);
+	      }
+
 	    if ( (buffer.back().Position() - buffer[0].Position() > buffer_size) || buffer.back().ChrID() != buffer[0].ChrID()) {
 	      COV_A ? subSampleWrite(buffer, cov_a) : subSampleWrite(buffer, cov_b);
 	      COV_A ? cov_a.clear() : cov_b.clear();
