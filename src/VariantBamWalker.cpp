@@ -124,7 +124,12 @@ void VariantBamWalker::TrackSeenRead(SnowTools::BamRead &r)
 
 void VariantBamWalker::printMessage(const SnowTools::BamRead &r) const 
 {
-  
+
+  if (rc_main.total <= 0) {
+    std::cerr << "NO READS FOUND" << std::endl;
+    return;
+  }
+
   char buffer[120];
   std::string posstring = SnowTools::AddCommas<int>(r.Position());
   std::sprintf (buffer, "Reading read %11s at %2s:%-11s. Kept %10s (%2d%%) [running count]",  

@@ -26,11 +26,8 @@ make
 ############### QUICK START ############### 
 mkdir -p tmp && cd tmp
 
-## using the chromosome name (as in a Samtools region string)
-VariantBam/src/variant <bam> -g 'X:100,000,000-100,001,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
-
-## using the chromosome name (as in a Samtools region string)
-VariantBam/src/variant <bam> -g 'X:100,000,000-100,001,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
+## using the included test BAM (HCC1143)
+VariantBam/src/variant small.bam -g 'X:1,000,000-1,100,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
 
 ## get help
 VariantBam/src/variant --help
@@ -47,7 +44,7 @@ variant <bam> -L $rfile -o mini.bam -v
 ## extract high-quality clipped reads
 variant <bam> -r 'phred[4,100];clip[5,1000]' -o mini.bam -v
 
-## subsample to max-coverage
+## subsample to max-coverage. BAM must be sorted
 variant <bam> -m 100 -o mini.bam -v
 ```
 
@@ -122,7 +119,7 @@ variant $bam -L bad.bed -o out.bam -v
 ##### Example Use 8
 Massive read-pileups can occur at repetitive regions. These can reduced with VariantBam by subsampling to a max-coverage.
 ```
-### 
+### BAM must be sorted
 variant $bam -m 100 -o out.bam -v
 ```
 
@@ -317,7 +314,7 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -S, --strip-all-tags                 Remove all alignment tags
  Filtering options
   -q, --qc-file                        Output a qc file that contains information about BAM
-  -m, --max-coverage                   Maximum coverage of output file
+  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted.
   -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple
   -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple
   -l, --linked-region                  Same as -g, but turns on mate-linking
@@ -350,6 +347,7 @@ Full list of available rules
     mate_rev_strand mate_rev_strand      Mate of read must be mapped to reverse strand  
     mapped          !mapped              Read must be unmapped
     mapped_mate     mapped_mate          Mate must be mapped
+    subsample       subsample[0.4]       Subsample this region to at a certain rate
     ff              ff                   Read pair must have forward-forward orientation
     rr              rr                   Read pair must have reverse-reverse orientation
     fr              fr                   Read pair must have forward-reverse orientation (proper)

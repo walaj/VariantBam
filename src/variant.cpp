@@ -32,7 +32,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -S, --strip-all-tags                 Remove all alignment tags\n"
 " Filtering options\n"
 "  -q, --qc-file                        Output a qc file that contains information about BAM\n"
-"  -m, --max-coverage                   Maximum coverage of output file\n"
+"  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted\n"
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
 "  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple\n"
 "  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
