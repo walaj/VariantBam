@@ -39,6 +39,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
+"  -P, --region-pad                     Apply a padding to each region\n"
 "\n";
 
 namespace opt {
@@ -59,13 +60,14 @@ namespace opt {
   static std::string counts_file = "";
   static bool counts_only = false;
   static std::string bam_qcfile = "";
+  static int pad = 0;
 }
 
 enum {
   OPT_HELP
 };
 
-static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:x:q:m:L:G:";
+static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:x:q:m:L:G:P:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
@@ -85,6 +87,7 @@ static const struct option longopts[] = {
   { "qc-file",                    no_argument, NULL, 'q' },
   { "rules",                      required_argument, NULL, 'r' },
   { "region",                     required_argument, NULL, 'g' },
+  { "region-pad",                 required_argument, NULL, 'P' },
   { "region-with-mates",          required_argument, NULL, 'c' },
   { "proc-regions-file",          required_argument, NULL, 'k' },
   { "no-pileup-check",            no_argument, NULL, 'j' },
@@ -93,6 +96,14 @@ static const struct option longopts[] = {
 
 static struct timespec start;
 
+std::string myreplace(std::string &s,
+                      std::string toReplace,
+                      std::string replaceWith)
+{
+  if (s.find(toReplace) == std::string::npos)
+    return (s);
+  return(s.replace(s.find(toReplace), toReplace.length(), replaceWith));
+}
 
 // forward declare
 void parseVarOptions(int argc, char** argv);
@@ -106,6 +117,14 @@ int main(int argc, char** argv) {
 
   // parse the command line
   parseVarOptions(argc, argv);
+
+  if (opt::pad != 0) {
+    std::cerr << opt::rules << " toreplace " << ("pad[" + std::to_string(opt::pad) + "];") << std::endl;
+      opt::rules = myreplace(opt::rules, "PDUM;", "pad[" + std::to_string(opt::pad) + "];");
+  } else {
+    opt::rules = myreplace(opt::rules, "PDUM;", "");
+  }
+
 
   bool has_ml_region = opt::rules.find("mlregion") != std::string::npos;
   
@@ -287,7 +306,10 @@ void parseVarOptions(int argc, char** argv) {
 	  break;
 	if (opt::rules.length())
 	  opt::rules += "%";
-	opt::rules += "mlregion@" + tmp;
+	if (tmp.find("region@") == std::string::npos)
+	  opt::rules += "PDUM;mlregion@" + tmp;
+	else 
+	  opt::rules += tmp;
       }
       break;
     case 'L': 
@@ -298,7 +320,10 @@ void parseVarOptions(int argc, char** argv) {
 	  break;
 	if (opt::rules.length())
 	  opt::rules += "%";
-	opt::rules += "!mlregion@" + tmp;
+	if (tmp.find("region@") == std::string::npos)
+	  opt::rules += "PDUM;!mlregion@" + tmp;
+	else 
+	  opt::rules += tmp;
       }
       break;
     case 'g': 
@@ -309,7 +334,10 @@ void parseVarOptions(int argc, char** argv) {
 	  break;
 	if (opt::rules.length())
 	  opt::rules += "%";
-	opt::rules += "region@" + tmp;
+	if (tmp.find("region@") == std::string::npos)
+	  opt::rules += "PDUM;region@" + tmp;
+	else 
+	  opt::rules += tmp;
       }
       break;
     case 'G': 
@@ -320,13 +348,15 @@ void parseVarOptions(int argc, char** argv) {
 	  break;
 	if (opt::rules.length())
 	  opt::rules += "%";
-	opt::rules += "!region@" + tmp;
+	if (tmp.find("region@") == std::string::npos)
+	  opt::rules += "PDUM;!region@" + tmp;
       }
       break;
     case 'c': arg >> opt::counts_file; break;
     case 'x': arg >> opt::counts_file; opt::counts_only = true; break;
     case 'q': arg >> opt::bam_qcfile; break;
     case 'Q': arg >> opt::bam_qcfile; opt::counts_only = true; break;
+    case 'P': arg >> opt::pad; break;
     case 'r': 
       {
 	std::string tmp;
@@ -355,7 +385,7 @@ void parseVarOptions(int argc, char** argv) {
 	  opt::rules += "%"; // adding a new line
 	  opt::rules += tmp;
 	}
-	else { // region is empty, so add one first
+	else { //if (tmp.find("region@") == std::string::npos) { // region is empty, so add one first
 	  opt::rules = "region@WG%" + tmp; // need to specify a region
 	}
 	//opt::rules += tmp;

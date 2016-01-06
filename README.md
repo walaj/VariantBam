@@ -34,12 +34,12 @@ VariantBam/src/variant --help
 
 ############## TL;DR ###################
 
-## extract all reads and their mate-pairs that overlap SNP sites
+## extract all reads and their mate-pairs that overlap SNP sites within 100 bp
 rfile=<BED file, samtools-style string (e.g. "1:1,000,000-1,000,010"), or VCF>
-variant <bam> -l $rfile -o mini.bam -v
+variant <bam> -l $rfile -o mini.bam -P 100 -v
 
 ## mask regions (exclude reads and their pair-mates that overlap)
-variant <bam> -L $rfile -o mini.bam -v
+variant <bam> -L $rfile -o mini.bam -v 
 
 ## extract high-quality clipped reads
 variant <bam> -r 'phred[4,100];clip[5,1000]' -o mini.bam -v
@@ -183,6 +183,10 @@ the regions around the sites. For example:
 
 ``pad[1000];region@myvcf.vcf``
 
+Alternatively, if supplying a region directly with the -l, -L, -g or -G flag, you can specify a padding with the -P flag. Note that this padding will be applied to every region provided with one of these flags:
+
+``variant <in.bam> -l myvcf.vcf -P 100``
+
 You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does (called "mate-linking"). Note that this only applies to the ``all`` target.
 This is particularly useful for extracting all read PAIRS that cover a variant site.
 
@@ -321,6 +325,7 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
   -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g
   -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from
+  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags
 ```
 
 Full list of available rules
