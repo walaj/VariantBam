@@ -11,6 +11,6 @@ variant_LDADD = \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
 	$(top_builddir)/SnowTools/htslib/libhts.a \
 	-lboost_regex -lboost_unit_test_framework \
-	-lboost_timer -lboost_system -lboost_chrono
+	-lboost_system 
 
 variant_SOURCES = variant.cpp VariantBamWalker.cpp variant_test.cpp
