@@ -16,6 +16,17 @@ void VariantBamWalker::writeVariantBam()
   int32_t buffer_size = 500;
   SnowTools::BamReadVector buffer;
 
+  // check if the BAM is sorted by looking at the header
+  std::string hh = std::string(header()->text);
+  bool sorted = hh.find("SO:coord") != std::string::npos;
+
+  if (!sorted && max_cov > 0) {
+    std::cerr << "ERROR: BAM file does not appear to be sorted (no SO:coordinate) found in header." << std::endl;
+    std::cerr << "       Sorted BAMs are required for coverage-based rules (max/min coverage)." << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+
   while (GetNextRead(r, rule))
     {
 

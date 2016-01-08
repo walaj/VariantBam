@@ -39,7 +39,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
-"  -P, --region-pad                     Apply a padding to each region\n"
+"  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags\n"
 "\n";
 
 namespace opt {
@@ -184,7 +184,6 @@ int main(int argc, char** argv) {
   walk.max_cov = opt::max_cov;
   if (opt::max_cov > 0 && opt::verbose)
     std::cerr << "--- Setting MAX coverage to: " << opt::max_cov << std::endl;
-  
 
   // set the regions to run
   if (grv_proc_regions.size()) {

@@ -46,12 +46,12 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_variant_OBJECTS = variant-variant.$(OBJEXT) \
-	variant-VariantBamWalker.$(OBJEXT)
+	variant-VariantBamWalker.$(OBJEXT) \
+	variant-variant_test.$(OBJEXT)
 variant_OBJECTS = $(am_variant_OBJECTS)
 variant_DEPENDENCIES = $(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
-	$(top_builddir)/SnowTools/htslib/libhts.a \
-	$(top_builddir)/SnowTools/modular-boost/stage/lib/libboost_regex.a
+	$(top_builddir)/SnowTools/htslib/libhts.a
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -162,16 +162,16 @@ variant_CPPFLAGS = \
      -I$(top_srcdir)/SnowTools/src \
      -I$(top_srcdir)/SnowTools/htslib \
      -I$(top_srcdir)/SnowTools \
-     -I$(top_srcdir)/SnowTools/multifast-v1.4.2 \
-     -I$(top_srcdir)/SnowTools/modular-boost	
+     -I$(top_srcdir)/SnowTools/multifast-v1.4.2 
 
 variant_LDADD = \
 	$(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
 	$(top_builddir)/SnowTools/htslib/libhts.a \
-	$(top_builddir)/SnowTools/modular-boost/stage/lib/libboost_regex.a	
+	-lboost_regex -lboost_unit_test_framework \
+	-lboost_timer -lboost_system -lboost_chrono
 
-variant_SOURCES = variant.cpp VariantBamWalker.cpp
+variant_SOURCES = variant.cpp VariantBamWalker.cpp variant_test.cpp
 all: all-am
 
 .SUFFIXES:
@@ -255,6 +255,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/variant-VariantBamWalker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/variant-variant.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/variant-variant_test.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -297,6 +298,20 @@ variant-VariantBamWalker.obj: VariantBamWalker.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='VariantBamWalker.cpp' object='variant-VariantBamWalker.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(variant_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o variant-VariantBamWalker.obj `if test -f 'VariantBamWalker.cpp'; then $(CYGPATH_W) 'VariantBamWalker.cpp'; else $(CYGPATH_W) '$(srcdir)/VariantBamWalker.cpp'; fi`
+
+variant-variant_test.o: variant_test.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(variant_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT variant-variant_test.o -MD -MP -MF $(DEPDIR)/variant-variant_test.Tpo -c -o variant-variant_test.o `test -f 'variant_test.cpp' || echo '$(srcdir)/'`variant_test.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/variant-variant_test.Tpo $(DEPDIR)/variant-variant_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='variant_test.cpp' object='variant-variant_test.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(variant_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o variant-variant_test.o `test -f 'variant_test.cpp' || echo '$(srcdir)/'`variant_test.cpp
+
+variant-variant_test.obj: variant_test.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(variant_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT variant-variant_test.obj -MD -MP -MF $(DEPDIR)/variant-variant_test.Tpo -c -o variant-variant_test.obj `if test -f 'variant_test.cpp'; then $(CYGPATH_W) 'variant_test.cpp'; else $(CYGPATH_W) '$(srcdir)/variant_test.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/variant-variant_test.Tpo $(DEPDIR)/variant-variant_test.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='variant_test.cpp' object='variant-variant_test.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(variant_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o variant-variant_test.obj `if test -f 'variant_test.cpp'; then $(CYGPATH_W) 'variant_test.cpp'; else $(CYGPATH_W) '$(srcdir)/variant_test.cpp'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

@@ -24,27 +24,17 @@ AC_ARG_WITH(boost, AS_HELP_STRING([--with-boost=PATH],
 	[specify directory containing the boost library)]))
 if test "$with_boost" -a -d "$with_boost"; then
     boost_include="-I$with_boost"
-else
-    boostr=/xchip/gistic/Jeremiah/boost_1_58_0
-    boost_include="-I$boostr"
-fi
-
-
-########
-### CHECK FOR SNOW TOOLS
-########
-#AC_ARG_WITH(snowtools, AS_HELP_STRING([--with-snowtools=PATH],
-#	[specify directory containing the SnowTools library]))
-#if test "$with_snowtools" -a -d "$with_snowtools"; then
-#   a=1
+    AC_CHECK_FILE("$with_boost/stage/lib", STAGE_PATH=1, STAGE_PATH=0)
+    if test ${STAGE_PATH} = 1; then
+        boost_lib="-L$with_boost/stage/lib"  
+    else
+        boost_lib="-L$with_boost/lib"        
+    fi
 #else
-#    with_snowtools="/xchip/gistic/Jeremiah/GIT/SnowTools"
-#fi
-
-#with_snowtools="./SnowTools"
-#snowtools_ldflags="-L$with_snowtools/src -L$with_snowtools/src/bwa -L$with_snowtools/src/multifast-v1.4.2/ahocorasick/build"
-#snowtools_include="-I$with_snowtools/src -I$with_snowtools/src/multifast-v1.4.2 -I$with_snowtools/src/htslib -I$with_snowtools/src/bwa"
-snowtools_libs="-lsnowtools $with_snowtools/src/htslib/libhts.a -lbwa -lahocorasick"
+#    boostr=/xchip/gistic/Jeremiah/GIT/boost
+#    boost_include="-I/xchip/gistic/Jeremiah/GIT/boost"
+#    boost_lib="-L/xchip/gistic/Jeremiah/GIT/boost/stage/lib -Wl,-rpath /xchip/gistic/Jeremiah/GIT/boost/stage/lib"
+fi
 
 # Only fail on warnings when the --enable-development flag is passed into configure
 AC_ARG_ENABLE(development, AS_HELP_STRING([--enable-development],
@@ -58,22 +48,18 @@ AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown
 ##AC_SUBST(AM_CXXFLAGS, "-g -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
-AC_SUBST(CPPFLAGS, "$CPPFLAGS")
-AC_SUBST(LDFLAGS, "$LDFLAGS -L.")
-
+AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
+AC_SUBST(LDFLAGS, "$LDFLAGS -L. $boost_lib")
 AC_SUBST(LIBS, "$LIBS -lpthread")
 
 # Make sure the bamtools headers can be found
 ##AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
 
 # Make sure the bamtools headers can be found
-##AC_CHECK_HEADERS([boost/icl/interval_set.hpp],,[AC_MSG_WARN([The Boost library must be installed for a few of the interval operations. NOT REQUIRED for VariantBam. Specify its path with the --with-boostxs=PATH option])])
+AC_CHECK_HEADERS([boost/regex.hpp],,[AC_MSG_ERROR([The Boost library must be installed for VariantBam. Specify its path with the --with-boost=PATH option])])
 
 ## Make sure the snowtools headers can be found
 #AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
-
-# Make sure the bamtools headers can be found
-#AC_CHECK_HEADERS([ahocorasick/ahocorasick.h],,[AC_MSG_WARN([The Aho-Corasick library must be installed (http://sourceforge.net/projects/multifast/), to do string matching rules. Can specify --with-aho=PATH option])])
 
 AC_CONFIG_FILES([Makefile
                  SnowTools/src/Makefile

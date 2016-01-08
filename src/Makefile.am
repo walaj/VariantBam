@@ -4,15 +4,13 @@ variant_CPPFLAGS = \
      -I$(top_srcdir)/SnowTools/src \
      -I$(top_srcdir)/SnowTools/htslib \
      -I$(top_srcdir)/SnowTools \
-     -I$(top_srcdir)/SnowTools/multifast-v1.4.2 \
-     -I$(top_srcdir)/SnowTools/modular-boost	
-
+     -I$(top_srcdir)/SnowTools/multifast-v1.4.2 
 
 variant_LDADD = \
 	$(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
 	$(top_builddir)/SnowTools/htslib/libhts.a \
-	$(top_builddir)/SnowTools/modular-boost/stage/lib/libboost_regex.a	
+	-lboost_regex -lboost_unit_test_framework \
+	-lboost_timer -lboost_system -lboost_chrono
 
-
-variant_SOURCES = variant.cpp VariantBamWalker.cpp
+variant_SOURCES = variant.cpp VariantBamWalker.cpp variant_test.cpp

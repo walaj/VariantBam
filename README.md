@@ -15,12 +15,19 @@ I have succesfully built on Unix with gcc 4.9 and on Mac with Clang 6.0
 ### if on Broad Institute servers, add GCC-4.9
 reuse -q GCC-4.9
 
+############## DOWNLOAD AND INSTALL BOOST ###############
+############## (only if not already installed) ##########
+git clone --recursive https://github.com/boostorg/boost.git
+cd boost
+./bootstrap.sh --with-libraries=regex,test
+./b2
+
 ############### DOWNLOAD VARIANT BAM ############### 
 git clone --recursive https://github.com/jwalabroad/VariantBam.git
 cd VariantBam
 
 ############### COMPILE AND INSTALL ###############
-./configure
+./configure --with-boost=<path_to_boost>
 make
 
 ############### QUICK START ############### 
