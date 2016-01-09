@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/jwalabroad/VariantBam.svg?branch=master)](https://travis-ci.org/jwalabroad/VariantBam)
+[![Coverage Status](https://coveralls.io/repos/jwalabroad/VariantBam/badge.svg?branch=master&service=github)](https://coveralls.io/github/jwalabroad/VariantBam?branch=master)
 
 VariantBam: Filtering and profiling of next-generational sequencing data using region-specific rules
 ======================================================================================================
