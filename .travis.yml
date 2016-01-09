@@ -40,7 +40,7 @@ script:
  - ./configure --with-boost=${BOOST_ROOT} && make
 
 after_success:
- - .travis_scripts/coveralls.sh
+ - .travis.scripts/coveralls.sh
 
 branches:
     only:
