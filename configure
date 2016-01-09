@@ -5293,7 +5293,7 @@ done
 ## Make sure the snowtools headers can be found
 #AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
 
-ac_config_files="$ac_config_files Makefile SnowTools/src/Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile test/Makefile SnowTools/src/Makefile src/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -5940,6 +5940,7 @@ do
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
     "SnowTools/src/Makefile") CONFIG_FILES="$CONFIG_FILES SnowTools/src/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
 

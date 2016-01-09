@@ -62,6 +62,7 @@ AC_CHECK_HEADERS([boost/regex.hpp],,[AC_MSG_ERROR([The Boost library must be ins
 #AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
 
 AC_CONFIG_FILES([Makefile
+		 test/Makefile
                  SnowTools/src/Makefile
 	         src/Makefile])
 
