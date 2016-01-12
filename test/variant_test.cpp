@@ -1,6 +1,8 @@
 #include <climits>
 #include <boost/test/unit_test.hpp>
+
 #include "SnowTools/MiniRules.h"
+#include "VariantBamWalker.h"
 
 BOOST_AUTO_TEST_CASE( test_test ) {
 

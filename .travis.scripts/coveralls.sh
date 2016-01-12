@@ -7,5 +7,5 @@ then
   sudo pip install cpp-coveralls
   cd test
   ./variant_test
-  cpp-coveralls --verbose
+  cpp-coveralls -r ../ -e examples -e doxy -e R -e rtdocs --verbose -y ../.coveralls.yml
 fi

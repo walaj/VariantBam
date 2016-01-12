@@ -47,8 +47,8 @@ fi
 # Set compiler flags.
 AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 ##AC_SUBST(AM_CXXFLAGS, "-g -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
-AC_SUBST(CXXFLAGS, "-O3")
-AC_SUBST(CFLAGS, "-O3")
+AC_SUBST(CXXFLAGS, "$CXXFLAGS -O3")
+AC_SUBST(CFLAGS, "$CFLAGS -O3")
 AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
 AC_SUBST(LDFLAGS, "$LDFLAGS -L.")
 AC_SUBST(LIBS, "$LIBS -lpthread")

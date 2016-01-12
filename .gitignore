@@ -5,6 +5,9 @@ SVSim*
 *.csv
 *.o
 *.gif
+*.gcda
+*.gcno
+*.gcov
 .*
 Test
 autom4te.cache
