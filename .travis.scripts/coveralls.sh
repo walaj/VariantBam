@@ -5,6 +5,9 @@
 if [ "$CXX" == "g++" ];
 then
   sudo pip install cpp-coveralls
+  make clean
+  ./configure --with-boost=${BOOST_ROOT} LDFLAGS=--coverage CXXFLAGS=--coverage
+  make
   cd test
   ./variant_test
   cpp-coveralls -r ../ -e examples -e doxy -e R -e rtdocs --verbose -y ../.coveralls.yml
