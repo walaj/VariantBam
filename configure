@@ -642,6 +642,7 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
 AM_CXXFLAGS
+boost_lib
 EGREP
 GREP
 CXXCPP
@@ -5095,10 +5096,11 @@ else
 fi
 
     if test ${STAGE_PATH} = 1; then
-        boost_lib="-L$with_boost/stage/lib"
+        boost_lib="$with_boost/stage/lib"
     else
-        boost_lib="-L$with_boost/lib"
+        boost_lib="$with_boost/lib"
     fi
+
 #else
 #    boostr=/xchip/gistic/Jeremiah/GIT/boost
 #    boost_include="-I/xchip/gistic/Jeremiah/GIT/boost"
@@ -5125,7 +5127,7 @@ CFLAGS="-O3"
 
 CPPFLAGS="$CPPFLAGS $boost_include"
 
-LDFLAGS="$LDFLAGS -L. $boost_lib"
+LDFLAGS="$LDFLAGS -L."
 
 LIBS="$LIBS -lpthread"
 

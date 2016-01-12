@@ -7,5 +7,5 @@ then
   sudo pip install cpp-coveralls
   cd test
   ./variant_test
-  coveralls
+  cpp-coveralls --verbose
 fi

@@ -26,9 +26,7 @@ void VariantBamWalker::writeVariantBam()
     exit(EXIT_FAILURE);
   }
 
-
-  while (GetNextRead(r, rule))
-    {
+  while (GetNextRead(r, rule)) {
 
       // prepare for case of long reads
       buffer_size = std::max((int32_t)r.Length() * 5, buffer_size);

@@ -144,9 +144,13 @@ int main(int argc, char** argv) {
   }
 
   // setup the walker
+  if (opt::verbose)
+    std::cerr << "...setting up the bam walker" << std::endl;
   VariantBamWalker walk(opt::bam);
 
   // set which regions to run
+  if (opt::verbose)
+    std::cerr << "...setting which regions to run" << std::endl;
   GRC grv_proc_regions;
   if (opt::proc_regions.length()) {
     if (SnowTools::read_access_test(opt::proc_regions)) {

@@ -26,10 +26,11 @@ if test "$with_boost" -a -d "$with_boost"; then
     boost_include="-I$with_boost"
     AC_CHECK_FILE("$with_boost/stage/lib", STAGE_PATH=1, STAGE_PATH=0)
     if test ${STAGE_PATH} = 1; then
-        boost_lib="-L$with_boost/stage/lib"  
+        boost_lib="$with_boost/stage/lib"  
     else
-        boost_lib="-L$with_boost/lib"        
+        boost_lib="$with_boost/lib"        
     fi
+    AC_SUBST(boost_lib)
 #else
 #    boostr=/xchip/gistic/Jeremiah/GIT/boost
 #    boost_include="-I/xchip/gistic/Jeremiah/GIT/boost"
@@ -49,7 +50,7 @@ AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown
 AC_SUBST(CXXFLAGS, "-O3")
 AC_SUBST(CFLAGS, "-O3")
 AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
-AC_SUBST(LDFLAGS, "$LDFLAGS -L. $boost_lib")
+AC_SUBST(LDFLAGS, "$LDFLAGS -L.")
 AC_SUBST(LIBS, "$LIBS -lpthread")
 
 # Make sure the bamtools headers can be found

@@ -50,7 +50,8 @@ am_variant_OBJECTS = variant-variant.$(OBJEXT) \
 variant_OBJECTS = $(am_variant_OBJECTS)
 variant_DEPENDENCIES = $(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
-	$(top_builddir)/SnowTools/htslib/libhts.a
+	$(top_builddir)/SnowTools/htslib/libhts.a \
+	@boost_lib@/libboost_regex.a
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -126,6 +127,7 @@ am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
 bindir = @bindir@
+boost_lib = @boost_lib@
 build_alias = @build_alias@
 builddir = @builddir@
 datadir = @datadir@
@@ -167,7 +169,7 @@ variant_LDADD = \
 	$(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
 	$(top_builddir)/SnowTools/htslib/libhts.a \
-	-lboost_regex
+        @boost_lib@/libboost_regex.a
 
 variant_SOURCES = variant.cpp VariantBamWalker.cpp
 all: all-am
