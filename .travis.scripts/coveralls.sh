@@ -12,5 +12,5 @@ echo "...trying coveralls"
   make
   cd test
   ./variant_test
-  cpp-coveralls -r ../ -e examples -e doxy -e R -e rtdocs --verbose -y ../.coveralls.yml
+  cpp-coveralls -r ../ -e examples -e doxy -e R -e rtdocs --verbose -t ${COVERALLS_TOKEN}
 #fi

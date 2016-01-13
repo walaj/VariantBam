@@ -1,47 +1,42 @@
 language: cpp
 
-compiler:
- - gcc
+compiler: 
+- gcc
 
-env:
-  global:
-      # Boost version to use:
-      # _MIN is used when building the master branch
-      # _MAX is used when building any other branch
-    - BOOST_VERSION_MIN="1.59.0"
-    - BOOST_VERSION_MAX="1.60.0"
-      # List of required boost libraries to build
-    - BOOST_LIBS="regex,system,test"
+env: 
+  global: 
+  - BOOST_VERSION_MIN="1.59.0"
+  - "BOOST_VERSION_MAX=\"1.60.0\" # List of required boost libraries to build"
+  - BOOST_LIBS="regex,system,test"
+  - secure: ck5M5R8YqNGA5LFmE5NdkkNvYMqwKg4v/b9/VE+Zhdw87Vx4xE44aHh/TxtQYDvrhzrmLWjmnCRR0g7TfXWCZ/Nq3gWqVqUe4j/ltG+zzI/3LWViZN6i91G/12LAgE/LZpyDnJOssbGYB5jDtYS4SgFmgTpYkFHfAuZWKOblMl7eP5DBCBTAe7GynDmCnSo3BDaYnQ1k1d7q9u/LxeMx2SOvbZF5tkanVvSthYAMiKgnyOwQSSWnitvrBrx4KwoyW6D8TT1W0PSl2ZggHYHreM22/F3MWGJeDNcdz5uA3EhpMP1ZYnAaSN4pgRv5D1/fuilmgn1IjBeoDTInQf6p0ri1L4Z3NmY+Plr75Q7/pOhjfWFw033AYh7Sio83lTR1mWL/u9ri39btjrn2tfRuBFzPlIVrYwRBHIxUMqYqt89epe+w8/0kdBzFCnwsSPjQEc2cyBwrmXvKZZJImnmAOPb4IwtSmPdNNC6smkWUKV+kiktuiCX8NnNU82cuESVBblwTfcpqfnUAxY1+adDEPTP/r1HfbPOU4tr790FpUqOhFNwIruzyGYFVX/jMHtYFwlz9fTGrLp+2fSRuFRFU+kHYJcL3BRM13kEQFoqkdyO5X6Xpqn+PlnaEABttIT++Hm57QyeapBiVrrCjWENhY3ZKJs6U+7daKy11boUd2go=
 
-before_install:
- - git submodule update --init --recursive
- - sudo pip install cpp-coveralls
- - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
- - sudo apt-get update
- - sudo apt-get install valgrind python-yaml libyaml-dev build-essential libssh2-1-dev libarchive-dev clang
- - sudo apt-get install gcc-4.9 g++-4.9
- - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
- - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
- - sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-4.9 20
- - sudo update-alternatives --config gcc
- - sudo update-alternatives --config g++
- - if [ "${TRAVIS_BRANCH}" = "master" ]; then export BOOST_VERSION="${BOOST_VERSION_MIN}"; else export BOOST_VERSION="${BOOST_VERSION_MAX}"; fi
- - if [ -n "${BOOST_VERSION}" ]; then export BOOST_ROOT="${TRAVIS_BUILD_DIR}/../boost-trunk"; export CMAKE_MODULE_PATH="${BOOST_ROOT}"; fi
- - if [ "${CXX}" = "g++" ]; then export CXX="$(which g++-4.9)"; export CC="$(which gcc-4.9)"; fi
- - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export DYLD_LIBRARY_PATH="${BOOST_ROOT}/lib"; fi
-    # c++ is a symlink to clang++, but the compiler behaves differently when invoked as c++
- - if [ "${TRAVIS_OS_NAME}" = "osx" -a "${CXX}" = "clang++" ]; then export CXX="$(which c++)"; export CC="$(which cc)"; fi
- - .travis.scripts/travis-before-install.sh
+before_install: 
+- git submodule update --init --recursive
+- sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+- sudo apt-get update
+- sudo apt-get install valgrind python-yaml libyaml-dev build-essential libssh2-1-dev libarchive-dev clang
+- sudo apt-get install gcc-4.9 g++-4.9
+- sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
+- sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+- sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-4.9 20
+- sudo update-alternatives --config gcc
+- sudo update-alternatives --config g++
+- if [ "${TRAVIS_BRANCH}" = "master" ]; then export BOOST_VERSION="${BOOST_VERSION_MIN}"; else export BOOST_VERSION="${BOOST_VERSION_MAX}"; fi
+- if [ -n "${BOOST_VERSION}" ]; then export BOOST_ROOT="${TRAVIS_BUILD_DIR}/../boost-trunk"; export CMAKE_MODULE_PATH="${BOOST_ROOT}"; fi
+- if [ "${CXX}" = "g++" ]; then export CXX="$(which g++-4.9)"; export CC="$(which gcc-4.9)"; fi
+- "if [ \"${TRAVIS_OS_NAME}\" = \"osx\" ]; then export DYLD_LIBRARY_PATH=\"${BOOST_ROOT}/lib\"; fi # c++ is a symlink to clang++, but the compiler behaves differently when invoked as c++"
+- if [ "${TRAVIS_OS_NAME}" = "osx" -a "${CXX}" = "clang++" ]; then export CXX="$(which c++)"; export CC="$(which cc)"; fi
+- .travis.scripts/travis-before-install.sh
 
-install:
-  - .travis.scripts/travis-install.sh
+install: 
+- .travis.scripts/travis-install.sh
 
-script:
- - ./configure --with-boost=${BOOST_ROOT} && make
+script: 
+- ./configure --with-boost=${BOOST_ROOT} && make
 
-after_success:
- - .travis.scripts/coveralls.sh
+after_success: 
+- .travis.scripts/coveralls.sh
 
-branches:
-    only:
-        - master	
+branches: 
+  only: 
+  - master

@@ -31,10 +31,6 @@ if test "$with_boost" -a -d "$with_boost"; then
         boost_lib="$with_boost/lib"        
     fi
     AC_SUBST(boost_lib)
-#else
-#    boostr=/xchip/gistic/Jeremiah/GIT/boost
-#    boost_include="-I/xchip/gistic/Jeremiah/GIT/boost"
-#    boost_lib="-L/xchip/gistic/Jeremiah/GIT/boost/stage/lib -Wl,-rpath /xchip/gistic/Jeremiah/GIT/boost/stage/lib"
 fi
 
 # Only fail on warnings when the --enable-development flag is passed into configure
