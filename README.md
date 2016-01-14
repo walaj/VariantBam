@@ -135,7 +135,7 @@ variant $bam -m 100 -o out.bam -v
 A user would like to extract only those reads supporting a particular allele at a variant site. This can be done by combining a small 
 point-region at the variant site with a motif dictionary. 
 Consider two alleles G and A at a site (e.g. 1:143250877), along with their adjacent sequences: 
-GCAGAAT and GCAAAAT. To extract variant reads supporting the A allele:
+GCA<font color="red">G</font>AAT and GCA<font color="red">A</font>AAT. To extract variant reads supporting the A allele:
 
 ```
 ## make the motifs file (include reverse complements) 
