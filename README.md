@@ -63,6 +63,8 @@ disk space and I/O, one may not want to store an entire BAM on disk. In many cas
 reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (eg breakpoints), many 
 reads can be removed without losing the information relevant to the problem. 
 
+Additionally, VariantBam can be used as part of analysis pipelines that 
+
 ##### Example Use 1
 Whole-genome analysis has been conducted on a BAM, generating VCF and MAF files. Ideally, these regions could be manually inspected
 or reanalyzed without having to keep the entire BAM. Running VariantBam to extract only reads that overlap these events will allow
@@ -120,14 +122,14 @@ To remove reads that intersect a region, set the region as an inverse-region. In
 quick use on the command line, use ``-L`` or ``-G`` (opposites of ``-l`` and ``-g``).
 ```
 ### 
-variant $bam -L bad.bed -o out.bam -v
+variant $bam -L bad.bed -o mini.bam -v
 ```
 
 ##### Example Use 8
 Massive read-pileups can occur at repetitive regions. These can reduced with VariantBam by subsampling to a max-coverage.
 ```
 ### BAM must be sorted
-variant $bam -m 100 -o out.bam -v
+variant $bam -m 100 -o mini.bam -v
 ```
 
 ##### Example Use 9
@@ -138,11 +140,11 @@ GCAGAAT and GCAAAAT. To extract variant reads supporting the A allele:
 
 ```
 ## make the motifs file (include reverse complements) 
-printf GCAAAAT\nATTTTGC > motifs.txt
-k=1:143,250,677-143,251,077 # just look near the variant
-r='motif[motifs.txt]
+printf "GCAAAAT\nATTTTGC" > motifs.txt
+k="1:143,250,677-143,251,077" # just look near the variant
+r='motif[motifs.txt]'
 g=1:143250877
-variant <bam> -k $k g $g r $r o out.bam
+variant <bam> -k $k -g $g -r $r -o mini.bam
 ```
 
 Because sequence information is required to match a motif, and reads do not contain the sequence information of their pair-mates, extracting all read pairs supporting a particular allele requires a two-pass solution:
@@ -150,15 +152,15 @@ Because sequence information is required to match a motif, and reads do not cont
 ```
 ## two pass solution                                                                                                                                                                                                                                                            
 variant <bam> -k $k -g $g -r $r | cut -f1 | uniq > q.txt                                                                                                                                                                        
-printf "^#\n" >> q.txt ## keep the sam header too                                                                                                                                                                                                                           
-samtools view <bam> $k -h | grep f q.txt | samtools view - -b > out.bam                                                                                                                                                                                                                                  
+printf "^@\n" >> q.txt ## keep the sam header too                                                                                                                                                                                                                           
+samtools view <bam> $k -h | grep -f q.txt | samtools view - -b > mini.bam                                                                                                                                                                                                                                  
 ```
                                              
 This can be expanded for an arbitrary number of heterozygous sites, for instance to capture reads from a single haplotype:
 
 ```
-r=region@1:143,250,677%motif[motifsA.txt]%region@1:183,250,677%motif[motifsB.txt]
-variant <bam> -r $r o out.bam
+r='region@1:143,250,677%motif[motifsA.txt]%region@1:183,250,677%motif[motifsB.txt]'
+variant <bam> -r $r -o mini.bam
 ```
 
 Note that for the allele-specific extraction, there will be false negatives (reads not extracted) if a read has a sequencing error within the motif. 
@@ -255,12 +257,12 @@ and apply rules separately to them.
 
 ```bash
     ### declare that region is a VCF file with pads of 1000 on either side of the variant.
-    ### use the "mate" keyword to specify that pairs whose mate falls in the region belong to this rule
-    region@/home/unix/jwala/myvcf.vcf;mate;pad[1000]
-    #### I want to keep all the reads (this the default). Ill be explicit with the "every" keyword
+    ### use the "mlregion" keyword to specify that pairs whose mate falls in the region belong to this rule
+    mlregion@/home/unix/jwala/myvcf.vcf;pad[1000]
+    #### I want to keep all the reads (this the default). Ill be explicit with the "all" keyword
     all
-    #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads
-    region@/home/unix/jwala/myexonlist.bed 
+    #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads pairs
+    mlregion@/home/unix/jwala/myexonlist.bed 
     ## keep discordant reads
     !isize[0,600];
     ## keep only unmapped reads and their mates
@@ -269,7 +271,6 @@ and apply rules separately to them.
     hardclip
     ## keep reads with a mismatch to reference, but with high mapq
     nm[1,101];mapq[30,100]
-    
 ```
 
 ##### Global
@@ -423,16 +424,15 @@ mapq[1,100];del[1,100]
 
 ### can match sequences against a database of motifs. If read has
 ### sequence motif in the provided dictionary, it is kept
-#motif[/cga/fh/pcawg_pipeline3/modules/VariantBam/data/abc_38_both_pm_update.uniq]
-#motif[/cga/fh/pcawg_pipeline3/modules/VariantBam/data/abc_v14.uniq]
+motif[VariantBam/test/motifs.txt]
 
 ################################################################
 ### can take ALL reads that overlap, or mate overlaps, a region. 
 ### the mlregion tag is for "mate-linked", which means a read passes
 ### if either it or its mate overlaps regions
 #################################################################
-#mlregion@/cga/fh/pcawg_pipeline3/modules/VariantBam/data/hla.bed
-#all
+mlregion@example.bed
+all
 
 ### can specify MuTect regions with KEEP fields as input
 #mlregion@LU-A08-43-Tumor.call_stats.txt
@@ -440,8 +440,8 @@ mapq[1,100];del[1,100]
 
 ### can specify VCF regions to keep. Here we also pad the regions by
 ### 500bp on each side
-#pad[500];mlregion@/home/unix/jwala/myvcf.vcf
-#all
+pad[500];mlregion@VariantBam/test/test.vcf
+all
 ```
 
 Attributions
