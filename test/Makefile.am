@@ -16,4 +16,4 @@ variant_test_LDADD = \
 
 #variant_test_LDFLAGS = --coverage ##-BOOST_TEST_DYN_LINK
 
-variant_test_SOURCES = variant_test.cpp variant_test_main.cpp 
+variant_test_SOURCES = variant_test.cpp variant_test_main.cpp VariantBamWalker.cpp

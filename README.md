@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/jwalabroad/VariantBam.svg?branch=master)](https://travis-ci.org/jwalabroad/VariantBam)
-#[![Coverage Status](https://coveralls.io/repos/jwalabroad/VariantBam/badge.svg?branch=master&service=github)](https://coveralls.io/github/jwalabroad/VariantBam?branch=master)
 
 VariantBam: Filtering and profiling of next-generational sequencing data using region-specific rules
 ======================================================================================================
@@ -10,7 +9,7 @@ VariantBam: Filtering and profiling of next-generational sequencing data using r
 
 Installation
 ------------
-I have succesfully built on Unix with gcc 4.9 and on Mac with Clang 6.0
+I have succesfully built on Unix with GCC-4.8+
 
 ```
 ### if on Broad Institute servers, add GCC-4.9
@@ -70,7 +69,7 @@ or reanalyzed without having to keep the entire BAM. Running VariantBam to extra
 these regions to be rapidly queried, without having to keep the full BAM record.
 ```
 ### Extract all read PAIRS that interset with a variant from a VCF
-variant $bam -l myvcf.vcf -all -o mini.bam
+variant $bam -l myvcf.vcf -o mini.bam
 ```
 
 ##### Example Use 2
@@ -81,7 +80,7 @@ only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be
 setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
 ```
 ### Extract only high quality reads with >= 50 bases of phred >=4 and MAPQ >= 1 and not duplicated/hardclip/qcfail
-variant $bam -r 'phred[4,100];length[50,1000];mapq[1,60];!duplicate;!hardclip!qcfail' -o mini.bam
+variant $bam -r 'phred[4,100];length[50,1000];mapq[1,60];!duplicate;!hardclip!;qcfail' -o mini.bam
 ```
 ##### Example Use 3
 An NGS tool operates only on a subset of the reads (eg. structural variant caller using only clipped/discordant reads). Running VariantBam
@@ -135,7 +134,7 @@ variant $bam -m 100 -o out.bam -v
 A user would like to extract only those reads supporting a particular allele at a variant site. This can be done by combining a small 
 point-region at the variant site with a motif dictionary. 
 Consider two alleles G and A at a site (e.g. 1:143250877), along with their adjacent sequences: 
-GCA<font color="red">G</font>AAT and GCA<font color="red">A</font>AAT. To extract variant reads supporting the A allele:
+GCAGAAT and GCAAAAT. To extract variant reads supporting the A allele:
 
 ```
 ## make the motifs file (include reverse complements) 
@@ -164,11 +163,10 @@ variant <bam> -r $r o out.bam
 
 Note that for the allele-specific extraction, there will be false negatives (reads not extracted) if a read has a sequencing error within the motif. 
 
-
 Tool comparison
 ---------------
 
-In comparing with other avaiable BAM filtering tools, VariantBam provides the following novel features:
+In comparing with other avaiable BAM filtering tools, VariantBam provides the following additional features:
 
 > 1. The ability to filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality.
 > 2. Use of interval trees to efficiently determine if a read or read mate overlaps a region.
@@ -177,30 +175,11 @@ In comparing with other avaiable BAM filtering tools, VariantBam provides the fo
 > 5. Ability to count numbers of reads that satisfy any number of user-defined properties
 > 6. Read and write CRAM files
 > 7. Selectively strip alignment tags
+> 8. Support for sub-sampling to obtain a coverage 
 
 VariantBam is implemented in C++ and uses the HTSlibrary from Heng Li, a highly optimized C library used as the core of Samtools and BCFtools.
 
-Example
--------
-
-We ran VariantBam like this:
-
-```bash
-options=(
-    --input-bam         big.bam
-    --output-bam        small.bam
-    --rules-file        rules.vb
-    --verbose        	
-    --strip-tags	OQ,BI     
-    --proc-regions-file example.bed
-)
-variant ${options[*]}
-```
-
 To get a full list of options, run ``variant --help``.
-
-NEW: Can provide samtools-style syntax for regions:
-```variant <bam> -g 7:145,000,000-146,000,000 -r mapq[10,100]```
 
 Rules Script Syntax
 ------
