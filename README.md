@@ -131,6 +131,40 @@ Massive read-pileups can occur at repetitive regions. These can reduced with Var
 variant $bam -m 100 -o out.bam -v
 ```
 
+##### Example Use 9
+A user would like to extract only those reads supporting a particular allele at a variant site. This can be done by combining a small 
+point-region at the variant site with a motif dictionary. 
+Consider two alleles G and A at a site (e.g. 1:143250877), along with their adjacent sequences: 
+GCAGAAT and GCAAAAT. To extract variant reads supporting the A allele:
+
+```
+## make the motifs file (include reverse complements) 
+printf GCAAAAT\nATTTTGC > motifs.txt
+k=1:143,250,677-143,251,077 # just look near the variant
+r='motif[motifs.txt]
+g=1:143250877
+variant <bam> -k $k g $g r $r o out.bam
+```
+
+Because sequence information is required to match a motif, and reads do not contain the sequence information of their pair-mates, extracting all read pairs supporting a particular allele requires a two-pass solution:
+
+```
+## two pass solution                                                                                                                                                                                                                                                            
+variant <bam> -k $k -g $g -r $r | cut -f1 | uniq > q.txt                                                                                                                                                                        
+printf "^#\n" >> q.txt ## keep the sam header too                                                                                                                                                                                                                           
+samtools view <bam> $k -h | grep f q.txt | samtools view - -b > out.bam                                                                                                                                                                                                                                  
+```
+                                             
+This can be expanded for an arbitrary number of heterozygous sites, for instance to capture reads from a single haplotype:
+
+```
+r=region@1:143,250,677%motif[motifsA.txt]%region@1:183,250,677%motif[motifsB.txt]
+variant <bam> -r $r o out.bam
+```
+
+Note that for the allele-specific extraction, there will be false negatives (reads not extracted) if a read has a sequencing error within the motif. 
+
+
 Tool comparison
 ---------------
 
@@ -326,7 +360,7 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -S, --strip-all-tags                 Remove all alignment tags
  Filtering options
   -q, --qc-file                        Output a qc file that contains information about BAM
-  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted.
+  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted. Negative values enforce a minimum coverage.
   -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple
   -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple
   -l, --linked-region                  Same as -g, but turns on mate-linking

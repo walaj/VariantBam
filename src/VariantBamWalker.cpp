@@ -13,7 +13,7 @@ void VariantBamWalker::writeVariantBam()
   bool rule;
 
   bool COV_A = true;
-  int32_t buffer_size = 500;
+  int32_t buffer_size = 10000;
   SnowTools::BamReadVector buffer;
 
   // check if the BAM is sorted by looking at the header
@@ -35,7 +35,7 @@ void VariantBamWalker::writeVariantBam()
       TrackSeenRead(r);
 
       // add coverage
-      if (max_cov > 0) {
+      if (max_cov != 0) {
 	cov_a.addRead(r);
 	cov_b.addRead(r);
       }
@@ -43,7 +43,7 @@ void VariantBamWalker::writeVariantBam()
       // read is valid
       if (rule) {
 
-	if (max_cov <= 0 && fop) {// if we specified an output file, write it
+	if (max_cov == 0 && fop) {// if we specified an output file, write it
 	  WriteAlignment(r);
 	  ++rc_main.keep;
 	} else if (fop) {
@@ -71,11 +71,8 @@ void VariantBamWalker::writeVariantBam()
 	    }
 	  }
 	}
-      
-
       }
-
-
+      
       if (++rc_main.total % 1000000 == 0 && m_verbose)
 	printMessage(r);
 
@@ -101,19 +98,26 @@ void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const Snow
     {
       double this_cov1 = cov.getCoverageAtPosition(r.ChrID(), r.Position());
       double this_cov2 = cov.getCoverageAtPosition(r.ChrID(), r.PositionEnd());
+      //double this_cov3 = cov.getCoverageAtPosition(r.ChrID(), r.Position());
+      //double this_cov4 = cov.getCoverageAtPosition(r.ChrID(), r.PositionEnd());
       double this_cov = std::max(this_cov1, this_cov2);
       double sample_rate = 1; // dummy, always set if max_coverage > 0
       if (this_cov > 0) 
 	sample_rate = 1 - (this_cov - max_cov) / this_cov; // if cov->inf, sample_rate -> 0. if cov -> max_cov, sample_rate -> 1
       
       // this read should be randomly sampled, cov is too high
-      if (this_cov > max_cov) 
+      if (this_cov > max_cov && max_cov > 0) 
 	{
 	  uint32_t k = __ac_Wang_hash(__ac_X31_hash_string(r.Qname().c_str()) ^ m_seed);
 	  if ((double)(k&0xffffff) / 0x1000000 <= sample_rate) { // passed the random filter
 	    WriteAlignment(r);
 	    ++rc_main.keep;
 	  }
+	}
+      // only take if reaches minimum coverage
+      else if (this_cov < -max_cov) // max_cov = -10 
+	{
+	  std::cerr << "not writing because this cov is " << this_cov << " and min cov is " << (-max_cov) << std::endl;
 	}
       else // didn't have a coverage problems
 	{
