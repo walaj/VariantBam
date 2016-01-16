@@ -34,7 +34,7 @@ make
 mkdir -p tmp && cd tmp
 
 ## using the included test BAM (HCC1143)
-VariantBam/src/variant small.bam -g 'X:1,000,000-1,100,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
+VariantBam/src/variant test/small.bam -g 'X:1,000,000-1,100,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
 
 ## get help
 VariantBam/src/variant --help
@@ -141,7 +141,8 @@ GCAGAAT and GCAAAAT. To extract variant reads supporting the A allele:
 ```
 ## make the motifs file (include reverse complements) 
 printf "GCAAAAT\nATTTTGC" > motifs.txt
-k="1:143,250,677-143,251,077" # just look near the variant
+## just look near the variant
+k="1:143,250,677-143,251,077" 
 r='motif[motifs.txt]'
 g=1:143250877
 variant <bam> -k $k -g $g -r $r -o mini.bam
@@ -177,7 +178,7 @@ In comparing with other avaiable BAM filtering tools, VariantBam provides the fo
 > 5. Ability to count numbers of reads that satisfy any number of user-defined properties
 > 6. Read and write CRAM files
 > 7. Selectively strip alignment tags
-> 8. Support for sub-sampling to obtain a coverage 
+> 8. Support for sub-sampling to obtain a BAM file with a coverage limit
 
 VariantBam is implemented in C++ and uses the HTSlibrary from Heng Li, a highly optimized C library used as the core of Samtools and BCFtools.
 
