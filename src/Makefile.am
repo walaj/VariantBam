@@ -9,7 +9,9 @@ variant_CPPFLAGS = \
 variant_LDADD = \
 	$(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
-	$(top_builddir)/SnowTools/htslib/libhts.a \
-        @boost_lib@/libboost_regex.a
+	$(top_builddir)/SnowTools/htslib/libhts.a 
+
+##variant_LDFLAGS = -Wl,-Bstatic -lboost_regex
+##@boost_lib@/libboost_regex.a
 
 variant_SOURCES = variant.cpp VariantBamWalker.cpp

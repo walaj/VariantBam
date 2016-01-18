@@ -600,7 +600,7 @@ PACKAGE_VERSION='0.0'
 PACKAGE_STRING='variant 0.0'
 PACKAGE_BUGREPORT='jwala@broadinstitute.org'
 
-ac_unique_file="src/variant.cpp"
+ac_unique_file="variant_test.cpp"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -5126,11 +5126,8 @@ CPPFLAGS="$CPPFLAGS $boost_include"
 
 LDFLAGS="$LDFLAGS -L. $boost_lib_flag"
 
-LIBS="$LIBS -lpthread -lboost_regex"
+LIBS="$LIBS -lpthread"
 
-
-# Make sure the bamtools headers can be found
-##AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
 
 # Make sure the bamtools headers can be found
 
@@ -5289,10 +5286,7 @@ fi
 done
 
 
-## Make sure the snowtools headers can be found
-#AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
-
-ac_config_files="$ac_config_files Makefile SnowTools/src/Makefile SnowTools/htslib/Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -5939,9 +5933,6 @@ do
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "SnowTools/src/Makefile") CONFIG_FILES="$CONFIG_FILES SnowTools/src/Makefile" ;;
-    "SnowTools/htslib/Makefile") CONFIG_FILES="$CONFIG_FILES SnowTools/htslib/Makefile" ;;
-    "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 $as_echo "$as_me: error: invalid argument: $ac_config_target" >&2;}

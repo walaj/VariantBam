@@ -2,7 +2,7 @@
 AC_PREREQ(2.59) ## specificy version of autoconf
 AC_INIT(variant, 0.0, jwala@broadinstitute.org)
 AM_INIT_AUTOMAKE(foreign)
-AC_CONFIG_SRCDIR([src/variant.cpp])
+AC_CONFIG_SRCDIR([variant_test.cpp])
 AC_CONFIG_HEADER([config.h])
 AM_MAINTAINER_MODE([disable])
 
@@ -48,20 +48,11 @@ AC_SUBST(CXXFLAGS, "$CXXFLAGS -O3")
 AC_SUBST(CFLAGS, "$CFLAGS -O3")
 AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
 AC_SUBST(LDFLAGS, "$LDFLAGS -L. $boost_lib_flag")
-AC_SUBST(LIBS, "$LIBS -lpthread -lboost_regex")
-
-# Make sure the bamtools headers can be found
-##AC_CHECK_HEADERS([htslib/hts.h],,[AC_MSG_ERROR([The HTS library must be installed (https://github.com/samtools/htslib). You can specify its path with the --with-hts=PATH option])])
+AC_SUBST(LIBS, "$LIBS -lpthread")
 
 # Make sure the bamtools headers can be found
 AC_CHECK_HEADERS([boost/regex.hpp],,[AC_MSG_ERROR([The Boost library must be installed for VariantBam. Specify its path with the --with-boost=PATH option])])
 
-## Make sure the snowtools headers can be found
-#AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
-
-AC_CONFIG_FILES([Makefile
-                 SnowTools/src/Makefile
-                 SnowTools/htslib/Makefile
-	         src/Makefile])
+AC_CONFIG_FILES([Makefile])
 
 AC_OUTPUT

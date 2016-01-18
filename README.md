@@ -19,7 +19,7 @@ reuse -q GCC-4.9
 ############## (only if not already installed) ##########
 git clone --recursive https://github.com/boostorg/boost.git
 cd boost
-./bootstrap.sh --with-libraries=regex,test
+./bootstrap.sh --with-libraries=regex
 ./b2
 
 ############### DOWNLOAD VARIANT BAM ############### 
@@ -62,8 +62,6 @@ VariantBam is a tool to extract/count specific sets of sequencing reads from NGS
 disk space and I/O, one may not want to store an entire BAM on disk. In many cases, it would be more efficient to store only those read-pairs or
 reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (eg breakpoints), many 
 reads can be removed without losing the information relevant to the problem. 
-
-Additionally, VariantBam can be used as part of analysis pipelines that 
 
 ##### Example Use 1
 Whole-genome analysis has been conducted on a BAM, generating VCF and MAF files. Ideally, these regions could be manually inspected
