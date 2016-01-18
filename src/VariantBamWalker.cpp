@@ -44,7 +44,7 @@ void VariantBamWalker::writeVariantBam()
       if (rule) {
 
 	if (max_cov == 0 && fop) {// if we specified an output file, write it
-	  WriteAlignment(r);
+	  writeAlignment(r);
 	  ++rc_main.keep;
 	} else if (fop) {
 	  buffer.push_back(r);
@@ -110,7 +110,7 @@ void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const Snow
 	{
 	  uint32_t k = __ac_Wang_hash(__ac_X31_hash_string(r.Qname().c_str()) ^ m_seed);
 	  if ((double)(k&0xffffff) / 0x1000000 <= sample_rate) { // passed the random filter
-	    WriteAlignment(r);
+	    writeAlignment(r);
 	    ++rc_main.keep;
 	  }
 	}
@@ -122,7 +122,7 @@ void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const Snow
       else // didn't have a coverage problems
 	{
 	  ++rc_main.keep;
-	  WriteAlignment(r);
+	  writeAlignment(r);
 	}
       
     }
