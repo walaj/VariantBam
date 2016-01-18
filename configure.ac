@@ -61,6 +61,7 @@ AC_CHECK_HEADERS([boost/regex.hpp],,[AC_MSG_ERROR([The Boost library must be ins
 AC_CONFIG_FILES([Makefile
 		 test/Makefile
                  SnowTools/src/Makefile
+                 SnowTools/htslib/Makefile
 	         src/Makefile])
 
 AC_OUTPUT

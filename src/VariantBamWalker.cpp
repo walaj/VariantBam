@@ -117,7 +117,7 @@ void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const Snow
       // only take if reaches minimum coverage
       else if (this_cov < -max_cov) // max_cov = -10 
 	{
-	  std::cerr << "not writing because this cov is " << this_cov << " and min cov is " << (-max_cov) << std::endl;
+	  //std::cerr << "not writing because this cov is " << this_cov << " and min cov is " << (-max_cov) << std::endl;
 	}
       else // didn't have a coverage problems
 	{
@@ -143,9 +143,9 @@ void VariantBamWalker::printMessage(const SnowTools::BamRead &r) const
     return;
   }
 
-  char buffer[120];
+  char buffer[90];
   std::string posstring = SnowTools::AddCommas<int>(r.Position());
-  std::sprintf (buffer, "Reading read %11s at %2s:%-11s. Kept %10s (%2d%%) [running count]",  
+  std::sprintf (buffer, "Read %11s at %2s:%-11s. Kept %10s (%2d%%) -- ",  
 		rc_main.totalString().c_str(), SnowTools::GenomicRegion::chrToString(r.ChrID()).c_str(), posstring.c_str(),  
 		rc_main.keepString().c_str(), rc_main.percent());
   //buffer[99] = '\0';

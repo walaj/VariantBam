@@ -5101,10 +5101,6 @@ fi
         boost_lib="$with_boost/lib"
     fi
 
-#else
-#    boostr=/xchip/gistic/Jeremiah/GIT/boost
-#    boost_include="-I/xchip/gistic/Jeremiah/GIT/boost"
-#    boost_lib="-L/xchip/gistic/Jeremiah/GIT/boost/stage/lib -Wl,-rpath /xchip/gistic/Jeremiah/GIT/boost/stage/lib"
 fi
 
 # Only fail on warnings when the --enable-development flag is passed into configure
@@ -5295,7 +5291,7 @@ done
 ## Make sure the snowtools headers can be found
 #AC_CHECK_HEADERS([SnowTools/SnowTools.h],,[AC_MSG_ERROR([The SnowTools library must be installed. You can specify its path with the --with-snowtools=PATH option])])
 
-ac_config_files="$ac_config_files Makefile test/Makefile SnowTools/src/Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile test/Makefile SnowTools/src/Makefile SnowTools/htslib/Makefile src/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -5944,6 +5940,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
     "SnowTools/src/Makefile") CONFIG_FILES="$CONFIG_FILES SnowTools/src/Makefile" ;;
+    "SnowTools/htslib/Makefile") CONFIG_FILES="$CONFIG_FILES SnowTools/htslib/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
