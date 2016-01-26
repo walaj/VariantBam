@@ -39,7 +39,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
-"  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags\n"
+"  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags. ** Must place before -l, etc flag! ** \n"
 "\n";
 
 namespace opt {
@@ -118,13 +118,12 @@ int main(int argc, char** argv) {
   // parse the command line
   parseVarOptions(argc, argv);
 
-  if (opt::pad != 0) {
+  /*  if (opt::pad != 0) {
     std::cerr << opt::rules << " toreplace " << ("pad[" + std::to_string(opt::pad) + "];") << std::endl;
       opt::rules = myreplace(opt::rules, "PDUM;", "pad[" + std::to_string(opt::pad) + "];");
   } else {
     opt::rules = myreplace(opt::rules, "PDUM;", "");
-  }
-
+    }*/
 
   bool has_ml_region = opt::rules.find("mlregion") != std::string::npos;
   
@@ -310,7 +309,7 @@ void parseVarOptions(int argc, char** argv) {
 	if (opt::rules.length())
 	  opt::rules += "%";
 	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "PDUM;mlregion@" + tmp;
+	  opt::rules += "pad[" + std::to_string(opt::pad) + "];mlregion@" + tmp;
 	else 
 	  opt::rules += tmp;
       }
@@ -324,7 +323,7 @@ void parseVarOptions(int argc, char** argv) {
 	if (opt::rules.length())
 	  opt::rules += "%";
 	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "PDUM;!mlregion@" + tmp;
+	  opt::rules += "pad[" + std::to_string(opt::pad) + "];mlregion@" + tmp;
 	else 
 	  opt::rules += tmp;
       }
@@ -338,7 +337,7 @@ void parseVarOptions(int argc, char** argv) {
 	if (opt::rules.length())
 	  opt::rules += "%";
 	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "PDUM;region@" + tmp;
+	  opt::rules += "pad[" + std::to_string(opt::pad) + "];region@" + tmp;
 	else 
 	  opt::rules += tmp;
       }
@@ -352,7 +351,7 @@ void parseVarOptions(int argc, char** argv) {
 	if (opt::rules.length())
 	  opt::rules += "%";
 	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "PDUM;!region@" + tmp;
+	  opt::rules += "pad[" + std::to_string(opt::pad) + "];region@" + tmp;
       }
       break;
     case 'c': arg >> opt::counts_file; break;

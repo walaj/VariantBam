@@ -207,8 +207,9 @@ the regions around the sites. For example:
 
 Alternatively, if supplying a region directly with the -l, -L, -g or -G flag, you can specify a padding with the -P flag. Note that this padding will be applied to every region provided with one of these flags:
 
-``variant <in.bam> -l myvcf.vcf -P 100``
+``variant <in.bam> -P 100 -l myvcf.vcf``
 
+Note that the -P flag is applied BEFORE the region, and sets the padding for all subsequent regions (reset with -P 0, or set to different padding)
 You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does (called "mate-linking"). Note that this only applies to the ``all`` target.
 This is particularly useful for extracting all read PAIRS that cover a variant site.
 
