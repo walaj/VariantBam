@@ -31,8 +31,6 @@ cd VariantBam
 make
 
 ############### QUICK START ############### 
-mkdir -p tmp && cd tmp
-
 ## using the included test BAM (HCC1143)
 VariantBam/src/variant test/small.bam -g 'X:1,000,000-1,100,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
 
