@@ -145,12 +145,12 @@ void VariantBamWalker::printMessage(const SnowTools::BamRead &r) const
 
   char buffer[90];
   std::string posstring = SnowTools::AddCommas<int>(r.Position());
+  std::string chrname;
+  try { chrname = SnowTools::GenomicRegion::chrToString(r.ChrID()); } catch(...) { chrname = "CHR_NAME_FAIL"; } 
   std::sprintf (buffer, "Read %11s at %2s:%-11s. Kept %10s (%2d%%) -- ",  
-		rc_main.totalString().c_str(), SnowTools::GenomicRegion::chrToString(r.ChrID()).c_str(), posstring.c_str(),  
+		rc_main.totalString().c_str(), chrname.c_str(), posstring.c_str(),  
 		rc_main.keepString().c_str(), rc_main.percent());
-  //buffer[99] = '\0';
   std::string outr(buffer);
-  //std::printf ("%s | ",buffer);
   std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;;
   
 }
