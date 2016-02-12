@@ -196,6 +196,10 @@ int main(int argc, char** argv) {
   }
 
   SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
+
+  for (auto& i : rules_rg)
+    std::cerr << i << std::endl;
+
   rules_rg.createTreeMap();
 
   if (grv_proc_regions.size() && rules_rg.size()) { // intersect rules regions with mask regions. 
