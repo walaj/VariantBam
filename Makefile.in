@@ -193,7 +193,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = SnowTools/bwa SnowTools/htslib SnowTools/src src
+SUBDIRS = SnowTools/blat SnowTools/multifast-v1.4.2/ahocorasick SnowTools/bwa SnowTools/htslib SnowTools/src src
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

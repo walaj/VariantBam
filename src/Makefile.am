@@ -9,7 +9,8 @@ variant_CPPFLAGS = \
 variant_LDADD = \
 	$(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
-	$(top_builddir)/SnowTools/htslib/libhts.a 
+	$(top_builddir)/SnowTools/htslib/libhts.a \
+	$(top_builddir)/SnowTools/multifast-v1.4.2/ahocorasick/build/libahocorasick.a
 
 ##variant_LDFLAGS = -Wl,-Bstatic -lboost_regex
 ##@boost_lib@/libboost_regex.a

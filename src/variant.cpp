@@ -385,7 +385,7 @@ void parseVarOptions(int argc, char** argv) {
 		  }
 	      }
 	    //trim off the last %
-	    opt::rules = SnowTools::cutLastChar(opt::rules); 
+	    opt::rules.pop_back(); 
 	  }
 	else if (opt::rules.length()) {
 	  opt::rules += "%"; // adding a new line

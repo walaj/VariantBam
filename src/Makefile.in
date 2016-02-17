@@ -50,7 +50,8 @@ am_variant_OBJECTS = variant-variant.$(OBJEXT) \
 variant_OBJECTS = $(am_variant_OBJECTS)
 variant_DEPENDENCIES = $(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
-	$(top_builddir)/SnowTools/htslib/libhts.a
+	$(top_builddir)/SnowTools/htslib/libhts.a \
+	$(top_builddir)/SnowTools/multifast-v1.4.2/ahocorasick/build/libahocorasick.a
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -167,7 +168,8 @@ variant_CPPFLAGS = \
 variant_LDADD = \
 	$(top_builddir)/SnowTools/src/libsnowtools.a \
 	$(top_builddir)/SnowTools/bwa/libbwa.a \
-	$(top_builddir)/SnowTools/htslib/libhts.a 
+	$(top_builddir)/SnowTools/htslib/libhts.a \
+	$(top_builddir)/SnowTools/multifast-v1.4.2/ahocorasick/build/libahocorasick.a
 
 variant_SOURCES = variant.cpp VariantBamWalker.cpp
 all: all-am
