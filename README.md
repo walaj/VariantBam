@@ -39,7 +39,7 @@ VariantBam/src/variant --help
 
 ############## TL;DR ###################
 
-## extract all reads and their mate-pairs that overlap SNP sites within 100 bp
+## extract all reads and their pair-mates that overlap SNP sites within 100 bp
 rfile=<BED file, samtools-style string (e.g. "1:1,000,000-1,000,010"), or VCF>
 variant <bam> -l $rfile -o mini.bam -P 100 -v
 
@@ -56,9 +56,9 @@ variant <bam> -m 100 -o mini.bam -v
 Description
 -----------
 
-VariantBam is a tool to extract/count specific sets of sequencing reads from NGS sequencing files. To save money, 
+VariantBam is a tool to extract/count specific sets of sequencing reads from next-generational sequencing files. To save money, 
 disk space and I/O, one may not want to store an entire BAM on disk. In many cases, it would be more efficient to store only those read-pairs or
-reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (eg breakpoints), many 
+reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (e.g. breakpoints), many 
 reads can be removed without losing the information relevant to the problem. 
 
 ##### Example Use 1
@@ -165,18 +165,18 @@ Note that for the allele-specific extraction, there will be false negatives (rea
 Tool comparison
 ---------------
 
-In comparing with other avaiable BAM filtering tools, VariantBam provides the following additional features:
+VariantBam packages into a single executable a number of filtering features not easily found using ``samtools`` + ``awk``::
 
-> 1. The ability to filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality.
-> 2. Use of interval trees to efficiently determine if a read or read mate overlaps a region.
-> 3. The ability to provide different rules for different regions, and the ability to provide these regions as common variant files (VCF, MAF, BED)
-> 4. Selecting reads by motif matching against a dictionary of any size
-> 5. Ability to count numbers of reads that satisfy any number of user-defined properties
+> 1. Filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality
+> 2. [Interval tree][ekg] to efficiently determine if a read or read mate overlaps a region
+> 3. Provide different rules for different arbitrarily-sized regions, and to provide these regions as common variant files (VCF, MAF, BED)
+> 4. Select reads by matching motifs against a large dictionary
+> 5. Count reads that satisfy any number of user-defined properties
 > 6. Read and write CRAM files
 > 7. Selectively strip alignment tags
 > 8. Support for sub-sampling to obtain a BAM file with a coverage limit
 
-VariantBam is implemented in C++ and uses the HTSlibrary from Heng Li, a highly optimized C library used as the core of Samtools and BCFtools.
+VariantBam is implemented in C++ and uses [HTSlib][hlib], a highly optimized C library used as the core of Samtools and BCFtools.
 
 To get a full list of options, run ``variant --help``.
 
@@ -465,3 +465,5 @@ This project was developed in collaboration with the Cancer Genome Analysis team
 [snowt]: https://github.com/jwalabroad/SnowTools
 
 [aho]: http://sourceforge.net/projects/multifast/
+
+[ekg]: https://github.com/ekg/intervaltree
