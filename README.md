@@ -7,6 +7,9 @@ VariantBam: Filtering and profiling of next-generational sequencing data using r
 
 **License:** [GNU GPLv3][license]
 
+[Bioinformatics Paper][biop]
+Wala, J., C. Zhang, M. Meyerson, R. Beroukhim. VariantBam: filtering and profiling of nextgenerational sequencing data using region-specific rules. 2016. Bioinformatics, doi: 10.1093/bioinformatics/btw111 
+
 Installation
 ------------
 I have succesfully built on Unix with GCC-4.8+
@@ -170,13 +173,13 @@ VariantBam packages into a single executable a number of filtering features not 
 > 1. Filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality
 > 2. [Interval tree][ekg] to efficiently determine if a read or read mate overlaps a region
 > 3. Provide different rules for different arbitrarily-sized regions, and to provide these regions as common variant files (VCF, MAF, BED)
-> 4. Select reads by matching motifs against a large dictionary
+> 4. Select reads by matching motifs against a large dictionary using [Aho-Corasick implementation][aho]
 > 5. Count reads that satisfy any number of user-defined properties
 > 6. Read and write CRAM files
 > 7. Selectively strip alignment tags
 > 8. Support for sub-sampling to obtain a BAM file with a coverage limit
 
-VariantBam is implemented in C++ and uses [HTSlib][hlib], a highly optimized C library used as the core of Samtools and BCFtools.
+VariantBam is implemented in C++ and uses [HTSlib][hlib], a highly optimized C library used as the core of [Samtools][samtools] and [BCFtools][bcf].
 
 To get a full list of options, run ``variant --help``.
 
@@ -454,16 +457,16 @@ This project was developed in collaboration with the Cancer Genome Analysis team
 * Esther Rheinbay 
 * Gordon Saksena
 
-[license]: https://github.com/broadinstitute/variant-bam/blob/master/LICENSE
-
-[BamTools]: https://raw.githubusercontent.com/wiki/pezmaster31/bamtools/Tutorial_Toolkit_BamTools-1.0.pdf
-
-[API]: http://pezmaster31.github.io/bamtools/annotated.html
+[license]: https://github.com/jwalabroad/VariantBam/blob/master/LICENSE
 
 [hlib]: https://github.com/samtools/htslib
-
-[snowt]: https://github.com/jwalabroad/SnowTools
 
 [aho]: http://sourceforge.net/projects/multifast/
 
 [ekg]: https://github.com/ekg/intervaltree
+
+[samtools]: https://github.com/samtools/samtools
+
+[bcf]: https://github.com/samtools/bcftools
+
+[biop]: http://bioinformatics.oxfordjournals.org/content/early/2016/03/15/bioinformatics.btw111.full.pdf
