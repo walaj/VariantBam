@@ -32,7 +32,7 @@ void VariantBamWalker::writeVariantBam()
       buffer_size = std::max((int32_t)r.Length() * 5, buffer_size);
 
       //std::cerr << "...r " << r << " rule " << rule << std::endl;
-      TrackSeenRead(r);
+      //TrackSeenRead(r);
 
       // add coverage
       if (max_cov != 0) {
@@ -138,15 +138,18 @@ void VariantBamWalker::TrackSeenRead(SnowTools::BamRead &r)
 void VariantBamWalker::printMessage(const SnowTools::BamRead &r) const 
 {
 
-  if (rc_main.total <= 0) {
-    std::cerr << "NO READS FOUND" << std::endl;
-    return;
-  }
-
   char buffer[90];
   std::string posstring = SnowTools::AddCommas<int>(r.Position());
   std::string chrname;
   try { chrname = SnowTools::GenomicRegion::chrToString(r.ChrID()); } catch(...) { chrname = "CHR_NAME_FAIL"; } 
+
+  if (rc_main.total <= 0) {
+    std::sprintf(buffer, "NO READS FOUND at %2s:%-11s",chrname.c_str(), posstring.c_str());
+    std::string outr(buffer);
+    std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;
+    return;
+  }
+
   std::sprintf (buffer, "Read %11s at %2s:%-11s. Kept %10s (%2d%%) -- ",  
 		rc_main.totalString().c_str(), chrname.c_str(), posstring.c_str(),  
 		rc_main.keepString().c_str(), rc_main.percent());

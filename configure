@@ -5124,7 +5124,7 @@ CFLAGS="$CFLAGS -O3"
 
 CPPFLAGS="$CPPFLAGS $boost_include"
 
-LDFLAGS="$LDFLAGS -L. $boost_lib_flag"
+LDFLAGS="$LDFLAGS $boost_lib_flag"
 
 LIBS="$LIBS -lpthread -lboost_regex"
 

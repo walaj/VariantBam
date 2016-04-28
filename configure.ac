@@ -47,7 +47,7 @@ AC_SUBST(AM_CXXFLAGS, "-g -std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown
 AC_SUBST(CXXFLAGS, "$CXXFLAGS -O3")
 AC_SUBST(CFLAGS, "$CFLAGS -O3")
 AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
-AC_SUBST(LDFLAGS, "$LDFLAGS -L. $boost_lib_flag")
+AC_SUBST(LDFLAGS, "$LDFLAGS $boost_lib_flag")
 AC_SUBST(LIBS, "$LIBS -lpthread -lboost_regex")
 
 # Make sure the bamtools headers can be found
