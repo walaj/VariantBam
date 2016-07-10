@@ -7,8 +7,8 @@ library(optparse)
 option_list = list(
     make_option(c("-i", "--input"),  type = "character", default = "qcreport.txt",  help = "Input txt file from a snowman preprocess qcreport.txt"),
     make_option(c("-o", "--output"), type = "character", default = "qcreport.pdf",  help = "Output pdf to generate"),
-      make_option(c("-H", "--height"), type = "numeric", default = 10,  help = "Height of pdf"),
-      make_option(c("-W", "--width"), type = "numeric", default = 10,  help = "Width of pdf"),
+    make_option(c("-H", "--height"), type = "numeric", default = 10,  help = "Height of pdf"),
+    make_option(c("-W", "--width"), type = "numeric", default = 10,  help = "Width of pdf"),
     make_option(c("-r", "--readgroup"), type = "character", default = NULL,  help = "Read group")
 )
 

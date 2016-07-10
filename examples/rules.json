@@ -1,0 +1,21 @@
+{
+   "global" : {
+         "region" : "WG", 
+	 "rules" : [{"off_flag" : 3840, "phred" : 5}]
+              },
+   "SV" :   {
+        "region" : "WG",
+        "rules" : [{"isize" : [0,1200], "mapped" : true, "mate_mapped" : false, "mapq" : [1,100]},
+	           {"xp" : 1}, 
+                   {"nbases" : [0,0], "clip" : 5, "length" : 20, "mapq" : 1},
+                   {"mapq" : 1, "ins" : 1}, 
+                   {"mapq" : 1, "del" : 1},
+                   {"mapped" : false, "mate_mapped" : true, "length" : 40},
+                   {"mate_mapped" : false, "mapped" : true, "mapq" : 10}]
+              },
+    "VCF" : {
+          "region" : "tumor.vcf", 
+          "pad" : 100, 
+          "matelink" : true
+            }
+}

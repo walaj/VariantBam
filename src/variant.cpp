@@ -46,7 +46,11 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "      --min-clip                       Minimum number of quality clipped bases\n"
 "      --max-nbases                     Maximum number of N bases\n"
 "      --min-mapq                       Minimum mapping quality\n"
+"      --min-del                        Minimum number of inserted bases\n"
+"      --min-ins                        Minimum number of deleted bases\n"
 "      --min-readlength                 Minimum read length (after base-quality trimming)\n"
+"      --motif                          Motif file\n"
+"  -R, --read-group                     Limit to just a single read group\n"
 "  -f, --include-aln-flag               Flags to include (like samtools -f)\n"
 "  -F, --exclude-aln-flag               Flags to exclude (like samtools -F)\n"
 "\n";
@@ -76,7 +80,7 @@ namespace opt {
   static bool strip_all_tags = false;
   static std::string tag_list = "";
   static std::string counts_file = "";
-  static bool counts_only = false;
+  static bool noop = false;
   static std::string bam_qcfile = "";
 }
 
@@ -86,14 +90,20 @@ enum {
   OPT_MAPQ,
   OPT_PHRED,
   OPT_NBASES,
-  OPT_CLIP
+  OPT_CLIP,
+  OPT_MOTIF,
+  OPT_INS, 
+  OPT_DEL
 };
 
-static const char* shortopts = "hvi:o:r:k:g:Cf:s:ST:l:c:x:q:m:L:G:P:F:R:";
+static const char* shortopts = "hvxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
   { "min-length",              required_argument, NULL, OPT_LENGTH },
+  { "min-motif",              required_argument, NULL, OPT_MOTIF },
+  { "min-ins",              required_argument, NULL, OPT_INS},
+  { "min-del",              required_argument, NULL, OPT_DEL },
   { "min-phred",              required_argument, NULL, OPT_PHRED },
   { "min-mapq",              required_argument, NULL, OPT_MAPQ },
   { "min-clip",              required_argument, NULL, OPT_CLIP },
@@ -283,11 +293,11 @@ int main(int argc, char** argv) {
   }
 
   // should we count all rules (slower)
-  if (opt::counts_only || opt::counts_file.length())
+  if (opt::counts_file.length())
     walk.setCountAllRules();
 
   // open the output BAM/CRAM. If we already set SAM, this does nothing
-  if (!opt::counts_only)
+  if (!opt::noop)
     walk.OpenWriteBam(opt::out);
 
   // if counts or qc only, dont write output
@@ -405,9 +415,16 @@ void parseVarOptions(int argc, char** argv) {
       __check_command_line(command_line_regions);
       arg >> command_line_regions.back().nbases;
       break;
-    case 'x': arg >> opt::counts_file; opt::counts_only = true; break;
+    case OPT_INS:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().ins;
+      break;
+    case OPT_DEL:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().del;
+      break;
+    case 'x': opt::noop = true; break;
     case 'q': arg >> opt::bam_qcfile; break;
-    case 'Q': arg >> opt::bam_qcfile; opt::counts_only = true; break;
     case 'P': 
       if (!command_line_regions.size()) {
 	std::cerr << "Error: Must input padding *after* specifying a region via -l, -L, -g, -G" << std::endl;
@@ -445,7 +462,7 @@ void parseVarOptions(int argc, char** argv) {
 
   if (opt::bam == "")
     die = true;
-  if (opt::out == "" && !opt::counts_only)
+  if (opt::out == "" && !opt::noop)
     opt::to_stdout = true;
 
   // dont stop the run for bad bams for quality checking only

@@ -1,0 +1,13 @@
+{
+  "region1" : {
+  "rules" : [{
+      "phred" : [4, 100],
+      "length" : [50,1000],
+      "mapq" : [1, 60],
+      "duplicate" : false,
+      "hardclip" : false,
+      "qcfail" : false
+   }
+  ]
+   }
+}

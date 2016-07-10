@@ -189,7 +189,6 @@ the length of a read)
 
 ### 
 variant $bam -r example6.json ## input as a JSON
-variant $bam --motif mymotifs.txt --min-phred 4 --min-length 20 ## input with command-line shortcuts
 ```
 
 ##### Example Use 7
@@ -209,6 +208,15 @@ variant $bam -m 100 -o mini.bam -v
 ```
 
 ##### Example Use 9
+Obtain basic QC stats from a BAM file, or profile how many reads were accepted by each rule
+```
+### get QC stats on whole bam AND find how many reads are clipped with high-quality clipped bases
+### use the -x flag to produce no output (profiling only)
+variant <bam> --min-clip 10 --min-phred 5 -q qcreport.txt -c clipcounts.txt -x
+Rscript VariantBam/R/BamQCPlot.R -i qcreport.txt -o qcreport.pdf
+```
+
+##### Example Use 10
 A user would like to extract only those reads supporting a particular allele at a variant site. This can be done by combining a small 
 point-region at the variant site with a motif dictionary. 
 Consider two alleles G and A at a site (e.g. 1:143250877), along with their adjacent sequences: 
@@ -221,17 +229,18 @@ printf "GCAAAAT\nATTTTGC" > motifs.txt
 k="1:143,250,677-143,251,077" 
 r='{"":{"rules":[{"motif":"motifs.txt"}]}}'
 g=1:143250877
-variant <bam> -k $k -g $g -r $r -o mini.bam
+variant <bam> -k $k -g $g -r $r -o mini.bam ## with JSON script
+variant <bam> -k $k -g $g --motif motifs.txt -o mini.bam ## using command line shortcut
 ```
 
 Because sequence information is required to match a motif, and reads do not contain the sequence information of their pair-mates, 
 extracting all read pairs supporting a particular allele requires a two-pass solution:
 
 ```
-## two pass solution                                                                                                                                                                                                                                                            
-variant <bam> -k $k -g $g -r $r | cut -f1 | uniq > q.txt                                                                                                                                                                        
-printf "^@\n" >> q.txt ## keep the sam header too                                                                                                                                                                                                                           
-samtools view <bam> $k -h | grep -f q.txt | samtools view - -b > mini.bam                                                                                                                                                                                                                                  
+## two pass solution
+variant <bam> -k $k -g $g -r $r | cut -f1 | uniq > q.txt
+printf "^@\n" >> q.txt ## keep the sam header too
+samtools view <bam> $k -h | grep -f q.txt | samtools view - -b > mini.bam
 ```
                                              
 This can be expanded for an arbitrary number of heterozygous sites, 
@@ -253,7 +262,9 @@ for instance to capture reads from a single haplotype:
   
 }
 ###
-variant <bam> -r het.json -o mini.bam
+variant <bam> -r het.json -o mini.bam ## using JSON
+variant <bam> -g 1:132,250,677 --motif motifsA.txt -g 1:182,250,325 --motif motifsB.txt ##using command line shortcut
+
 ```
 
 Note that for the allele-specific extraction, there could be false negatives (reads not extracted) if a read has a sequencing error within the motif. 
@@ -269,10 +280,14 @@ applied to a BAM. Below is an example of a valid VariantBam JSON script:
    { 
      "reg1" : {
           "region" : "WG",
-          "rules" : [{RULE_SET_A}, {RULE_SET_B}]
+          "rules" : [{RULE_A, RULE_B}, {RULE_C, RULE_D, RULE_E}]
            }
    }
 ```
+
+This can be read as "Accept a read that passes (RULE_A && RULE_B) OR (RULE_C && RULE_D && RULE_E)".
+
+If no "rules" is supplied, it will default to "accept every".
 
 ### Region
 
@@ -288,7 +303,7 @@ the regions around the sites. For example:
 { 
 "" : {
        "region" : "myvcf.vcf",
-       "pad" : 1000
+       "pad" : 1000,
      }
 }
 ### command line short-cut
@@ -310,7 +325,7 @@ Mate-linking is particularly useful for extracting all read PAIRS that cover a v
 "" : {
        "region" : "myvcf.vcf",
        "pad" : 1000,
-       "matelinked" : true
+       "matelinked" : true,
      }
 }
 ### command line shortcut
@@ -374,26 +389,23 @@ and apply rules separately to them.
    "reg1" : {
               "region" : "myvcf.vcf",
               "pad" : 1000,
-	      "matelinked" : true,
-              "rules" : [{"all" : true}]
-            }
+	      "matelinked" : true
+            },
    "reg2" : {
               "region" : "myexonlist.bed",
               "matelinked" : true,
-              "rules" : [{"isize" : [600,0], "mapped" : true, "mate_mapped" : false},
+              "rules" : [{"isize" : [600,0], "mapped" : true, "mate_mapped" : false, "rg" : "H01PE.2"},
                          {"mapped" : false, "mate_mapped" : false},
                          {"hardclip" : true},
 			 {"nm" : [1,101], "mapq" : [30, 100]}]
             }
-
-
 }
 
 The above JSON can be interpreted as a rule-cascade that, in one-pass of the BAM:
 --Near VCF sites (to within 1000 bases)
    Keep reads interesecting region OR reads with mate-pairs that intersect region
 --In exons:
-   keep reads with: (isize outside of 0, 600) OR (mapepd and mate unmapped) OR hardclipped OR (NM >= 1 && MAPQ >= 30)
+   keep reads with: (isize outside of 0, 600 && with readgroup H01PE.2) OR (mapepd and mate unmapped) OR hardclipped OR (NM >= 1 && MAPQ >= 30)
 
 ```
 
@@ -458,7 +470,11 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
       --min-clip                       Minimum number of quality clipped bases
       --max-nbases                     Maximum number of N bases
       --min-mapq                       Minimum mapping quality
+      --min-del                        Minimum number of inserted bases
+      --min-ins                        Minimum number of deleted bases
       --min-readlength                 Minimum read length (after base-quality trimming)
+      --motif                          Motif file
+  -R, --read-group                     Limit to just a single read group
   -f, --include-aln-flag               Flags to include (like samtools -f)
   -F, --exclude-aln-flag               Flags to exclude (like samtools -F)
 ```
@@ -471,6 +487,7 @@ Full list of available JSON rules
     flag            "flag" : 4                 Set the flag bits that must be ON
     !flag           "!flag" : 4                Set the flag bits that must be OFF
     motif           "motif" : seqs.txt         File containing substrings that must be present in the sequence.
+    !motif          "!motif" : seqs.txt        File containing substrings that must NOT be present in the sequence.
     duplicate       "duplicate" : true         Read must be marked as optical duplicate
     supp            "supp" : false             Read must be primary alignment
     qcfail          "qcfail" : false           Read must note be marked as QC Fail

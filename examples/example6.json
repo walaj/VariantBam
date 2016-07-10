@@ -1,0 +1,6 @@
+		{
+			"example6" :	{
+	  "rules" : [{"!motif" : "mymotifs.txt", "phred" : 4, "length" : 4}]
+	} 			        
+}	  				
+					

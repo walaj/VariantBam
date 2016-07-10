@@ -37,7 +37,7 @@ void VariantBamWalker::writeVariantBam()
       buffer_size = std::max((int32_t)r.Length() * 5, buffer_size);
 
       //std::cerr << "...r " << r << " rule " << rule << std::endl;
-      //TrackSeenRead(r);
+      TrackSeenRead(r);
 
       // add coverage
       if (max_cov != 0) {

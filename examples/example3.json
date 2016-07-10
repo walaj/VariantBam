@@ -1,0 +1,6 @@
+{
+  "global" : { "nbases" : [0,0], "hardclip" : false, "supplementary" : false, "qcfail" : false, "phred" : [4,100] },
+  "region_wg" : {"rules" : [ 
+         { "mapq" : [0, 1000], "clip" : [5,1000] }, {"ic" : true}, {"ff" : true}, {"rf" : true}, {"rr" : true}, { "ins" : [1,1000], "mapq" : [1,100] }, { "del" : [1,1000], "mapq" : [1,1000] } 
+  ]}
+}
