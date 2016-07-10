@@ -415,8 +415,8 @@ minimum accepted value (``"mapq" : 30``). To instead reject reads in this bounda
 ``"mapq" : [100, 30]`` accepts only reads with MAPQ < 30 || MAPQ > 100.
 
 ###### Flag rules
-Flag rules can be input using keywords like ``"mapped" : true`` or more versatily using the raw flag ``"off_flag" : 4``. Use
-``on_flag`` to set all of the flags that must be turned on, and ``off_flag`` for that must be turned off. Thus, ``"off_flag" : 4``
+Flag rules can be input using keywords like ``"mapped" : true`` or more versatily using the raw flag ``"!flag" : 4``. Use
+``flag`` to set all of the flags that must be turned on, and ``!flag`` for that must be turned off. Thus, ``"!flag" : 4``
 requires that the "unmapped" bit be turned off, and so accepts only mapped reads.
 
 Command Line Usage
@@ -428,12 +428,10 @@ You can specify simple scripts directly on the command line:
 variant $bam -l myvcf.vcf -f 1 -F 1024 -P 100 -o out.bam
 ```
 
-JSON scripts can also be supplied directly, just make sure to use single qutoes and remove spaces:
+JSON scripts can also be supplied directly, just make sure to encase in single quotes and remove spaces:
 ```bash
 variant $bam -g WG -r '{"":{"rules":[{"motif":"mymotifs.txt"}]}}' -o out.bam
 ```
-
-Note the single quotes so that it is interpreted as a string literal in BASH
 
 ### Full list of options
 
@@ -448,7 +446,7 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -c, --counts-file                    File to place read counts per rule / region
   -x, --counts-file-only               Same as -c, but does counting only (no output BAM)
   -r, --rules                          JSON script for the rules.
-  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from
+  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED of regions to process
  Output options
   -o, --output-bam                     Output BAM file to write instead of SAM-format stdout
   -C, --cram                           Output file should be in CRAM format
@@ -458,13 +456,13 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -S, --strip-all-tags                 Remove all alignment tags
  Filtering options
   -q, --qc-file                        Output a qc file that contains information about BAM
-  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted. Negative values enforce a minimum coverage.
+  -m, --max-coverage                   Maximum coverage of output. BAM must be sorted. Negative vals enforce min coverage.
  Region specifiers
-  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple
-  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple
+  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.
+  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. 
   -l, --linked-region                  Same as -g, but turns on mate-linking
   -L, --linked-exclude-region          Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
-  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G region flags (specify after region flag)
+  -P, --region-pad                     Apply a padding to each region supplied with the region flags (specify after region flag)
  Command line rules shortcuts (to be used without supplying a -r script)
       --min-phred                      Set the minimum base quality score considered to be high-quality
       --min-clip                       Minimum number of quality clipped bases
@@ -488,6 +486,7 @@ Full list of available JSON rules
     !flag           "!flag" : 4                Set the flag bits that must be OFF
     motif           "motif" : seqs.txt         File containing substrings that must be present in the sequence.
     !motif          "!motif" : seqs.txt        File containing substrings that must NOT be present in the sequence.
+    rg              "rg" : "H01PE.2"           Limit to just a single read-group 
     duplicate       "duplicate" : true         Read must be marked as optical duplicate
     supp            "supp" : false             Read must be primary alignment
     qcfail          "qcfail" : false           Read must note be marked as QC Fail

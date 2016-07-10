@@ -1,7 +1,7 @@
 {
    "global" : {
          "region" : "WG", 
-	 "rules" : [{"off_flag" : 3840, "phred" : 5}]
+	 "rules" : [{"!flag" : 3840, "phred" : 5}]
               },
    "SV" :   {
         "region" : "WG",
