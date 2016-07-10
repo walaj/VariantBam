@@ -111,16 +111,38 @@ only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be
 setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
 ```
 ### Extract only high quality reads with >= 50 bases of phred >=4 and MAPQ >= 1 and not duplicated/hardclip/qcfail
+### json
+{
+  "region1" : {
+  "region"  : "WG",
+  "rules" : [{
+      "phred" : [4, 100],
+      "length" : [50,1000],
+      "mapq" : [1, 60],
+      "duplicate" : false,
+      "hardclip" : false,
+      "qcfail" : false
+   }
+  ]
+   }
+}
+###
 variant $bam -r example2.json -o mini.bam
-## old method: variant $bam -r 'phred[4,100];length[50,1000];mapq[1,60];!duplicate;!hardclip!;qcfail' -o mini.bam
 ```
 ##### Example Use 3
 An NGS tool operates only on a subset of the reads (eg. structural variant caller using only clipped/discordant reads). Running VariantBam
 to keep only these reads allows the tool to run much faster. This is particurlaly useful for facilitating a more rapid "build/test" cycle.
 ```
 ### Extract clipped, discordant, unmapped and indel reads
+### json
+{
+  "global" : { "nbases" : [0,0], "hardclip" : false, "supplementary" : false, "qcfail" : false, "phred" : [4,100] },
+  "region_wg" : {"region" : "WG", "rules" : [ 
+         { "mapq" : [0, 1000], "clip" : [5,1000] }, {"ic" : true}, {"ff" : true}, {"rf" : true}, {"rr" : true}, { "ins" : [1,1000], "mapq" : [1,100] }, { "del" : [1,1000], "mapq" : [1,1000] } 
+  ]}
+}
+###
 variant $bam -r example3.json
-## old method: variant $bam  -r 'global@nbases[0,0];!hardclip;!supplementary;!duplicate;!qcfail;phred[4,100];%region@WG%discordant[0,1000];mapq[1,1000]%mapq[1,1000];clip[5,1000]%ins[1,1000];mapq[1,100]%del[1,1000];mapq[1,1000]' -o mini.bam
 ```
 ##### Example Use 4
 A user wants to profile a BAM for quality. They would like to count the number of clipped reads in a BAM file, so long
@@ -254,9 +276,9 @@ applied to a BAM. Below is an example of a valid VariantBam JSON script:
 
 ### Region
 
-
 The ``region`` keyword marks that what follows is a genomic region, 
-which is either the keyword ``WG`` for whole genome, or a VCF, MAF, Callstats, BED file, or samtools-style string. Regions are 
+which is either the keyword ``WG`` for whole genome, or a VCF, MAF, Callstats, BED file, or samtools-style string. If not specified, 
+the default "WG" is applied. Regions are 
 treated such that they will include any read who overlaps it, even partially. Optionally,
 you can specify that your region of interest is a bit bigger than is actually in the file. You can do this by "padding"
 the regions around the sites. For example:
