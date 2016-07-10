@@ -10,54 +10,66 @@ VariantBam: Filtering and profiling of next-generational sequencing data using r
 [Bioinformatics Paper][biop]
 Wala, J., C. Zhang, M. Meyerson, R. Beroukhim. VariantBam: filtering and profiling of nextgenerational sequencing data using region-specific rules. 2016. Bioinformatics, doi: 10.1093/bioinformatics/btw111 
 
+**NOTE:** VariantBam recently was updated to use the more universal JSON syntax, and to remove all dependencies on Boost to make installation easier.
+
+
+Table of contents
+=================
+
+  * [Installation](#gh-md-toc)
+  * [Description](#description)
+    * [Example 1](#example-use-1)
+    * [Example 2](#example-use-2)
+    * [Example 3](#example-use-3)
+    * [Example 4](#example-use-4)
+    * [Example 5](#example-use-5)
+    * [Example 6](#example-use-6)
+    * [Example 7](#example-use-7)
+    * [Example 8](#example-use-8)
+    * [Example 9](#example-use-9)
+    * [Tool comparison](#tool-comparison)
+  * [Rules script syntax](#rules-script-syntax)
+    * [Region](#region)
+    * [Rules](#rules)
+
 Installation
-------------
-I have succesfully built on Unix with GCC-4.8+
+============
+I have succesfully built on Unix with GCC-4.8, 4.9 and 5.1
 
 ```
-### if on Broad Institute servers, add GCC-4.9
-reuse -q GCC-4.9
-
-############## DOWNLOAD AND INSTALL BOOST ###############
-############## (only if not already installed) ##########
-git clone --recursive https://github.com/boostorg/boost.git
-cd boost
-./bootstrap.sh --with-libraries=regex
-./b2
-
-############### DOWNLOAD VARIANT BAM ############### 
 git clone --recursive https://github.com/jwalabroad/VariantBam.git
 cd VariantBam
-
-############### COMPILE AND INSTALL ###############
-./configure --with-boost=<path_to_boost>
+./configure
 make
+```
 
-############### QUICK START ############### 
+Quick Start
+===========
+```
 ## using the included test BAM (HCC1143)
 VariantBam/src/variant test/small.bam -g 'X:1,000,000-1,100,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
 
 ## get help
 VariantBam/src/variant --help
 
-############## TL;DR ###################
+## TL;DR examples
 
 ## extract all reads and their pair-mates that overlap SNP sites within 100 bp
 rfile=<BED file, samtools-style string (e.g. "1:1,000,000-1,000,010"), or VCF>
-variant <bam> -l $rfile -o mini.bam -P 100 -v
+variant <bam> -l $rfile -P 100 -o mini.bam -v
 
 ## mask regions (exclude reads and their pair-mates that overlap)
 variant <bam> -L $rfile -o mini.bam -v 
 
-## extract high-quality clipped reads
-variant <bam> -r 'phred[4,100];clip[5,1000]' -o mini.bam -v
+## extract high-quality clipped reads (where clip length account for low quality bases)
+variant <bam> --min-phred 4 --min-clip 5 -o mini.bam -v
 
 ## subsample to max-coverage. BAM must be sorted
 variant <bam> -m 100 -o mini.bam -v
 ```
 
 Description
------------
+===========
 
 VariantBam is a tool to extract/count specific sets of sequencing reads from next-generational sequencing files. To save money, 
 disk space and I/O, one may not want to store an entire BAM on disk. In many cases, it would be more efficient to store only those read-pairs or
@@ -81,22 +93,36 @@ only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be
 setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
 ```
 ### Extract only high quality reads with >= 50 bases of phred >=4 and MAPQ >= 1 and not duplicated/hardclip/qcfail
-variant $bam -r 'phred[4,100];length[50,1000];mapq[1,60];!duplicate;!hardclip!;qcfail' -o mini.bam
+variant $bam -r example2.json -o mini.bam
+## old method: variant $bam -r 'phred[4,100];length[50,1000];mapq[1,60];!duplicate;!hardclip!;qcfail' -o mini.bam
 ```
 ##### Example Use 3
 An NGS tool operates only on a subset of the reads (eg. structural variant caller using only clipped/discordant reads). Running VariantBam
 to keep only these reads allows the tool to run much faster. This is particurlaly useful for facilitating a more rapid "build/test" cycle.
 ```
 ### Extract clipped, discordant, unmapped and indel reads
-variant $bam  -r 'global@nbases[0,0];!hardclip;!supplementary;!duplicate;!qcfail;phred[4,100];%region@WG%discordant[0,1000];mapq[1,1000]%mapq[1,1000];clip[5,1000]%ins[1,1000];mapq[1,100]%del[1,1000];mapq[1,1000]' -o mini.bam
+variant $bam -r example3.json
+## old method: variant $bam  -r 'global@nbases[0,0];!hardclip;!supplementary;!duplicate;!qcfail;phred[4,100];%region@WG%discordant[0,1000];mapq[1,1000]%mapq[1,1000];clip[5,1000]%ins[1,1000];mapq[1,100]%del[1,1000];mapq[1,1000]' -o mini.bam
 ```
 ##### Example Use 4
 A user wants to profile a BAM for quality. They would like to count the number of clipped reads in a BAM file, so long
 as those reads have sufficient optical quality and mapping quality. VariantBam run with the -x flag for "counting only" 
-will accomplish this.
+will accomplish this. Let's try an example of this, just for part of chromsome 22
 ```
+## example4.json
+{
+"example4": {
+  "region" : "22:50,000,000-51,304,566"
+  "rules": [{"clip": [5,1000],
+    	     "phred": [4, 1000],
+             "length": [20, 1000]}]
+}
+}									  
+##
+
 ### 
-variant $bam -r 'clip[5,100];phred[4,100];mapq[10,100]' -x counts.tsv
+variant $bam -g 22:50,000,000-51,304,566 --min-clip 5 --min-phred 4 --min-mapq 10 -x counts.txv 
+variant $bam -r example4.json -x counts.tsv ## using JSON
 ```
 ##### Example Use 5
 A team is only interested in variants in known cancer genes, and would like to analyze thousands of exomes and genomes. Running 
@@ -111,8 +137,19 @@ A research team would like to extract only reads matching a certain motifs, but 
 VariantBam with the ``motif`` rule will accomplish this with rapid O(n) efficiency for an arbitrarily large motif dictionary (where ``n`` is
 the length of a read)
 ```
+## example6.json
+{
+"example6": {
+  "rules": [{"motif": "mymotifs.txt",
+    	     "phred": 4,
+             "length": 20 }]
+}
+}									  
+##
+
 ### 
-variant $bam -r 'motif[mymotifs.txt];phred[4,100];length[20,1000]' -o mini.bam
+variant $bam -r example6.json ## input as a JSON
+variant $bam --motif mymotifs.txt --min-phred 4 --min-length 20 ## input with command-line shortcuts
 ```
 
 ##### Example Use 7
@@ -142,12 +179,13 @@ GCAGAAT and GCAAAAT. To extract variant reads supporting the A allele:
 printf "GCAAAAT\nATTTTGC" > motifs.txt
 ## just look near the variant
 k="1:143,250,677-143,251,077" 
-r='motif[motifs.txt]'
+r='{"":{"rules":[{"motif":"motifs.txt"}]}}'
 g=1:143250877
 variant <bam> -k $k -g $g -r $r -o mini.bam
 ```
 
-Because sequence information is required to match a motif, and reads do not contain the sequence information of their pair-mates, extracting all read pairs supporting a particular allele requires a two-pass solution:
+Because sequence information is required to match a motif, and reads do not contain the sequence information of their pair-mates, 
+extracting all read pairs supporting a particular allele requires a two-pass solution:
 
 ```
 ## two pass solution                                                                                                                                                                                                                                                            
@@ -156,17 +194,31 @@ printf "^@\n" >> q.txt ## keep the sam header too
 samtools view <bam> $k -h | grep -f q.txt | samtools view - -b > mini.bam                                                                                                                                                                                                                                  
 ```
                                              
-This can be expanded for an arbitrary number of heterozygous sites, for instance to capture reads from a single haplotype:
+This can be expanded for an arbitrary number of heterozygous sites, 
+for instance to capture reads from a single haplotype:
 
 ```
-r='region@1:143,250,677%motif[motifsA.txt]%region@1:183,250,677%motif[motifsB.txt]'
-variant <bam> -r $r -o mini.bam
+### het.json
+{
+  "A" : {
+      "region" : "1:132,250,677"
+      "rules" : {[ "motif" : "motifsA.txt" ]
+       }
+  },
+  "B" : {
+      "region" : "1:182,250,325"
+      "rules" : {[ "motif" : "motifsB.txt" ]
+       }
+  },
+  
+}
+###
+variant <bam> -r het.json -o mini.bam
 ```
 
-Note that for the allele-specific extraction, there will be false negatives (reads not extracted) if a read has a sequencing error within the motif. 
+Note that for the allele-specific extraction, there could be false negatives (reads not extracted) if a read has a sequencing error within the motif. 
 
-Tool comparison
----------------
+##### Tool comparison
 
 VariantBam packages into a single executable a number of filtering features not easily found using ``samtools`` + ``awk``::
 
@@ -184,141 +236,166 @@ VariantBam is implemented in C++ and uses [HTSlib][hlib], a highly optimized C l
 To get a full list of options, run ``variant --help``.
 
 Rules Script Syntax
-------
+===================
 
 This section will describe the syntax used by VariantBam to specify the cascades of rules and regions 
-applied to a BAM. Below is an example of a valid VariantBam script:
+applied to a BAM. Below is an example of a valid VariantBam JSON script:
 
 ```bash
-    ### this is a comment. The line code below defines filters to be applied to each region/rule
-    region@WG
-    !hardclip;mapped;mapped_mate;isize[0,600];!mapq[10,100]
-    !hardclip;mapped;mapped_mate;clip[10,101]
+   { 
+     "reg1" : {
+          "region" : "WG",
+          "rules" : [{RULE_SET_A}, {RULE_SET_B}]
+           }
+   }
 ```
 
-##### Region
+### Region
 
-Let's look first at the ``region`` tag. The region@ keyword marks that what follows is a genomic region, 
-which is either the keyword ``WG`` for whole genome, or a VCF, MAF, Callstats or BED file. Regions are 
+
+The ``region`` keyword marks that what follows is a genomic region, 
+which is either the keyword ``WG`` for whole genome, or a VCF, MAF, Callstats, BED file, or samtools-style string. Regions are 
 treated such that they will include any read who overlaps it, even partially. Optionally,
 you can specify that your region of interest is a bit bigger than is actually in the file. You can do this by "padding"
 the regions around the sites. For example:
 
-``pad[1000];region@myvcf.vcf``
-
-Alternatively, if supplying a region directly with the -l, -L, -g or -G flag, you can specify a padding with the -P flag. Note that this padding will be applied to every region provided with one of these flags:
-
-``variant <in.bam> -P 100 -l myvcf.vcf``
-
-Note that the -P flag is applied BEFORE the region, and sets the padding for all subsequent regions (reset with -P 0, or set to different padding)
-You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does (called "mate-linking"). Note that this only applies to the ``all`` target.
-This is particularly useful for extracting all read PAIRS that cover a variant site.
-
-``pad[1000];mlregion@myvcf``
-
-Note that the syntax is such that you must specify the file immediately after the @. 
-
-A region can be inverted, so as to exclude any read that satisfies a rule on that region. In the rules-script, simply prepend the ``region`` with a !.
-```bash
-## exclude mapq = 0 reads and their mates in blacklist regions
-pad[1000];!mlregion@blacklist.bed
-mapq[0,0]
+```
+### json
+{ 
+"" : {
+       "region" : "myvcf.vcf",
+       "pad" : 1000
+     }
+}
+### command line short-cut
+variant $bam -g myvcf.vcf -P 1000
 ```
 
-##### Rules
+Alternatively, if supplying a region directly with the -l, -L, -g or -G flag, you can specify a padding with the -P flag. Note that this padding must be supplied
+after a region flag is provided, and will be applied to the last supplied region flag (but with multiple regions, you can provide multiple ``-P`` flags). 
 
-Rules are supplied as a list of criteria that a read must satisfy.
-Note that you can take the complement of a condition 
-by prefixing with a ``!``. For example:
+``variant <in.bam> -g myvcf.vcf -P 100``
 
-```bash
-    # do not include hardclipped reads, reads with isize > 600, or reads with mapq between 10 and 100.
-    !hardclip;isize[0,600];!mapq[10,100]
-    
-    # an equivalent specification would be
-    !hardclip;mapped;!isize[601,250000000];mapq[0,9]``
+You can also state that the region applies to reads who don't necessarily overlap the region, but their pair-mate does (called "mate-linking"). 
+Note that rules that involve pair-mate information not located within the view read (e.g. mate mapq) are not considered.
+Mate-linking is particularly useful for extracting all read PAIRS that cover a variant site.
+
+```
+### json
+{ 
+"" : {
+       "region" : "myvcf.vcf",
+       "pad" : 1000,
+       "matelinked" : true
+     }
+}
+### command line shortcut
+variant $bam -l myvcf.vcf -P 1000
+```
+### json to remove low (<= 10) MAPQ reads in bad region
+{ 
+"" : {
+       "region" : "blacklist.bed",
+       "pad" : 1000,
+       "rules" : [{"mapq" : [0, 10]}]
+       "exclude" : true
+     }
+}
+### command line shortcut (for pure blacklisting)
+variant $bam -G blacklist.bed -P 1000
+### command line shortcut (for pure blacklisting, with mate linking)
+variant $bam -L blacklist.bed -P 1000
+
 ```
 
-VariantBam handles multiple rules in the following way. For each read, VariantBam 
-will cycle through the rules within a region until the read satisfies a rule. When it 
-does, it includes the read in the output and stops checking. The logic for the entire collection of 
-rules is then as follows:
+##### Global region
 
-On a given rule line, the read must satisfy ALL conditions (logical AND)
-
-Across different rules, the read nead only satisfy ONE rule (logical OR)
-
-To illustrate this, note that there is a small discrepancy in the first rule of the above. In the BAM format, 
-unmapped reads and reads with unmapped mates are given an insert size of 0. However, in the same rule 
-a condition is described to keep all reads with insert sizes 0-600 inclusive. Recalling the AND logic
-within a rule, VariantBam will exclude the read, because it fails the ``mapped`` criteria.
-
-Below is another example which uses the ability of VariantBam to interpret VCFs and BED files,
-and apply rules separately to them.
-
-```bash
-    ### declare that region is a VCF file with pads of 1000 on either side of the variant.
-    ### use the "mlregion" keyword to specify that pairs whose mate falls in the region belong to this rule
-    mlregion@/home/unix/jwala/myvcf.vcf;pad[1000]
-    #### I want to keep all the reads (this the default). Ill be explicit with the "all" keyword
-    all
-    #### A BED file which gives a list of exons. In here, I just want to keep "variant" reads pairs
-    mlregion@/home/unix/jwala/myexonlist.bed 
-    ## keep discordant reads
-    !isize[0,600];
-    ## keep only unmapped reads and their mates
-    !mapped;!mapped_mate
-    ## or keep if it is hardclipped
-    hardclip
-    ## keep reads with a mismatch to reference, but with high mapq
-    nm[1,101];mapq[30,100]
-```
-
-##### Global
-
-To reduce redundancy, you can also type a ``global@`` rule anywhere in the stack,
+To reduce redundancy, you can name a region-rule set \"global\" anywhere in the stack,
 and it will append that rule to everything below. For example, to exclude hardclipped, duplicate, qcfail and 
 supplementary reads in every region, you would do:
 
 ```bash
-    global@!hardclip;!duplicate;!qcfail;!supplementary
-    region@WG
-    !isize[0,600]
-    clip[10,101];mapq[1,60]
-    region@myvcf.vcf
+{
+  "global" : {
+  	      "rules" : [{"hardclip" : false, "duplicate" : false, "qcfail" : false, "supplementary" : false}]
+             },
+  "A" : {
+        "rules" : [{"isize" : [600, 0]}, {"clip" : [10,101], "mapq" : [1,60]}]
+       },
+  "B" : {
+  	"region" : myvcf.vcf
+   }
+}
 ```
 
-which is equivalent to
+which keeps hardclipped reads, etc out from both of the subsequent regions (A and B)
+
+### Rules
+
+Rules are supplied as a list of criteria that a read must satisfy. VariantBam handles multiple rules in the following way. For each read, VariantBam 
+will cycle through the rules within a region until the read satisfies a rule. When it 
+does, it includes the read in the output and stops checking. The logic for the entire collection of 
+rules is then as follows:
+
+* On a given rule line, the read must satisfy ALL conditions (logical AND)
+
+* Across different rules, the read nead only satisfy ONE rule (logical OR)
+
+Below is an example which uses the ability of VariantBam to interpret VCFs and BED files,
+and apply rules separately to them.
 
 ```bash
-    region@WG
-    !isize[0,600];!hardclip;!duplicate;!qcfail;!supplementary
-    clip[10,101];mapq[1,60];!hardclip;!duplicate;!qcfail;!supplementary
-    region@myvcf.vcf
-    !hardclip;!duplicate;!qcfail;!supplementary
+{
+   "reg1" : {
+              "region" : "myvcf.vcf",
+              "pad" : 1000,
+	      "matelinked" : true,
+              "rules" : [{"all" : true}]
+            }
+   "reg2" : {
+              "region" : "myexonlist.bed",
+              "matelinked" : true,
+              "rules" : [{"isize" : [600,0], "mapped" : true, "mate_mapped" : false},
+                         {"mapped" : false, "mate_mapped" : false},
+                         {"hardclip" : true},
+			 {"nm" : [1,101], "mapq" : [30, 100]}]
+            }
+
+
+}
+
+The above JSON can be interpreted as a rule-cascade that, in one-pass of the BAM:
+--Near VCF sites (to within 1000 bases)
+   Keep reads interesecting region OR reads with mate-pairs that intersect region
+--In exons:
+   keep reads with: (isize outside of 0, 600) OR (mapepd and mate unmapped) OR hardclipped OR (NM >= 1 && MAPQ >= 30)
+
 ```
-	
-The global tag will apply through all of the regions. If you want to reset it for everything, just add ``global@all`` 
-back onto the stack.
 
-To make things run a little faster, you can set the order so that the more inclusive regions / rules are first. This only
-applies if there is an overlap among regions. This is because VariantBam will move down the list of regions
-that apply to this read and stop as soon as it meets an inclusion criteria. I prefer to start with a whole-genome region / rule
-set, and then add more fine-mapped regions later.
+###### Range rules
+Range rules can be input as a two-element JSON array (``"mapq" : [30, 100]``) or a single value specificying the 
+minimum accepted value (``"mapq" : 30``). To instead reject reads in this boundary, switch the order. Thus, 
+``"mapq" : [100, 30]`` accepts only reads with MAPQ < 30 || MAPQ > 100.
 
-##### Command Line Script
+###### Flag rules
+Flag rules can be input using keywords like ``"mapped" : true`` or more versatily using the raw flag ``"off_flag" : 4``. Use
+``on_flag`` to set all of the flags that must be turned on, and ``off_flag`` for that must be turned off. Thus, ``"off_flag" : 4``
+requires that the "unmapped" bit be turned off, and so accepts only mapped reads.
 
-The usual method of inputing rules is with a VariantBam script as a text file (passed to
-VariantBam with the ``-r`` flag). However, sometimes it is useful to not have to write an intermediate
-file and just feed rules directly in. In that case, just pass a string literal to the ``-r, -g, -l`` flags, and VariantBam
-will parse directly. ``-r`` will append a new rule, ``-g`` will append a new region and ``-l`` will append a new mate-linke regions. 
-You can separate rule lines with either a new ``-r`` flag or with a ``%``. For instance, you might run something like the following:
+### Command Line Script
 
+You can specify simple scripts directly on the command line:
 ```bash
-variant big.bam -o small.bam -r 'global@!hardclip' -g WG -r '!isize[0,600];%clip[10,101];mapq[1,60]' -l 'myvcf.vcf' 
+### keep only paired reads, but not duplicates, in mate-linked region around 100 bp window at VCF sites
+variant $bam -l myvcf.vcf -f 1 -F 1024 -P 100 -o out.bam
 ```
 
-Note the single quotes so that it is interpreted as a string literal in BASH.
+JSON scripts can also be supplied directly, just make sure to use single qutoes and remove spaces:
+```bash
+variant $bam -g WG -r '{"":{"rules":[{"motif":"mymotifs.txt"}]}}' -o out.bam
+```
+
+Note the single quotes so that it is interpreted as a string literal in BASH
 
 Full list of options
 --------------------
@@ -345,7 +422,7 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple
   -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple
   -l, --linked-region                  Same as -g, but turns on mate-linking
-  -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
+  -L, --linked-exclude-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
   -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g
   -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from
   -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags
@@ -362,7 +439,7 @@ Full list of available rules
     nm              nm[0,4]              NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
     xp              xp[0,4]              Number of supplementary aligments, with XP or XA tag from BAM (hold identity of supplementary alignments)
     isize           isize[100,500]       Insert size, where all insert sizes are converted to positive.
-    len             len[80,101]          Length of the read following phred trimming
+    len             len[80,101]          Length of the read following phred trimming. If phred trimming, don't count hardclips. If not, then HC count to length
     clip            clip[0,5]            Number of clipped bases following phred trimming
     nbases          nbases[0,5]          Removed reads that have within this range of N bases.
     phred           phred[4,100]         Range of phred scores that are "quality" 

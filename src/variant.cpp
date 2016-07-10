@@ -36,11 +36,52 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
 "  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple\n"
 "  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
-"  -L, --linked-exclue-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
+"  -L, --linked-exclude-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
 "  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
 "  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags. ** Must place before -l, etc flag! ** \n"
+"\n"
+"\n"
+"     RULE           #EXAMPLE                     #DESCRIPTION OF EXAMPLE / FLAG\n"
+"    motif           \"motif\" : seqs.txt         File containing substrings that must be present in the sequence.\n"
+"    duplicate       \"duplicate\" : true         Read must be marked as optical duplicate\n"
+"    supp            \"supp\" : false             Read must be primary alignment\n"
+"    qcfail          \"qcfail\" : false           Read must note be marked as QC Fail\n"
+"    fwd_strand      \"fwd_strand\" : true        Read must be mapped to forward strand\n"
+"    rev_strand      \"rev_strand\" : true        Read must be mapped to reverse strand\n"
+"    mate_fwd_strand \"mate_fwd_strand\" : true   Mate of read must be mapped to forward strand\n"
+"    mate_rev_strand \"mate_rev_strand\" : true   Mate of read must be mapped to reverse strand\n" 
+"    mapped          \"mapped\" : true            Read must be unmapped\n"
+"    mate_mapped     \"mate_mapped\" : true       Mate must be mapped\n"
+"    subsample       \"subsample\" : 0.4          Subsample this region to at a certain rate\n"
+"    ff              \"ff\" true                  Read pair must have forward-forward orientation\n"
+"    rr              \"rr\" : true                Read pair must have reverse-reverse orientation\n"
+"    fr              \"fr\" : true                Read pair must have forward-reverse orientation (proper)\n"
+"    rf              \"rf\" : true                Read pair must have reverse-forward orientation\n"
+"    ic              \"ic\" : true                Read pair must have inter-chromosomal mapping\n"
+"    ... ALL RANGE RULES FOLLOW THE 3 INPUT OPTIONS ILLUSTRATED BELOW ... \n"
+"    ins             \"ins\"  : [5,101]           Number of inserted bases on the reads (from parsed CIGAR string)\n"
+"                    \"ins\" : 5                  ... Take only reads with max insertion size of >= 5\n"
+"                    \"ins\" : [101,5]            ... Take only reads with max insertion size NOT in [5,101] (e.g. 0-4)\n"
+"    del             \"del\"  : [5,101]           Number of deleted bases relative to reference (from parsed CIGAR string). \n"
+"    nm              \"nm\" : [0,4]               NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive\n"
+"    xp              \"xp\" : [0,4]               Number of supplementary aligments, with XP or XA tag from BAM (hold identity of supplementary alignments)\n"
+"    isize           \"isize\" : [100,500]        Insert size, where all insert sizes are converted to positive.\n"
+"    len             \"len\" : [80,101]           Length of the read following phred trimming. If phred trimming, don't count hardclips. If not, then HC count to length\n"
+"    clip            \"clip\" : [0,5]             Number of clipped bases following phred trimming\n"
+"    nbases          \"nbases\" : [0,5]           Removed reads that have within this range of N bases.\n"
+"    phred           \"phred\" : [4,100]          Range of phred scores that are considered 'high-quality'\n" 
+  //"    discordant      discordant[100,600]  Shortcut for !isize[100,600] || rr || ff || rf || ic (!discordant gives 'proper' pairs)\n"
 "\n";
+
+std::vector<SnowTools::CommandLineRegion> command_line_regions;
+
+void __check_command_line(std::vector<SnowTools::CommandLineRegion>& c) {
+
+  if (!c.size())
+    c.push_back(SnowTools::CommandLineRegion("WG", -1)); // add whole-genome ALL rule
+
+}
 
 namespace opt {
 
@@ -60,19 +101,29 @@ namespace opt {
   static std::string counts_file = "";
   static bool counts_only = false;
   static std::string bam_qcfile = "";
-  static int pad = 0;
 }
 
 enum {
-  OPT_HELP
+  OPT_HELP,
+  OPT_LENGTH,
+  OPT_MAPQ,
+  OPT_PHRED,
+  OPT_NBASES
 };
 
-static const char* shortopts = "hvji:o:r:k:g:Cf:s:ST:l:c:x:q:m:L:G:P:";
+static const char* shortopts = "hvi:o:r:k:g:Cf:s:ST:l:c:x:q:m:L:G:P:F:R:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, OPT_HELP },
   { "linked-region",              required_argument, NULL, 'l' },
-  { "exclude-region",             required_argument, NULL, 'L' },
-  { "linked-exclude-region",      required_argument, NULL, 'G' },
+  { "min-length",              required_argument, NULL, OPT_LENGTH },
+  { "min-phred",              required_argument, NULL, OPT_PHRED },
+  { "min-mapq",              required_argument, NULL, OPT_MAPQ },
+  { "max-nbases",              required_argument, NULL, OPT_NBASES },
+  { "read-group",              required_argument, NULL, 'R' },
+  { "include-aln-flag",             required_argument, NULL, 'f' },
+  { "exclude-aln-flag",             required_argument, NULL, 'F' },
+  { "exclude-region",             required_argument, NULL, 'G' },
+  { "linked-exclude-region",      required_argument, NULL, 'L' },
   { "max-coverage",               required_argument, NULL, 'm' },
   { "counts-file",                required_argument, NULL, 'c' },
   { "no-output",                  required_argument, NULL, 'x' },
@@ -90,7 +141,6 @@ static const struct option longopts[] = {
   { "region-pad",                 required_argument, NULL, 'P' },
   { "region-with-mates",          required_argument, NULL, 'c' },
   { "proc-regions-file",          required_argument, NULL, 'k' },
-  { "no-pileup-check",            no_argument, NULL, 'j' },
   { NULL, 0, NULL, 0 }
 };
 
@@ -108,6 +158,19 @@ std::string myreplace(std::string &s,
 // forward declare
 void parseVarOptions(int argc, char** argv);
 
+// helper for formatting rules script string with no whitespace
+// http://stackoverflow.com/questions/83439/remove-spaces-from-stdstring-in-c
+/*  template<typename T, typename P>
+    T remove_if(T beg, T end, P pred)
+  {
+    T dest = beg;
+    for (T itr = beg;itr != end; ++itr)
+      if (!pred(*itr))
+	*(dest++) = *itr;
+    return dest;
+  }
+*/
+
 int main(int argc, char** argv) {
 
 #ifndef __APPLE__
@@ -117,13 +180,6 @@ int main(int argc, char** argv) {
 
   // parse the command line
   parseVarOptions(argc, argv);
-
-  /*  if (opt::pad != 0) {
-    std::cerr << opt::rules << " toreplace " << ("pad[" + std::to_string(opt::pad) + "];") << std::endl;
-      opt::rules = myreplace(opt::rules, "PDUM;", "pad[" + std::to_string(opt::pad) + "];");
-  } else {
-    opt::rules = myreplace(opt::rules, "PDUM;", "");
-    }*/
 
   bool has_ml_region = opt::rules.find("mlregion") != std::string::npos;
   
@@ -135,9 +191,6 @@ int main(int argc, char** argv) {
     //std::cerr << "TWO-PASS solution?:      " << (opt::twopass ? "ON" : "OFF") << std::endl;
   }
 
-  if (opt::verbose) 
-    std::cerr << "Rules script: " << opt::rules << std::endl;
-
   if (has_ml_region && opt::verbose) {
     std::cerr << "...mate-linked region supplied. Defaulting to whole BAM run unless trimmed explicitly with -k flag" << std::endl;
   }
@@ -147,11 +200,11 @@ int main(int argc, char** argv) {
     std::cerr << "...setting up the bam walker" << std::endl;
   VariantBamWalker walk(opt::bam);
 
-  // set which regions to run
-  if (opt::verbose)
-    std::cerr << "...setting which regions to run" << std::endl;
   GRC grv_proc_regions;
   if (opt::proc_regions.length()) {
+    // set which regions to run
+    if (opt::verbose)
+      std::cerr << "...setting which regions to run from proc_regions" << std::endl;
     if (SnowTools::read_access_test(opt::proc_regions)) {
       grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
     } else if (opt::proc_regions.find(":") != std::string::npos) {
@@ -163,8 +216,7 @@ int main(int argc, char** argv) {
   // should it print to stdout?
   if (opt::to_stdout) {
     walk.setStdout();
-    if (opt::header)
-      walk.setPrintHeader();
+    walk.setPrintHeader(opt::header);
   }
   // should we print to cram
   else if (opt::cram) {
@@ -179,9 +231,37 @@ int main(int argc, char** argv) {
 
   // make the mini rules collection from the rules file
   // this also calls function to parse the BED files
-  if (opt::verbose)
-    std::cerr << "...rules: " << opt::rules << std::endl;
-  walk.SetMiniRulesCollection(opt::rules);
+  if (opt::verbose) {
+    std::string str = opt::rules;
+    str.erase(std::remove_if(str.begin(), str.end(), [](char x){return std::isspace(x);}),str.end());
+    std::cerr << "Rules script: " << str << std::endl;
+  }
+
+  SnowTools::MiniRulesCollection mrc;
+  mrc.h = walk.header();
+  
+  if (!opt::rules.empty())
+    mrc = SnowTools::MiniRulesCollection(opt::rules, walk.header());
+
+  // make sure command_line_reigons makes sense
+  if (command_line_regions.size() == 2 && command_line_regions[1].all()) {
+    std::cerr << "***************************************************" << std::endl
+              << "  Region (-l, -L, -g, -G) supplied after rule flags"
+              << "  Did you mean to set region flag before rule flags"
+              << "***************************************************" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+    
+
+  // add specific mini rules from command-line
+  for (auto& i : command_line_regions) {
+    SnowTools::MiniRules mr(i, walk.header());
+    mr.pad = i.pad;
+    mr.mrc = &mrc;
+    mrc.m_regions.push_back(mr);
+  }
+  
+  walk.m_mr = mrc;
 
   // set max coverage
   walk.max_cov = opt::max_cov;
@@ -190,8 +270,8 @@ int main(int argc, char** argv) {
 
   // set the regions to run
   if (grv_proc_regions.size()) {
-    //if (opt::verbose)
-    //  std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
+    if (opt::verbose)
+       std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
     walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
   }
 
@@ -272,10 +352,8 @@ int main(int argc, char** argv) {
   walk.MakeIndex();
 #endif
 
-  if (opt::verbose) {
-    SnowTools::displayRuntime(start);
-    std::cerr << std::endl;
-  }
+  if (opt::verbose) 
+    std::cerr << "--- Total time: " << SnowTools::displayRuntime(start) << std::endl;
   
   return 0;
 }
@@ -294,6 +372,8 @@ void parseVarOptions(int argc, char** argv) {
   for (char c; (c = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1;) {
 
     std::istringstream arg(optarg != NULL ? optarg : "");
+    
+    std::string tmp;
     switch (c) {
     case OPT_HELP: die = true; break;
     case 'v': opt::verbose = true; break;
@@ -302,75 +382,66 @@ void parseVarOptions(int argc, char** argv) {
     case 'T': arg >> opt::reference; break;
     case 'C': opt::cram = true; break;
     case 'h': opt::header = true;
-      //case 't': opt::twopass = true; break;
     case 'i': arg >> opt::bam; break;
     case 'o': arg >> opt::out; break;
     case 'm': arg >> opt::max_cov; break;
     case 'l': 
-      {
-	std::string tmp;
 	arg >> tmp;
-	if (tmp.length() == 0)
-	  break;
-	if (opt::rules.length())
-	  opt::rules += "%";
-	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "pad[" + std::to_string(opt::pad) + "];mlregion@" + tmp;
-	else 
-	  opt::rules += tmp;
-      }
-      break;
+	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_MATE_LINKED));
+	break;
     case 'L': 
-      {
-	std::string tmp;
 	arg >> tmp;
-	if (tmp.length() == 0)
-	  break;
-	if (opt::rules.length())
-	  opt::rules += "%";
-	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "pad[" + std::to_string(opt::pad) + "];mlregion@" + tmp;
-	else 
-	  opt::rules += tmp;
-      }
-      break;
+	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_MATE_LINKED_EXCLUDE));
+	break;
     case 'g': 
-      {
-	std::string tmp;
 	arg >> tmp;
-	if (tmp.length() == 0)
-	  break;
-	if (opt::rules.length())
-	  opt::rules += "%";
-	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "pad[" + std::to_string(opt::pad) + "];region@" + tmp;
-	else 
-	  opt::rules += tmp;
-      }
-      break;
+	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_REGION));
+	break;
     case 'G': 
-      {
-	std::string tmp;
 	arg >> tmp;
-	if (tmp.length() == 0)
-	  break;
-	if (opt::rules.length())
-	  opt::rules += "%";
-	if (tmp.find("region@") == std::string::npos)
-	  opt::rules += "pad[" + std::to_string(opt::pad) + "];region@" + tmp;
-      }
-      break;
+	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_REGION_EXCLUDE));	
+	break;
     case 'c': arg >> opt::counts_file; break;
+    case 'R':
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().rg;
+      break;
+    case OPT_MAPQ:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().mapq;
+      break;
+    case OPT_LENGTH:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().len;
+      break;
+    case OPT_PHRED:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().phred;
+      break;
+    case OPT_NBASES:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().nbases;
+      break;
     case 'x': arg >> opt::counts_file; opt::counts_only = true; break;
     case 'q': arg >> opt::bam_qcfile; break;
     case 'Q': arg >> opt::bam_qcfile; opt::counts_only = true; break;
-    case 'P': arg >> opt::pad; break;
+    case 'P': 
+      if (!command_line_regions.size()) {
+	std::cerr << "Error: Must input padding *after* specifying a region via -l, -L, -g, -G" << std::endl;
+	exit(EXIT_FAILURE);
+      }
+      arg >> command_line_regions.back().pad;
+      break;
+    case 'f': 
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().i_flag;
+      break;
+    case 'F': 
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().e_flag;
+      break;
     case 'r': 
-      {
-	std::string tmp;
 	arg >> tmp;
-	if (tmp.length() == 0)
-	  break;
 
 	// check if it's a file
 	if (SnowTools::read_access_test(tmp)) 
@@ -379,42 +450,13 @@ void parseVarOptions(int argc, char** argv) {
 	    std::string val;
 
 	    while(std::getline(iss, val))
-	      {
-		if (val.find("#") == std::string::npos)
-		  {
-		    opt::rules += val;
-		    opt::rules += "%";
-		  }
-	      }
-	    //trim off the last %
-	    opt::rules.pop_back(); 
+	       opt::rules += val;
 	  }
-	else if (opt::rules.length()) {
-	  opt::rules += "%"; // adding a new line
-	  opt::rules += tmp;
+	else {
+	  opt::rules = tmp;
 	}
-	else { //if (tmp.find("region@") == std::string::npos) { // region is empty, so add one first
-	  opt::rules = "region@WG%" + tmp; // need to specify a region
-	}
-	//opt::rules += tmp;
-      }
       break;
     case 'k': arg >> opt::proc_regions; break;
-      /*    case 'f': 
-      {
-	string file;
-	arg >> file;
-	
-	string line;
-	igzstream iss(file.c_str());
-	while(getline(iss, line, '\n')) {
-	  if (opt::rules.length() && line.length())
-	    opt::rules += "%";
-	  if (line.length())
-	    opt::rules += line;
-	}
-      }
-      break;*/
     }
   }
 

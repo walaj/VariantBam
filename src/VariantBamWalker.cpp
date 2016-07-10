@@ -26,6 +26,11 @@ void VariantBamWalker::writeVariantBam()
     exit(EXIT_FAILURE);
   }
 
+  // check that regions are sufficient size
+  for (auto& k : m_region)
+    if (k.width() < 1000)
+      k.pad(1000);
+
   while (GetNextRead(r, rule)) {
 
       // prepare for case of long reads
@@ -36,8 +41,8 @@ void VariantBamWalker::writeVariantBam()
 
       // add coverage
       if (max_cov != 0) {
-	cov_a.addRead(r);
-	cov_b.addRead(r);
+	cov_a.addRead(r, 0, false);
+	cov_b.addRead(r, 0, false);
       }
 
       // read is valid
@@ -86,6 +91,11 @@ void VariantBamWalker::writeVariantBam()
       COV_A = !COV_A;
       buffer.clear();
     }
+  }
+
+  if (r.isEmpty()) {
+    std::cerr << "NO READS RETRIEVED FROM THESE REGIONS" << std::endl;
+    return;
   }
 
   if (m_verbose)
@@ -139,6 +149,7 @@ void VariantBamWalker::printMessage(const SnowTools::BamRead &r) const
 {
 
   char buffer[90];
+
   std::string posstring = SnowTools::AddCommas<int>(r.Position());
   std::string chrname;
   try { chrname = SnowTools::GenomicRegion::chrToString(r.ChrID()); } catch(...) { chrname = "CHR_NAME_FAIL"; } 
