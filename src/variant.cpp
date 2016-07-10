@@ -23,6 +23,8 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -v, --verbose                        Verbose output\n"
 "  -c, --counts-file                    File to place read counts per rule / region\n"
 "  -x, --no-output                      Don't output reads (used for profiling with -q and/or counting with -c)\n"
+"  -r, --rules                          JSON ecript for the rules.\n"
+"  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
 " Output options\n"
 "  -o, --output-bam                     Output BAM file to write instead of SAM-format stdout\n"
 "  -C, --cram                           Output file should be in CRAM format\n"
@@ -33,45 +35,20 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 " Filtering options\n"
 "  -q, --qc-file                        Output a qc file that contains information about BAM\n"
 "  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted. Negative values enforce a minimum coverage\n"
+" Region specifiers\n"
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple\n"
 "  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple\n"
 "  -l, --linked-region                  Same as -g, but turns on mate-linking\n"
-"  -L, --linked-exclude-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
-"  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g\n"
-"  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from\n"
-"  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags. ** Must place before -l, etc flag! ** \n"
-"\n"
-"\n"
-"     RULE           #EXAMPLE                     #DESCRIPTION OF EXAMPLE / FLAG\n"
-"    motif           \"motif\" : seqs.txt         File containing substrings that must be present in the sequence.\n"
-"    duplicate       \"duplicate\" : true         Read must be marked as optical duplicate\n"
-"    supp            \"supp\" : false             Read must be primary alignment\n"
-"    qcfail          \"qcfail\" : false           Read must note be marked as QC Fail\n"
-"    fwd_strand      \"fwd_strand\" : true        Read must be mapped to forward strand\n"
-"    rev_strand      \"rev_strand\" : true        Read must be mapped to reverse strand\n"
-"    mate_fwd_strand \"mate_fwd_strand\" : true   Mate of read must be mapped to forward strand\n"
-"    mate_rev_strand \"mate_rev_strand\" : true   Mate of read must be mapped to reverse strand\n" 
-"    mapped          \"mapped\" : true            Read must be unmapped\n"
-"    mate_mapped     \"mate_mapped\" : true       Mate must be mapped\n"
-"    subsample       \"subsample\" : 0.4          Subsample this region to at a certain rate\n"
-"    ff              \"ff\" true                  Read pair must have forward-forward orientation\n"
-"    rr              \"rr\" : true                Read pair must have reverse-reverse orientation\n"
-"    fr              \"fr\" : true                Read pair must have forward-reverse orientation (proper)\n"
-"    rf              \"rf\" : true                Read pair must have reverse-forward orientation\n"
-"    ic              \"ic\" : true                Read pair must have inter-chromosomal mapping\n"
-"    ... ALL RANGE RULES FOLLOW THE 3 INPUT OPTIONS ILLUSTRATED BELOW ... \n"
-"    ins             \"ins\"  : [5,101]           Number of inserted bases on the reads (from parsed CIGAR string)\n"
-"                    \"ins\" : 5                  ... Take only reads with max insertion size of >= 5\n"
-"                    \"ins\" : [101,5]            ... Take only reads with max insertion size NOT in [5,101] (e.g. 0-4)\n"
-"    del             \"del\"  : [5,101]           Number of deleted bases relative to reference (from parsed CIGAR string). \n"
-"    nm              \"nm\" : [0,4]               NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive\n"
-"    xp              \"xp\" : [0,4]               Number of supplementary aligments, with XP or XA tag from BAM (hold identity of supplementary alignments)\n"
-"    isize           \"isize\" : [100,500]        Insert size, where all insert sizes are converted to positive.\n"
-"    len             \"len\" : [80,101]           Length of the read following phred trimming. If phred trimming, don't count hardclips. If not, then HC count to length\n"
-"    clip            \"clip\" : [0,5]             Number of clipped bases following phred trimming\n"
-"    nbases          \"nbases\" : [0,5]           Removed reads that have within this range of N bases.\n"
-"    phred           \"phred\" : [4,100]          Range of phred scores that are considered 'high-quality'\n" 
-  //"    discordant      discordant[100,600]  Shortcut for !isize[100,600] || rr || ff || rf || ic (!discordant gives 'proper' pairs)\n"
+"  -L, --linked-exclude-region          Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
+"  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G region flags. ** Must place after region flag! ** \n"
+" Command line rules shortcuts (to be used without supplying a -r script)\n"
+"      --min-phred                      Set the minimum base quality score considered to be high-quality\n"
+"      --min-clip                       Minimum number of quality clipped bases\n"
+"      --max-nbases                     Maximum number of N bases\n"
+"      --min-mapq                       Minimum mapping quality\n"
+"      --min-readlength                 Minimum read length (after base-quality trimming)\n"
+"  -f, --include-aln-flag               Flags to include (like samtools -f)\n"
+"  -F, --exclude-aln-flag               Flags to exclude (like samtools -F)\n"
 "\n";
 
 std::vector<SnowTools::CommandLineRegion> command_line_regions;
@@ -108,7 +85,8 @@ enum {
   OPT_LENGTH,
   OPT_MAPQ,
   OPT_PHRED,
-  OPT_NBASES
+  OPT_NBASES,
+  OPT_CLIP
 };
 
 static const char* shortopts = "hvi:o:r:k:g:Cf:s:ST:l:c:x:q:m:L:G:P:F:R:";
@@ -118,6 +96,7 @@ static const struct option longopts[] = {
   { "min-length",              required_argument, NULL, OPT_LENGTH },
   { "min-phred",              required_argument, NULL, OPT_PHRED },
   { "min-mapq",              required_argument, NULL, OPT_MAPQ },
+  { "min-clip",              required_argument, NULL, OPT_CLIP },
   { "max-nbases",              required_argument, NULL, OPT_NBASES },
   { "read-group",              required_argument, NULL, 'R' },
   { "include-aln-flag",             required_argument, NULL, 'f' },
@@ -409,6 +388,10 @@ void parseVarOptions(int argc, char** argv) {
     case OPT_MAPQ:
       __check_command_line(command_line_regions);
       arg >> command_line_regions.back().mapq;
+      break;
+    case OPT_CLIP:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().clip;
       break;
     case OPT_LENGTH:
       __check_command_line(command_line_regions);

@@ -18,19 +18,17 @@ Table of contents
 
   * [Installation](#gh-md-toc)
   * [Description](#description)
-    * [Example 1](#example-use-1)
-    * [Example 2](#example-use-2)
-    * [Example 3](#example-use-3)
-    * [Example 4](#example-use-4)
-    * [Example 5](#example-use-5)
-    * [Example 6](#example-use-6)
-    * [Example 7](#example-use-7)
-    * [Example 8](#example-use-8)
-    * [Example 9](#example-use-9)
-    * [Tool comparison](#tool-comparison)
+  * [Examples](#examples)
   * [Rules script syntax](#rules-script-syntax)
     * [Region](#region)
+    * [Global region](#global-region)
     * [Rules](#rules)
+      * [Range rules](#range-rules)
+      * [Flag rules](#flag-rules)
+  * [Command line usage](#command-line-usage)
+    * [Full list of options](#full-list-of-options)
+  * [Full list of available JSON rules](#full-list-of-available-json-rules)
+  * [Attributions](#attributions)
 
 Installation
 ============
@@ -75,6 +73,26 @@ VariantBam is a tool to extract/count specific sets of sequencing reads from nex
 disk space and I/O, one may not want to store an entire BAM on disk. In many cases, it would be more efficient to store only those read-pairs or
 reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (e.g. breakpoints), many 
 reads can be removed without losing the information relevant to the problem. 
+
+##### Tool comparison
+
+VariantBam packages into a single executable a number of filtering features not easily found using ``samtools`` + ``awk``::
+
+> 1. Filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality
+> 2. [Interval tree][ekg] to efficiently determine if a read or read mate overlaps a region
+> 3. Provide different rules for different arbitrarily-sized regions, and to provide these regions as common variant files (VCF, MAF, BED)
+> 4. Select reads by matching motifs against a large dictionary using [Aho-Corasick implementation][aho]
+> 5. Count reads that satisfy any number of user-defined properties
+> 6. Read and write CRAM files
+> 7. Selectively strip alignment tags
+> 8. Support for sub-sampling to obtain a BAM file with a coverage limit
+
+VariantBam is implemented in C++ and uses [HTSlib][hlib], a highly optimized C library used as the core of [Samtools][samtools] and [BCFtools][bcf].
+
+To get a full list of options, run ``variant --help``.
+
+Examples
+========
 
 ##### Example Use 1
 Whole-genome analysis has been conducted on a BAM, generating VCF and MAF files. Ideally, these regions could be manually inspected
@@ -218,22 +236,6 @@ variant <bam> -r het.json -o mini.bam
 
 Note that for the allele-specific extraction, there could be false negatives (reads not extracted) if a read has a sequencing error within the motif. 
 
-##### Tool comparison
-
-VariantBam packages into a single executable a number of filtering features not easily found using ``samtools`` + ``awk``::
-
-> 1. Filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality
-> 2. [Interval tree][ekg] to efficiently determine if a read or read mate overlaps a region
-> 3. Provide different rules for different arbitrarily-sized regions, and to provide these regions as common variant files (VCF, MAF, BED)
-> 4. Select reads by matching motifs against a large dictionary using [Aho-Corasick implementation][aho]
-> 5. Count reads that satisfy any number of user-defined properties
-> 6. Read and write CRAM files
-> 7. Selectively strip alignment tags
-> 8. Support for sub-sampling to obtain a BAM file with a coverage limit
-
-VariantBam is implemented in C++ and uses [HTSlib][hlib], a highly optimized C library used as the core of [Samtools][samtools] and [BCFtools][bcf].
-
-To get a full list of options, run ``variant --help``.
 
 Rules Script Syntax
 ===================
@@ -292,6 +294,8 @@ Mate-linking is particularly useful for extracting all read PAIRS that cover a v
 ### command line shortcut
 variant $bam -l myvcf.vcf -P 1000
 ```
+
+```
 ### json to remove low (<= 10) MAPQ reads in bad region
 { 
 "" : {
@@ -305,10 +309,9 @@ variant $bam -l myvcf.vcf -P 1000
 variant $bam -G blacklist.bed -P 1000
 ### command line shortcut (for pure blacklisting, with mate linking)
 variant $bam -L blacklist.bed -P 1000
-
 ```
 
-##### Global region
+### Global region
 
 To reduce redundancy, you can name a region-rule set \"global\" anywhere in the stack,
 and it will append that rule to everything below. For example, to exclude hardclipped, duplicate, qcfail and 
@@ -382,7 +385,8 @@ Flag rules can be input using keywords like ``"mapped" : true`` or more versatil
 ``on_flag`` to set all of the flags that must be turned on, and ``off_flag`` for that must be turned off. Thus, ``"off_flag" : 4``
 requires that the "unmapped" bit be turned off, and so accepts only mapped reads.
 
-### Command Line Script
+Command Line Usage
+==================
 
 You can specify simple scripts directly on the command line:
 ```bash
@@ -397,8 +401,8 @@ variant $bam -g WG -r '{"":{"rules":[{"motif":"mymotifs.txt"}]}}' -o out.bam
 
 Note the single quotes so that it is interpreted as a string literal in BASH
 
-Full list of options
---------------------
+### Full list of options
+
 ```
 Usage: variant <input.bam> [OPTIONS] 
 
@@ -409,6 +413,8 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
   -v, --verbose                        Verbose output
   -c, --counts-file                    File to place read counts per rule / region
   -x, --counts-file-only               Same as -c, but does counting only (no output BAM)
+  -r, --rules                          JSON script for the rules.
+  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from
  Output options
   -o, --output-bam                     Output BAM file to write instead of SAM-format stdout
   -C, --cram                           Output file should be in CRAM format
@@ -419,111 +425,62 @@ Description: Filter a BAM/CRAM file according to hierarchical rules
  Filtering options
   -q, --qc-file                        Output a qc file that contains information about BAM
   -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted. Negative values enforce a minimum coverage.
+ Region specifiers
   -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.  Applied in same order as -r for multiple
   -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. Applied in same order as -r for multiple
   -l, --linked-region                  Same as -g, but turns on mate-linking
-  -L, --linked-exclude-region           Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
-  -r, --rules                          Script for the rules. If specified multiple times, will be applied in same order as -g
-  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000,000-2,000,000) or BED file of regions to proess reads from
-  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G flags
+  -L, --linked-exclude-region          Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
+  -P, --region-pad                     Apply a padding to each region supplied to variantBam with the -l, -L, -g or -G region flags (specify after region flag)
+ Command line rules shortcuts (to be used without supplying a -r script)
+      --min-phred                      Set the minimum base quality score considered to be high-quality
+      --min-clip                       Minimum number of quality clipped bases
+      --max-nbases                     Maximum number of N bases
+      --min-mapq                       Minimum mapping quality
+      --min-readlength                 Minimum read length (after base-quality trimming)
+  -f, --include-aln-flag               Flags to include (like samtools -f)
+  -F, --exclude-aln-flag               Flags to exclude (like samtools -F)
 ```
 
-Full list of available rules
-----------------------------
+Full list of available JSON rules
+=================================
 
 ```
-    #RULE           #EXAMPLE             #DESCRIPTION OF EXAMPLE / FLAG 
-    motif           motif[seqs.txt]  	 File containing substrings that must be present in the sequence.
-    ins             ins[5,101]           Number of inserted bases on the reads (from parsed CIGAR string)
-    del             del[10,101]          Number of deleted bases relative to reference (from parsed CIGAR string). 
-    nm              nm[0,4]              NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
-    xp              xp[0,4]              Number of supplementary aligments, with XP or XA tag from BAM (hold identity of supplementary alignments)
-    isize           isize[100,500]       Insert size, where all insert sizes are converted to positive.
-    len             len[80,101]          Length of the read following phred trimming. If phred trimming, don't count hardclips. If not, then HC count to length
-    clip            clip[0,5]            Number of clipped bases following phred trimming
-    nbases          nbases[0,5]          Removed reads that have within this range of N bases.
-    phred           phred[4,100]         Range of phred scores that are "quality" 
-    duplicate       duplicate            Read must be marked as optical duplicate 
-    supp            !supp                Read must be primary alignment
-    qcfail          !qcfail              Read must note be marked as QC Fail
-    fwd_strand      fwd_strand           Read must be mapped to forward strand
-    rev_strand      rev_strand           Read must be mapped to reverse strand
-    mate_fwd_strand mate_fwd_strand      Mate of read must be mapped to forward strand
-    mate_rev_strand mate_rev_strand      Mate of read must be mapped to reverse strand  
-    mapped          !mapped              Read must be unmapped
-    mapped_mate     mapped_mate          Mate must be mapped
-    subsample       subsample[0.4]       Subsample this region to at a certain rate
-    ff              ff                   Read pair must have forward-forward orientation
-    rr              rr                   Read pair must have reverse-reverse orientation
-    fr              fr                   Read pair must have forward-reverse orientation (proper)
-    rf              rf                   Read pair must have reverse-forward orientation
-    ic              ic                   Read pair must have inter-chromosomal mapping
-    discordant      discordant[100,600]  Shortcut for !isize[100,600] || rr || ff || rf || ic (!discordant gives "proper" pairs)
-```
-
-Longer example rules script
----------------------------
-```
-##################################
-### filters to apply to every read
-##################################
-global@!duplicate;!hardclip;!qcfail;!supplementary
-
-#######################################################
-## specify rules that apply to reads anywhere in genome
-#######################################################
-region@WG
-
-#### Reads with abs(isize) outside of this range are kept. Also reads
-## with non FR orientation. They must be both mapped though, and have
-## min mapq of 1
-discordant[0,1200];mapped;mate_mapped;mapq[1,100]
-
-#### Reads with 1+ secondary alignments (as stored in XA or XP tag) are kept
-xp[1,100]
-
-### Reads without N in sequence, and with clip of 5+ bases (where each
-### base must have phred of 4+ are kept). Must also be sufficiently
-### long and have min mapq of 1
-nbases[0,0];clip[5,101];phred[4,100];!length[0,20];mapq[1,100]
-
-### Any read with non-zero mapq and an insertion (by CIGAR) of 1+ are kept
-mapq[1,100];ins[1,100]
-
-### Same, but for dels
-mapq[1,100];del[1,100]
-
-### any unmapped mate, and sufficient optical quality (>40 bases with
-### phred 4+), is kept
-!mapped;mate_mapped;phred[4,100];!length[0,40]
-
-### any read with unmapped mate and mapq >= 10 is kept
-!mate_mapped;mapped;mapq[10,100]
-
-### can match sequences against a database of motifs. If read has
-### sequence motif in the provided dictionary, it is kept
-motif[VariantBam/test/motifs.txt]
-
-################################################################
-### can take ALL reads that overlap, or mate overlaps, a region. 
-### the mlregion tag is for "mate-linked", which means a read passes
-### if either it or its mate overlaps regions
-#################################################################
-mlregion@example.bed
-all
-
-### can specify MuTect regions with KEEP fields as input
-#mlregion@LU-A08-43-Tumor.call_stats.txt
-#all
-
-### can specify VCF regions to keep. Here we also pad the regions by
-### 500bp on each side
-pad[500];mlregion@VariantBam/test/test.vcf
-all
+    #RULE           #EXAMPLE                   #DESCRIPTION OF EXAMPLE / FLAG
+    flag            "flag" : 4                 Set the flag bits that must be ON
+    !flag           "!flag" : 4                Set the flag bits that must be OFF
+    motif           "motif" : seqs.txt         File containing substrings that must be present in the sequence.
+    duplicate       "duplicate" : true         Read must be marked as optical duplicate
+    supp            "supp" : false             Read must be primary alignment
+    qcfail          "qcfail" : false           Read must note be marked as QC Fail
+    fwd_strand      "fwd_strand" : true        Read must be mapped to forward strand
+    rev_strand      "rev_strand" : true        Read must be mapped to reverse strand
+    mate_fwd_strand "mate_fwd_strand" : true   Mate of read must be mapped to forward strand
+    mate_rev_strand "mate_rev_strand" : true   Mate of read must be mapped to reverse strand
+    mapped          "mapped" : true            Read must be unmapped
+    mate_mapped     "mate_mapped" : true       Mate must be mapped
+    subsample       "subsample" : 0.4          Subsample this region to at a certain rate
+    ff              "ff" true                  Read pair must have forward-forward orientation
+    rr              "rr" : true                Read pair must have reverse-reverse orientation
+    fr              "fr" : true                Read pair must have forward-reverse orientation (proper)
+    rf              "rf" : true                Read pair must have reverse-forward orientation
+    ic              "ic" : true                Read pair must have inter-chromosomal mapping
+    ... ALL RANGE RULES FOLLOW THE 3 INPUT OPTIONS ILLUSTRATED BELOW ... 
+    ins             "ins"  : [5,101]           Number of inserted bases on the reads (from parsed CIGAR string)
+                    "ins" : 5                  ... Take only reads with max insertion size of >= 5
+                    "ins" : [101,5]            ... Take only reads with max insertion size NOT in [5,101] (e.g. 0-4)
+    del             "del"  : [5,101]           Number of deleted bases relative to reference (from parsed CIGAR string). 
+    nm              "nm" : [0,4]               NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
+    xp              "xp" : [0,4]               Number of supplementary aligments, with XP or XA tag from BAM (hold identity of supplementary alignments)
+    isize           "isize" : [100,500]        Insert size, where all insert sizes are converted to positive.
+    len             "len" : [80,101]           Length of the read following phred trimming. If phred trimming, don't count hardclips. If not, then HC count to length
+    clip            "clip" : [0,5]             Number of clipped bases following phred trimming
+    nbases          "nbases" : [0,5]           Removed reads that have within this range of N bases.
+    phred           "phred" : [4,100]          Range of phred scores that are considered 'high-quality'
 ```
 
 Attributions
-------------
+============
+
 VariantBam is developed and maintained by Jeremiah Wala (jwala@broadinstitute.org) --  Rameen Berkoukhim's lab -- Dana Farber Cancer Institute, Boston, MA. 
 
 This project was developed in collaboration with the Cancer Genome Analysis team at the Broad Institute. Particular thanks to:
