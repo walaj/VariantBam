@@ -266,13 +266,9 @@ int main(int argc, char** argv) {
 
   SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
 
-  //  for (auto& i : rules_rg)
-  //std::cerr << i << std::endl;
-
   rules_rg.createTreeMap();
 
   if (grv_proc_regions.size() && rules_rg.size()) { // intersect rules regions with mask regions. 
-
     // dont incorporate rules regions if there are any mate-linked regions
     rules_rg = rules_rg.intersection(grv_proc_regions, true); // true -> ignore_strand
     if (opt::verbose)
@@ -283,14 +279,14 @@ int main(int argc, char** argv) {
 
   if (grv_proc_regions.size() > 0 && (rules_rg.size() || has_ml_region )) // explicitly gave regions
     walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
-  else if (rules_rg.size() && !has_ml_region && grv_proc_regions.size() == 0) {
+  /*  else if (rules_rg.size() && !has_ml_region && grv_proc_regions.size() == 0) {
     walk.setBamWalkerRegions(rules_rg.asGenomicRegionVector());
     if (opt::verbose)
       std::cerr << "...from rules, will run on " << rules_rg.size() << " regions" << std::endl;
   } else if (!rules_rg.size() && grv_proc_regions.size() > 0) {
     std::cerr << "No regions with possibility of reads. This error occurs if no regions in -g are in -k." << std::endl;
     return 1;
-  }
+    }*/
 
   // should we count all rules (slower)
   if (opt::counts_file.length())

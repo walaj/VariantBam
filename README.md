@@ -45,7 +45,7 @@ Quick Start
 ===========
 ```
 ## using the included test BAM (HCC1143)
-VariantBam/src/variant test/small.bam -g 'X:1,000,000-1,100,000' -r mapq[10,100] -c counts.tsv -o mini.bam -v
+VariantBam/src/variant test/small.bam -g 'X:1,000,000-1,100,000' --min-mapq 10 -c counts.tsv -o mini.bam -v
 
 ## get help
 VariantBam/src/variant --help
@@ -62,6 +62,9 @@ variant <bam> -L $rfile -o mini.bam -v
 ## extract high-quality clipped reads (where clip length account for low quality bases)
 variant <bam> --min-phred 4 --min-clip 5 -o mini.bam -v
 
+## extract reads with high mapq that also contain a large insertion or deletion
+variant <bam> --min-mapq 20 --min-ins 10 --min-del 10 -v -o mini.bam
+
 ## subsample to max-coverage. BAM must be sorted
 variant <bam> -m 100 -o mini.bam -v
 ```
@@ -72,20 +75,21 @@ Description
 VariantBam is a tool to extract/count specific sets of sequencing reads from next-generational sequencing files. To save money, 
 disk space and I/O, one may not want to store an entire BAM on disk. In many cases, it would be more efficient to store only those read-pairs or
 reads who intersect some region around the variant locations. Alternatively, if your scientific question is focused on only one aspect of the data (e.g. breakpoints), many 
-reads can be removed without losing the information relevant to the problem. 
+reads can be removed without losing the information relevant to the problem, and enriching for the signal you are interested in.
 
 ##### Tool comparison
 
-VariantBam packages into a single executable a number of filtering features not easily found using ``samtools`` + ``awk``::
+VariantBam packages into a single executable a number of filtering features not easily found using ``samtools`` + ``awk``:
 
-> 1. Filter specifically on read clipping, orientation and insert size (all important for structural variation), while taking into account the per-base phred quality
-> 2. [Interval tree][ekg] to efficiently determine if a read or read mate overlaps a region
-> 3. Provide different rules for different arbitrarily-sized regions, and to provide these regions as common variant files (VCF, MAF, BED)
-> 4. Select reads by matching motifs against a large dictionary using [Aho-Corasick implementation][aho]
-> 5. Count reads that satisfy any number of user-defined properties
-> 6. Read and write CRAM files
-> 7. Selectively strip alignment tags
-> 8. Support for sub-sampling to obtain a BAM file with a coverage limit
+> 1. Filter specifically on read clipping, orientation and insert size (all important for structural variation)
+> 2. Support for considering only high-quality bases when determining read length or clip count
+> 3. [Interval tree][ekg] to efficiently determine if a read overlaps a region
+> 4. Ability to link reads to a genomic region if their mate intersects that region.
+> 5. Provide different rules for different arbitrarily-sized regions, and to provide these regions as common variant files (VCF, MAF, BED)
+> 6. Select reads by matching motifs against a large dictionary using [Aho-Corasick implementation][aho]
+> 7. Count reads that satisfy any number of user-defined properties
+> 8. Selectively strip alignment tags
+> 9. Support for sub-sampling to obtain a BAM file with a coverage limit
 
 VariantBam is implemented in C++ and uses [HTSlib][hlib], a highly optimized C library used as the core of [Samtools][samtools] and [BCFtools][bcf].
 
@@ -96,7 +100,7 @@ Examples
 
 ##### Example Use 1
 Whole-genome analysis has been conducted on a BAM, generating VCF and MAF files. Ideally, these regions could be manually inspected
-or reanalyzed without having to keep the entire BAM. Running VariantBam to extract only reads that overlap these events will allow
+or reanalyzed without having to keep the entire BAM. Running VariantBam to extract only read-pairs that overlap these events will allow
 these regions to be rapidly queried, without having to keep the full BAM record.
 ```
 ### Extract all read PAIRS that interset with a variant from a VCF
@@ -106,9 +110,9 @@ variant $bam -l myvcf.vcf -o mini.bam
 ##### Example Use 2
 In situations where the sequencing or library preparation quality is low, it may be advantageous
 to remove poor quality reads before starting the analysis train. VariantBam handles this by optionally taking into
-account Phred base-qualities when making a decision whether to keep a sequencing read. For instance, one might 
+account base-qualities when making a decision whether to keep a sequencing read. For instance, one might 
 only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be 
-setup to apply unique Phred filters to different regions or across the entire genome, all with one-pass. 
+setup to apply unique base-quality filters to different regions or across the entire genome, all with one-pass. 
 ```
 ### Extract only high quality reads with >= 50 bases of phred >=4 and MAPQ >= 1 and not duplicated/hardclip/qcfail
 ### json
@@ -147,12 +151,12 @@ variant $bam -r example3.json
 ##### Example Use 4
 A user wants to profile a BAM for quality. They would like to count the number of clipped reads in a BAM file, so long
 as those reads have sufficient optical quality and mapping quality. VariantBam run with the -x flag for "counting only" 
-will accomplish this. Let's try an example of this, just for part of chromsome 22
+will accomplish this. Let's try an example of this, just for chromsome 22
 ```
 ## example4.json
 {
 "example4": {
-  "region" : "22:50,000,000-51,304,566"
+  "region" : "22",
   "rules": [{"clip": [5,1000],
     	     "phred": [4, 1000],
              "length": [20, 1000]}]
@@ -161,8 +165,8 @@ will accomplish this. Let's try an example of this, just for part of chromsome 2
 ##
 
 ### 
-variant $bam -g 22:50,000,000-51,304,566 --min-clip 5 --min-phred 4 --min-mapq 10 -x counts.txv 
-variant $bam -r example4.json -x counts.tsv ## using JSON
+variant $bam -g 22 --min-clip 5 --min-phred 4 --min-mapq 10 -c counts.tsv
+variant $bam -r example4.json -c counts.tsv ## using JSON
 ```
 ##### Example Use 5
 A team is only interested in variants in known cancer genes, and would like to analyze thousands of exomes and genomes. Running 
@@ -170,7 +174,7 @@ VariantBam to extract reads from only these genes, and sending the BAM files to 
 to allow all of the relevant data to be stored on disk.
 ```
 ### Grab only reads from predefined regions. Strip unneccessary tags and convert to CRAM for maximum compression
-variant $bam -g mygenes.bed -r all -C -o mini.cram -s BI,OQ
+variant $bam -l mygenes.bed -C -o mini.cram -s BI,OQ
 ```
 ##### Example Use 6
 A research team would like to extract only reads matching a certain motifs, but only if they have high optical quality. 
@@ -189,14 +193,23 @@ the length of a read)
 
 ### 
 variant $bam -r example6.json ## input as a JSON
+variant $bam --min-phred 4 --min-length 20 --motif mymotifs.txt ## using command line shortcuts
 ```
 
 ##### Example Use 7
 To reduce the size of the BAM, reads can be removed from centromeric and satellite repeat regions. These reads are rarely helpful for variant calling.
-To remove reads that intersect a region, set the region as an inverse-region. In a VariantBam script, use ``!region`` or ``!mlregion``. For 
+To remove reads that intersect a region, set the region as an inverse-region. In a VariantBam script, use ``"exclude" : true```. For 
 quick use on the command line, use ``-L`` or ``-G`` (opposites of ``-l`` and ``-g``).
 ```
-### 
+### json 
+{
+  "" : {
+         "region" : "bad.bed",
+         "exclude" : true,
+	 "matelink" : true
+       }
+}
+###
 variant $bam -L bad.bed -o mini.bam -v
 ```
 

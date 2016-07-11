@@ -75,7 +75,10 @@ void VariantBamWalker::writeVariantBam()
 	      buffer.clear();
 	    }
 	  }
+	} else if (!fop) { // we are not outputting anything
+	  ++rc_main.keep;
 	}
+	 
       }
       
       if (++rc_main.total % 1000000 == 0 && m_verbose)
