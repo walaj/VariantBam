@@ -42,7 +42,8 @@ I have succesfully built on Unix with GCC-4.8, 4.9 and 5.1
 git clone --recursive https://github.com/jwalabroad/VariantBam.git
 cd VariantBam
 ./configure
-make
+make 
+## or for slightly higher level of compiler optimization: make CXXFLAGS="-O3"
 ```
 
 Quick Start

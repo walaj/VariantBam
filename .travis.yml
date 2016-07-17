@@ -22,7 +22,7 @@ before_install:
 - if [ "${TRAVIS_OS_NAME}" = "osx" -a "${CXX}" = "clang++" ]; then export CXX="$(which c++)"; export CC="$(which cc)"; fi
 
 script: 
-- ./configure && make
+- ./configure && make CXXFLAGS="-O3"
 
 after_success: 
 - .travis.scripts/coveralls.sh
