@@ -28,7 +28,7 @@ Table of contents
       * [Motif rules](#motif-rules)
       * [Tag rules](#tag-rules)
       * [CIGAR rules](#cigar-rules)
-      * [Subsample rules](#subsample-rules)            
+      * [Subsample rule](#subsample-rule)
   * [Command line usage](#command-line-usage)
     * [Full list of options](#full-list-of-options)
   * [Full list of available JSON rules](#full-list-of-available-json-rules)
