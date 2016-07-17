@@ -20,19 +20,11 @@ AC_CHECK_HEADER([zlib.h])
 AC_SEARCH_LIBS([gzopen],[z],,[AC_MSG_ERROR([libz not found, please install zlib (http://www.zlib.net/)])])
 AC_SEARCH_LIBS([clock_gettime], [rt], [AC_DEFINE([HAVE_CLOCK_GETTIME], [1], [clock_getttime found])], )
 
-AC_ARG_WITH(boost, AS_HELP_STRING([--with-boost=PATH],
-	[specify directory containing the boost library)]))
-if test "$with_boost" -a -d "$with_boost"; then
-    boost_include="-I$with_boost"
-    ##AC_CHECK_FILE("$with_boost/stage/lib", STAGE_PATH=1, STAGE_PATH=0)
-    ##if test ${STAGE_PATH} = 1; then
-    ##     boost_lib="$with_boost/stage/lib"  
-    ##else
-    ##      boost_lib="$with_boost/lib"        
-    ##fi
-    ##boost_lib_flag="-L/$boost_lib"	
-    ##AC_SUBST(boost_lib)
-fi
+##AC_ARG_WITH(boost, AS_HELP_STRING([--with-boost=PATH],
+##	[specify directory containing the boost library)]))
+##if test "$with_boost" -a -d "$with_boost"; then
+##    boost_include="-I$with_boost"
+##fi
 
 # Only fail on warnings when the --enable-development flag is passed into configure
 AC_ARG_ENABLE(development, AS_HELP_STRING([--enable-development],
@@ -44,14 +36,15 @@ fi
 # Set compiler flags.
 AC_SUBST(AM_CXXFLAGS, "-std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
 ##AC_SUBST(AM_CXXFLAGS, "-Wall -Wextra $fail_on_warning -Wno-unknown-pragmas")
-AC_SUBST(CXXFLAGS, "$CXXFLAGS -O3")
-AC_SUBST(CFLAGS, "$CFLAGS -O3")
-AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
-AC_SUBST(LDFLAGS, "$LDFLAGS")
-AC_SUBST(LIBS, "$LIBS")
+##AC_SUBST(CXXFLAGS, "$CXXFLAGS")
+##AC_SUBST(CFLAGS, "$CFLAGS")
+##AC_SUBST(CPPFLAGS, "$CPPFLAGS $boost_include")
+## pthread required for htslib to link
+AC_SUBST(LDFLAGS, "$LDFLAGS -pthread")
+##AC_SUBST(LIBS, "$LIBS")
 
-# Make sure the boost headers can be found
-#AC_CHECK_HEADERS([boost/regex.hpp],,[AC_MSG_ERROR([The Boost library must be installed for VariantBam. Specify its path with the --with-boost=PATH option])])
+# Make sure the boost headers can be found. NOTE: No longer required for VariantBam. No code calls functions in SnowTools that use BOOST
+##AC_CHECK_HEADERS([boost/regex.hpp],[AC_SUBST(CPPFLAGS, "$CPPFLAGS -DHAVE_BOOST")],[AC_MSG_ERROR([The Boost library must be installed for VariantBam. Specify its path with the --with-boost=PATH option])])
 
 AC_CONFIG_FILES([Makefile
                  SnowTools/src/Makefile

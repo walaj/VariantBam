@@ -25,6 +25,10 @@ Table of contents
     * [Rules](#rules)
       * [Range rules](#range-rules)
       * [Flag rules](#flag-rules)
+      * [Motif rules](#motif-rules)
+      * [Tag rules](#tag-rules)
+      * [CIGAR rules](#cigar-rules)
+      * [Subsample rules](#subsample-rules)            
   * [Command line usage](#command-line-usage)
     * [Full list of options](#full-list-of-options)
   * [Full list of available JSON rules](#full-list-of-available-json-rules)
@@ -428,9 +432,30 @@ minimum accepted value (``"mapq" : 30``). To instead reject reads in this bounda
 ``"mapq" : [100, 30]`` accepts only reads with MAPQ < 30 || MAPQ > 100.
 
 ###### Flag rules
-Flag rules can be input using keywords like ``"mapped" : true`` or more versatily using the raw flag ``"!flag" : 4``. Use
+Flag rules can be input using keywords like ``"mapped" : true`` or more versatily using the raw alginmetn flag ``"!flag" : 4``. Use
 ``flag`` to set all of the flags that must be turned on, and ``!flag`` for that must be turned off. Thus, ``"!flag" : 4``
 requires that the "unmapped" bit be turned off, and so accepts only mapped reads.
+
+###### Motif rules
+A set of motifs can be supplied, so that only reads with (or without) the motif are accepted. A motif file is just a list of sequences in upper case, separated by newlines.
+Reverse complements are not automatically considered,
+so these must be explicitly provided. To include reads with a motif, use the ``--motif`` flag for simple rules, or in JSON specify ``"motif" : "motiffile.txt"``. To
+exclude reads with a motif, use JSON key-value pair: ``"!motif" : "motiffile.txt"``.
+
+Variant BAM can also filter based on the number of ``N`` bases in a read, with the ``nbases`` key, input as a range rule (``"nbaes" : [0,3]``)
+
+###### Tag rules
+Filters can be made based on the value of an alignment tag. Supported tags include "rg" (read-group), "nm" (number mismatches), and "xp" (number of supplementary alignments).
+
+###### Cigar rules
+Filters can be supplied to enforce a min (or max) number of insertions or deletions, or number of clipped reads. Note that this refers to the max element size. e.g. a CIGAR
+of ``10M4D20M2D20M`` will pass the filter ``"del" : [0,4]`` but fail the filter ``"del" : [5, 100]``. The number of clipped bases is consider after trimming low-quality bases (if ``phred`` is supplied).
+
+###### Subsample rule
+Region-specific subsampling rates can be applied. For example, in region A you can set ``"subsample" : 0.5``, which will remove half of all reads that otherwise passed the other filters. If a
+read falls into two regions, the region listed first in the JSON will apply.
+
+""
 
 Command Line Usage
 ==================
