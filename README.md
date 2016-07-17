@@ -43,7 +43,6 @@ git clone --recursive https://github.com/jwalabroad/VariantBam.git
 cd VariantBam
 ./configure
 make 
-## or for slightly higher level of compiler optimization: make CXXFLAGS="-O3"
 ```
 
 Quick Start
