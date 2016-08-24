@@ -5,7 +5,7 @@ VariantBam: Filtering and profiling of next-generational sequencing data using r
 
 <div style="text-align:center"><img src="https://raw.githubusercontent.com/jwalabroad/VariantBam/master/labels_vb.png" width="200"></div>
 
-**License:** [GNU GPLv3][license]
+**License:** [Apache2][license]
 
 [Bioinformatics Paper][biop]
 Wala, J., C. Zhang, M. Meyerson, R. Beroukhim. VariantBam: filtering and profiling of nextgenerational sequencing data using region-specific rules. 2016. Bioinformatics, doi: 10.1093/bioinformatics/btw111 
@@ -512,7 +512,7 @@ This project was developed in collaboration with the Cancer Genome Analysis team
 
 [hlib]: https://github.com/samtools/htslib
 
-[aho]: http://sourceforge.net/projects/multifast/
+[aho]: https://github.com/blockchaindev/aho_corasick
 
 [ekg]: https://github.com/ekg/intervaltree
 
