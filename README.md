@@ -12,7 +12,6 @@ Wala, J., C. Zhang, M. Meyerson, R. Beroukhim. VariantBam: filtering and profili
 
 **NOTE:** VariantBam recently was updated to use the more universal JSON syntax, and to remove all dependencies on Boost to make installation easier.
 
-
 Table of contents
 =================
 
@@ -49,7 +48,11 @@ Quick Start
 ===========
 ```
 ## using the included test BAM (HCC1143)
-VariantBam/src/variant test/small.bam -g 'X:1,000,000-1,100,000' --min-mapq 10 -c counts.tsv -o mini.bam -v
+BAMOUTPUT='-b'
+VariantBam/src/variant test/small.bam -g 'X:1,000,000-1,100,000' --min-mapq 10 $BAMOUTPUT -o mini.bam -v
+
+## can stream in and out (out is binary stream with -b flag)
+samtools view -h test/small.bam | variant - --min-mapq 10 -b | bamToBed > out.bed
 
 ## get help
 VariantBam/src/variant --help
@@ -58,19 +61,20 @@ VariantBam/src/variant --help
 
 ## extract all reads and their pair-mates that overlap SNP sites within 100 bp
 rfile=<BED file, samtools-style string (e.g. "1:1,000,000-1,000,010"), or VCF>
-variant <bam> -l $rfile -P 100 -o mini.bam -v
+variant <bam> -l $rfile -P 100 -b -o mini.bam -v
 
 ## mask regions (exclude reads and their pair-mates that overlap)
-variant <bam> -L $rfile -o mini.bam -v 
+variant <bam> -L $rfile -b -o mini.bam -v 
 
 ## extract high-quality clipped reads (where clip length account for low quality bases)
-variant <bam> --min-phred 4 --min-clip 5 -o mini.bam -v
+variant <bam> --min-phred 4 --min-clip 5 -o mini.sam -v
 
 ## extract reads with high mapq that also contain a large insertion or deletion
-variant <bam> --min-mapq 20 --min-ins 10 --min-del 10 -v -o mini.bam
+## pipe output
+variant <bam> --min-mapq 20 --min-ins 10 --min-del 10 | wc -l
 
 ## subsample to max-coverage. BAM must be sorted
-variant <bam> -m 100 -o mini.bam -v
+variant <bam> -m 100 -o mini.bam -v -b
 ```
 
 Description
@@ -108,7 +112,7 @@ or reanalyzed without having to keep the entire BAM. Running VariantBam to extra
 these regions to be rapidly queried, without having to keep the full BAM record.
 ```
 ### Extract all read PAIRS that interset with a variant from a VCF
-variant $bam -l myvcf.vcf -o mini.bam
+variant $bam -l myvcf.vcf -o mini.bam -b
 ```
 
 ##### Example Use 2
@@ -135,7 +139,7 @@ setup to apply unique base-quality filters to different regions or across the en
    }
 }
 ###
-variant $bam -r example2.json -o mini.bam
+variant $bam -r example2.json -o mini.bam -b
 ```
 ##### Example Use 3
 An NGS tool operates only on a subset of the reads (eg. structural variant caller using only clipped/discordant reads). Running VariantBam
@@ -152,26 +156,7 @@ to keep only these reads allows the tool to run much faster. This is particurlal
 ###
 variant $bam -r example3.json
 ```
-##### Example Use 4
-A user wants to profile a BAM for quality. They would like to count the number of clipped reads in a BAM file, so long
-as those reads have sufficient optical quality and mapping quality. VariantBam run with the -x flag for "counting only" 
-will accomplish this. Let's try an example of this, just for chromsome 22
-```
-## example4.json
-{
-"example4": {
-  "region" : "22",
-  "rules": [{"clip": [5,1000],
-    	     "phred": [4, 1000],
-             "length": [20, 1000]}]
-}
-}									  
-##
 
-### 
-variant $bam -g 22 --min-clip 5 --min-phred 4 --min-mapq 10 -c counts.tsv
-variant $bam -r example4.json -c counts.tsv ## using JSON
-```
 ##### Example Use 5
 A team is only interested in variants in known cancer genes, and would like to analyze thousands of exomes and genomes. Running 
 VariantBam to extract reads from only these genes, and sending the BAM files to compressed CRAM provides sufficient data reduction
@@ -214,14 +199,14 @@ quick use on the command line, use ``-L`` or ``-G`` (opposites of ``-l`` and ``-
        }
 }
 ###
-variant $bam -L bad.bed -o mini.bam -v
+variant $bam -L bad.bed -o mini.bam -b
 ```
 
 ##### Example Use 8
 Massive read-pileups can occur at repetitive regions. These can reduced with VariantBam by subsampling to a max-coverage.
 ```
 ### BAM must be sorted
-variant $bam -m 100 -o mini.bam -v
+variant $bam -m 100 -o mini.bam -b
 ```
 
 ##### Example Use 9
@@ -229,7 +214,7 @@ Obtain basic QC stats from a BAM file, or profile how many reads were accepted b
 ```
 ### get QC stats on whole bam AND find how many reads are clipped with high-quality clipped bases
 ### use the -x flag to produce no output (profiling only)
-variant <bam> --min-clip 10 --min-phred 5 -q qcreport.txt -c clipcounts.txt -x
+variant <bam> --min-clip 10 --min-phred 5 -q qcreport.txt -x
 Rscript VariantBam/R/BamQCPlot.R -i qcreport.txt -o qcreport.pdf
 ```
 
@@ -246,8 +231,8 @@ printf "GCAAAAT\nATTTTGC" > motifs.txt
 k="1:143,250,677-143,251,077" 
 r='{"":{"rules":[{"motif":"motifs.txt"}]}}'
 g=1:143250877
-variant <bam> -k $k -g $g -r $r -o mini.bam ## with JSON script
-variant <bam> -k $k -g $g --motif motifs.txt -o mini.bam ## using command line shortcut
+variant <bam> -k $k -g $g -r $r -b -o mini.bam ## with JSON script
+variant <bam> -k $k -g $g --motif motifs.txt -b -o mini.bam ## using command line shortcut
 ```
 
 Because sequence information is required to match a motif, and reads do not contain the sequence information of their pair-mates, 
@@ -257,7 +242,7 @@ extracting all read pairs supporting a particular allele requires a two-pass sol
 ## two pass solution
 variant <bam> -k $k -g $g -r $r | cut -f1 | uniq > q.txt
 printf "^@\n" >> q.txt ## keep the sam header too
-samtools view <bam> $k -h | grep -f q.txt | samtools view - -b > mini.bam
+samtools view <bam> $k | grep -f q.txt | samtools view - -b > mini.bam
 ```
                                              
 This can be expanded for an arbitrary number of heterozygous sites, 
@@ -469,50 +454,6 @@ variant $bam -l myvcf.vcf -f 1 -F 1024 -P 100 -o out.bam
 JSON scripts can also be supplied directly, just make sure to encase in single quotes and remove spaces:
 ```bash
 variant $bam -g WG -r '{"":{"rules":[{"motif":"mymotifs.txt"}]}}' -o out.bam
-```
-
-### Full list of options
-
-```
-Usage: variant <input.bam> [OPTIONS] 
-
-Description: Filter a BAM/CRAM file according to hierarchical rules
-
- General options
-      --help                           Display this help and exit
-  -v, --verbose                        Verbose output
-  -c, --counts-file                    File to place read counts per rule / region
-  -x, --counts-file-only               Same as -c, but does counting only (no output BAM)
-  -r, --rules                          JSON script for the rules.
-  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED of regions to process
- Output options
-  -o, --output-bam                     Output BAM file to write instead of SAM-format stdout
-  -C, --cram                           Output file should be in CRAM format
-  -T, --reference                      Path to reference. Required for reading/writing CRAM
-  -h, --include-header                 When outputting to stdout, include the header.
-  -s, --strip-tags                     Remove the specified tags, separated by commas. eg. -s RG,MD
-  -S, --strip-all-tags                 Remove all alignment tags
- Filtering options
-  -q, --qc-file                        Output a qc file that contains information about BAM
-  -m, --max-coverage                   Maximum coverage of output. BAM must be sorted. Negative vals enforce min coverage.
- Region specifiers
-  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.
-  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read. 
-  -l, --linked-region                  Same as -g, but turns on mate-linking
-  -L, --linked-exclude-region          Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.
-  -P, --region-pad                     Apply a padding to each region supplied with the region flags (specify after region flag)
- Command line rules shortcuts (to be used without supplying a -r script)
-      --min-phred                      Set the minimum base quality score considered to be high-quality
-      --min-clip                       Minimum number of quality clipped bases
-      --max-nbases                     Maximum number of N bases
-      --min-mapq                       Minimum mapping quality
-      --min-del                        Minimum number of inserted bases
-      --min-ins                        Minimum number of deleted bases
-      --min-readlength                 Minimum read length (after base-quality trimming)
-      --motif                          Motif file
-  -R, --read-group                     Limit to just a single read group
-  -f, --include-aln-flag               Flags to include (like samtools -f)
-  -F, --exclude-aln-flag               Flags to exclude (like samtools -F)
 ```
 
 Full list of available JSON rules
