@@ -1,37 +1,49 @@
 #ifndef VARIANT_VARIANT_BAM_WALKER_H__
 #define VARIANT_VARIANT_BAM_WALKER_H__
 
-#include "SnowTools/BamWalker.h"
-#include "SnowTools/BamStats.h"
-#include "SnowTools/BamRead.h"
-#include "SnowTools/STCoverage.h"
+#include "SeqLib/BamReader.h"
+#include "SeqLib/BamWriter.h"
+#include "SeqLib/ReadFilter.h"
+#include "BamStats.h"
+//#include "SnowTools/BamRead.h"
+#include "STCoverage.h"
 
-class VariantBamWalker: public SnowTools::BamWalker
+class VariantBamWalker: public SeqLib::BamReader
 {
  public:
 
   VariantBamWalker() {}
 
-  VariantBamWalker(const std::string in) : SnowTools::BamWalker(in) {}
+  VariantBamWalker(const std::string in) : SeqLib::BamReader(in) {}
 
   void writeVariantBam();
   
-  void TrackSeenRead(SnowTools::BamRead &r);
+  void TrackSeenRead(SeqLib::BamRecord &r);
   
-  void printMessage(const SnowTools::BamRead &r) const;
+  void printMessage(const SeqLib::BamRecord &r) const;
   
-  SnowTools::BamStats m_stats;
+  BamStats m_stats;
 
-  SnowTools::STCoverage cov_a;
-  SnowTools::STCoverage cov_b;
+  STCoverage cov_a;
+  STCoverage cov_b;
 
   int m_seed = 0;
   
   int max_cov = 0;
 
-  void subSampleWrite(SnowTools::BamReadVector& buff, const SnowTools::STCoverage& cov);
+  void subSampleWrite(SeqLib::BamRecordVector& buff, const STCoverage& cov);
 
-  SnowTools::ReadCount rc_main;
+  ReadCount rc_main;
+
+  bool m_verbose = false;
+  
+  SeqLib::ReadFilterCollection m_mr;
+
+  SeqLib::BamWriter m_writer;
+
+  bool m_strip_all_tags = false;
+
+  std::vector<std::string> m_tags_to_strip;
 
 };
 #endif

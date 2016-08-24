@@ -43,12 +43,8 @@ AC_SUBST(AM_CXXFLAGS, "-std=c++11 -Wall -Wextra $fail_on_warning -Wno-unknown-pr
 AC_SUBST(LDFLAGS, "$LDFLAGS -pthread")
 ##AC_SUBST(LIBS, "$LIBS")
 
-# Make sure the boost headers can be found. NOTE: No longer required for VariantBam. No code calls functions in SnowTools that use BOOST
-##AC_CHECK_HEADERS([boost/regex.hpp],[AC_SUBST(CPPFLAGS, "$CPPFLAGS -DHAVE_BOOST")],[AC_MSG_ERROR([The Boost library must be installed for VariantBam. Specify its path with the --with-boost=PATH option])])
-
 AC_CONFIG_FILES([Makefile
-                 SnowTools/src/Makefile
-                 SnowTools/htslib/Makefile
+                 SeqLib/src/Makefile
 	         src/Makefile])
 
 AC_OUTPUT

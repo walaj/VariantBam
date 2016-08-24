@@ -1,35 +1,36 @@
 #include <string>
 #include <getopt.h>
 #include <iostream>
+#include <fstream>
 
-#include "SnowTools/gzstream.h"
-#include "SnowTools/SnowUtils.h"
-#include "SnowTools/GenomicRegionCollection.h"
-#include "SnowTools/GenomicRegion.h"
-#include "SnowTools/SnowToolsCommon.h"
+#include "SeqLib/SeqLibUtils.h"
+#include "SeqLib/GenomicRegionCollection.h"
+#include "SeqLib/GenomicRegion.h"
+#include "SeqLib/SeqLibCommon.h"
 
 #include "VariantBamWalker.h"
+#include "CommandLineRegion.h"
 
-using SnowTools::GenomicRegion;
-using SnowTools::GenomicRegionCollection;
-using SnowTools::GRC;
+using SeqLib::GenomicRegion;
+using SeqLib::GenomicRegionCollection;
+using SeqLib::GRC;
 
 static const char *VARIANT_BAM_USAGE_MESSAGE =
 "Usage: variant <input.bam> [OPTIONS] \n\n"
-"  Description: Filter a BAM/CRAM file according to hierarchical rules\n"
+"  Description: Filter a BAM/SAM/CRAM/STDIN according to hierarchical rules\n"
 "\n"
 " General options\n"
 "      --help                           Display this help and exit\n"
 "  -v, --verbose                        Verbose output\n"
-"  -c, --counts-file                    File to place read counts per rule / region\n"
+  //"  -c, --counts-file                    File to place read counts per rule / region\n"
 "  -x, --no-output                      Don't output reads (used for profiling with -q and/or counting with -c)\n"
 "  -r, --rules                          JSON ecript for the rules.\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED of regions to process\n"
 " Output options\n"
-"  -o, --output-bam                     Output BAM file to write instead of SAM-format stdout\n"
+"  -o, --output                         Output file to write to (BAM/SAM/CRAM) file instead of stdout\n"
 "  -C, --cram                           Output file should be in CRAM format\n"
+"  -b, --bam                            Output should be in binary BAM format\n"
 "  -T, --reference                      Path to reference. Required for reading/writing CRAM\n"
-"  -h, --include-header                 When outputting to stdout, include the header.\n"
 "  -s, --strip-tags                     Remove the specified tags, separated by commas. eg. -s RG,MD\n"
 "  -S, --strip-all-tags                 Remove all alignment tags\n"
 " Filtering options\n"
@@ -55,12 +56,12 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -F, --exclude-aln-flag               Flags to exclude (like samtools -F)\n"
 "\n";
 
-std::vector<SnowTools::CommandLineRegion> command_line_regions;
+std::vector<CommandLineRegion> command_line_regions;
 
-void __check_command_line(std::vector<SnowTools::CommandLineRegion>& c) {
+void __check_command_line(std::vector<CommandLineRegion>& c) {
 
   if (!c.size())
-    c.push_back(SnowTools::CommandLineRegion("WG", -1)); // add whole-genome ALL rule
+    c.push_back(CommandLineRegion("WG", -1)); // add whole-genome ALL rule
 
 }
 
@@ -73,15 +74,14 @@ namespace opt {
   static bool verbose = false;
   static std::string rules = "";
   static std::string proc_regions = "";
-  static bool to_stdout = false;
   static bool cram = false;
-  static bool header = false;
-  static std::string reference = SnowTools::REFHG19;
+  static std::string reference = SeqLib::REFHG19;
   static bool strip_all_tags = false;
   static std::string tag_list = "";
   static std::string counts_file = "";
   static bool noop = false;
   static std::string bam_qcfile = "";
+  static bool bam_output = false;
 }
 
 enum {
@@ -96,12 +96,13 @@ enum {
   OPT_DEL
 };
 
-static const char* shortopts = "hvxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:";
+static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:";
 static const struct option longopts[] = {
-  { "help",                       no_argument, NULL, OPT_HELP },
+  { "help",                       no_argument, NULL, 'h' },
+  { "bam",                        no_argument, NULL, 'b' },
   { "linked-region",              required_argument, NULL, 'l' },
   { "min-length",              required_argument, NULL, OPT_LENGTH },
-  { "min-motif",              required_argument, NULL, OPT_MOTIF },
+  { "motif",              required_argument, NULL, OPT_MOTIF },
   { "min-ins",              required_argument, NULL, OPT_INS},
   { "min-del",              required_argument, NULL, OPT_DEL },
   { "min-phred",              required_argument, NULL, OPT_PHRED },
@@ -114,26 +115,23 @@ static const struct option longopts[] = {
   { "exclude-region",             required_argument, NULL, 'G' },
   { "linked-exclude-region",      required_argument, NULL, 'L' },
   { "max-coverage",               required_argument, NULL, 'm' },
-  { "counts-file",                required_argument, NULL, 'c' },
+  //  { "counts-file",                required_argument, NULL, 'c' },
   { "no-output",                  required_argument, NULL, 'x' },
   { "cram",                       no_argument, NULL, 'C' },
   { "strip-all-tags",             no_argument, NULL, 'S' },
   { "strip-tags",                 required_argument, NULL, 's' },
   { "reference",                  required_argument, NULL, 'T' },
   { "verbose",                    no_argument, NULL, 'v' },
-  { "include-header",             no_argument, NULL, 'h' },
   { "input",                      required_argument, NULL, 'i' },
-  { "output-bam",                 required_argument, NULL, 'o' },
+  { "output",                 required_argument, NULL, 'o' },
   { "qc-file",                    no_argument, NULL, 'q' },
   { "rules",                      required_argument, NULL, 'r' },
   { "region",                     required_argument, NULL, 'g' },
   { "region-pad",                 required_argument, NULL, 'P' },
-  { "region-with-mates",          required_argument, NULL, 'c' },
+  //  { "region-with-mates",          required_argument, NULL, 'c' },
   { "proc-regions-file",          required_argument, NULL, 'k' },
   { NULL, 0, NULL, 0 }
 };
-
-static struct timespec start;
 
 std::string myreplace(std::string &s,
                       std::string toReplace,
@@ -164,7 +162,7 @@ int main(int argc, char** argv) {
 
 #ifndef __APPLE__
   // start the timer
-  clock_gettime(CLOCK_MONOTONIC, &start);
+  //clock_gettime(CLOCK_MONOTONIC, &start);
 #endif
 
   // parse the command line
@@ -185,38 +183,67 @@ int main(int argc, char** argv) {
   }
 
   // setup the walker
-  if (opt::verbose)
-    std::cerr << "...setting up the bam walker" << std::endl;
-  VariantBamWalker walk(opt::bam);
+  VariantBamWalker reader;
+  if (!reader.Open(opt::bam))  {
+    std::cerr << "ERROR: could not open file " << opt::bam << std::endl;
+    exit(EXIT_FAILURE);
+  }
+    
 
   GRC grv_proc_regions;
   if (opt::proc_regions.length()) {
     // set which regions to run
     if (opt::verbose)
       std::cerr << "...setting which regions to run from proc_regions" << std::endl;
-    if (SnowTools::read_access_test(opt::proc_regions)) {
-      grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
+    if (SeqLib::read_access_test(opt::proc_regions)) {
+      grv_proc_regions = GRC(opt::proc_regions, reader.Header());
+      //grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
     } else if (opt::proc_regions.find(":") != std::string::npos) {
-      grv_proc_regions.add(SnowTools::GenomicRegion(opt::proc_regions, walk.header()));
+      grv_proc_regions.add(SeqLib::GenomicRegion(opt::proc_regions, reader.Header()));
     }
     grv_proc_regions.createTreeMap();
   }
 
-  // should it print to stdout?
-  if (opt::to_stdout) {
-    walk.setStdout();
-    walk.setPrintHeader(opt::header);
-  }
-  // should we print to cram
-  else if (opt::cram) {
-    walk.setCram(opt::out, opt::reference);
+  // open for writing
+  if (!opt::noop) {
+    if (opt::out.empty()) {
+      reader.m_writer = SeqLib::BamWriter(opt::bam_output ? SeqLib::BAM : SeqLib::SAM);
+      reader.m_writer.SetHeader(reader.Header());
+      reader.m_writer.Open("-");
+    }
+    // should we print to cram
+    else if (opt::cram) {
+      reader.m_writer = SeqLib::BamWriter(SeqLib::CRAM);
+      reader.m_writer.SetHeader(reader.Header());
+      if (!reader.m_writer.Open(opt::out)) {
+	std::cerr << "ERROR: could not open output CRAM " << opt::out << std::endl;
+	exit(EXIT_FAILURE);
+      }
+      if (!reader.m_writer.SetCramReference(opt::reference)) {
+	std::cerr << "Failed to set CRAM reference file: " << opt::reference << std::endl;
+	exit(EXIT_FAILURE);
+      }
+    } else {
+      reader.m_writer = SeqLib::BamWriter(opt::bam_output ? SeqLib::BAM : SeqLib::SAM);
+      reader.m_writer.SetHeader(reader.Header());
+      if (!reader.m_writer.Open(opt::out)) {
+	std::cerr << "ERROR: could not open output " << (opt::bam_output ? "BAM" : "SAM") << opt::out << std::endl;
+	exit(EXIT_FAILURE);
+      }
+    }
+    reader.m_writer.WriteHeader();
   }
 
   // should we clear tags?
   if (opt::strip_all_tags)
-    walk.setStripAllTags();
-  else if (opt::tag_list.length())
-    walk.setStripTags(opt::tag_list);
+    reader.m_strip_all_tags = true; //.setStripAllTags();
+  else if (opt::tag_list.length()) {
+    std::istringstream iss(opt::tag_list);
+    std::string val;
+    while(std::getline(iss, val, ',')) {
+      reader.m_tags_to_strip.push_back(val);
+    }
+  }
 
   // make the mini rules collection from the rules file
   // this also calls function to parse the BED files
@@ -226,11 +253,10 @@ int main(int argc, char** argv) {
     std::cerr << "Rules script: " << str << std::endl;
   }
 
-  SnowTools::MiniRulesCollection mrc;
-  mrc.h = walk.header();
+  SeqLib::ReadFilterCollection rfc;
   
   if (!opt::rules.empty())
-    mrc = SnowTools::MiniRulesCollection(opt::rules, walk.header());
+    rfc = SeqLib::ReadFilterCollection(opt::rules, reader.Header());
 
   // make sure command_line_reigons makes sense
   if (command_line_regions.size() == 2 && command_line_regions[1].all()) {
@@ -242,18 +268,27 @@ int main(int argc, char** argv) {
   }
     
 
+  if (opt::verbose && command_line_regions.size())
+    std::cerr << "...buliding rules from command line" << std::endl;
+
   // add specific mini rules from command-line
   for (auto& i : command_line_regions) {
-    SnowTools::MiniRules mr(i, walk.header());
-    mr.pad = i.pad;
-    mr.mrc = &mrc;
-    mrc.m_regions.push_back(mr);
+    SeqLib::ReadFilter rf = BuildReadFilterFromCommandLineRegion(i, reader.Header());
+    //SeqLib::MiniRules mr(i, walk.header());
+    //SeqLib::ReadFilter rf(i, reader.Header());
+    //mr.pad = i.pad;
+    //mr.mrc = &mrc;
+    rfc.AddReadFilter(rf);
+    //mrc.m_regions.push_back(mr);
   }
   
-  walk.m_mr = mrc;
+  reader.m_mr = rfc;
+
+  if (opt::verbose)
+    std::cerr << rfc << std::endl;
 
   // set max coverage
-  walk.max_cov = opt::max_cov;
+  reader.max_cov = opt::max_cov;
   if (opt::max_cov > 0 && opt::verbose)
     std::cerr << "--- Setting MAX coverage to: " << opt::max_cov << std::endl;
 
@@ -261,10 +296,11 @@ int main(int argc, char** argv) {
   if (grv_proc_regions.size()) {
     if (opt::verbose)
        std::cerr << "...from -g flag will run on " << grv_proc_regions.size() << " regions" << std::endl;
-    walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
+    //walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
+    reader.SetMultipleRegions(grv_proc_regions);
   }
 
-  SnowTools::GRC rules_rg = walk.GetMiniRulesCollection().getAllRegions();
+  SeqLib::GRC rules_rg = grv_proc_regions; //reader.GetMiniRulesCollection().getAllRegions();
 
   rules_rg.createTreeMap();
 
@@ -278,7 +314,8 @@ int main(int argc, char** argv) {
   }
 
   if (grv_proc_regions.size() > 0 && (rules_rg.size() || has_ml_region )) // explicitly gave regions
-    walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
+    //walk.setBamWalkerRegions(grv_proc_regions.asGenomicRegionVector());
+    reader.SetMultipleRegions(grv_proc_regions);
   /*  else if (rules_rg.size() && !has_ml_region && grv_proc_regions.size() == 0) {
     walk.setBamWalkerRegions(rules_rg.asGenomicRegionVector());
     if (opt::verbose)
@@ -289,23 +326,15 @@ int main(int argc, char** argv) {
     }*/
 
   // should we count all rules (slower)
-  if (opt::counts_file.length())
-    walk.setCountAllRules();
-
-  // open the output BAM/CRAM. If we already set SAM, this does nothing
-  if (!opt::noop)
-    walk.OpenWriteBam(opt::out);
-
-  // if counts or qc only, dont write output
-  //walk.fop = nullptr;
+  //if (opt::counts_file.length())
+  //  reader.m_mr.setCountAllRules();
 
   // print out some info
   if (opt::verbose) 
-    std::cerr << walk << std::endl;
+    std::cerr << reader << std::endl;
 
   // set verbosity of walker
-  if (opt::verbose)
-    walk.setVerbose();
+  reader.m_verbose = opt::verbose;
 
   // do the filtering
   if (opt::verbose)
@@ -314,18 +343,23 @@ int main(int argc, char** argv) {
   ////////////
   /// RUN THE WALKER
   ////////////
-  walk.writeVariantBam();
+  reader.writeVariantBam();
 
   // dump the stats file
   if (opt::bam_qcfile.length()) {
     std::ofstream ofs;
     ofs.open(opt::bam_qcfile);
-    ofs << walk.m_stats;
+    ofs << reader.m_stats;
     ofs.close();
   }
 
   // display the rule counts
-  walk.MiniRulesToFile(opt::counts_file);
+  /*
+  std::ofstream cfile;
+  cfile.open(opt::counts_file.c_str());
+  cfile << reader.m_mr.EmitCounts(); //MiniRulesToFile(opt::counts_file);
+  cfile.close();
+  */
 
   // make a bed file
   //if (opt::verbose > 0)
@@ -334,11 +368,11 @@ int main(int argc, char** argv) {
 
   // index it
 #ifdef HAVE_BAMTOOLS
-  walk.MakeIndex();
+  reader.BuildIndex();
 #endif
 
-  if (opt::verbose) 
-    std::cerr << "--- Total time: " << SnowTools::displayRuntime(start) << std::endl;
+  //if (opt::verbose) 
+  // std::cerr << "--- Total time: " << SeqLib::displayRuntime(start) << std::endl;
   
   return 0;
 }
@@ -360,33 +394,33 @@ void parseVarOptions(int argc, char** argv) {
     
     std::string tmp;
     switch (c) {
-    case OPT_HELP: die = true; break;
+    case 'h': die = true; break;
     case 'v': opt::verbose = true; break;
     case 's': arg >> opt::tag_list; break;
     case 'S': opt::strip_all_tags = true; break;
     case 'T': arg >> opt::reference; break;
     case 'C': opt::cram = true; break;
-    case 'h': opt::header = true;
     case 'i': arg >> opt::bam; break;
     case 'o': arg >> opt::out; break;
     case 'm': arg >> opt::max_cov; break;
+    case 'b': opt::bam_output = true; break;
     case 'l': 
 	arg >> tmp;
-	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_MATE_LINKED));
+	command_line_regions.push_back(CommandLineRegion(tmp, MINIRULES_MATE_LINKED));
 	break;
     case 'L': 
 	arg >> tmp;
-	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_MATE_LINKED_EXCLUDE));
+	command_line_regions.push_back(CommandLineRegion(tmp, MINIRULES_MATE_LINKED_EXCLUDE));
 	break;
     case 'g': 
 	arg >> tmp;
-	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_REGION));
+	command_line_regions.push_back(CommandLineRegion(tmp, MINIRULES_REGION));
 	break;
     case 'G': 
 	arg >> tmp;
-	command_line_regions.push_back(SnowTools::CommandLineRegion(tmp, MINIRULES_REGION_EXCLUDE));	
+	command_line_regions.push_back(CommandLineRegion(tmp, MINIRULES_REGION_EXCLUDE));	
 	break;
-    case 'c': arg >> opt::counts_file; break;
+	//    case 'c': arg >> opt::counts_file; break;
     case 'R':
       __check_command_line(command_line_regions);
       arg >> command_line_regions.back().rg;
@@ -394,6 +428,10 @@ void parseVarOptions(int argc, char** argv) {
     case OPT_MAPQ:
       __check_command_line(command_line_regions);
       arg >> command_line_regions.back().mapq;
+      break;
+    case OPT_MOTIF:
+      __check_command_line(command_line_regions);
+      arg >> command_line_regions.back().motif;
       break;
     case OPT_CLIP:
       __check_command_line(command_line_regions);
@@ -440,7 +478,7 @@ void parseVarOptions(int argc, char** argv) {
 	arg >> tmp;
 
 	// check if it's a file
-	if (SnowTools::read_access_test(tmp)) 
+	if (SeqLib::read_access_test(tmp)) 
 	  {
 	    std::ifstream iss(tmp);
 	    std::string val;
@@ -458,8 +496,6 @@ void parseVarOptions(int argc, char** argv) {
 
   if (opt::bam == "")
     die = true;
-  if (opt::out == "" && !opt::noop)
-    opt::to_stdout = true;
 
   // dont stop the run for bad bams for quality checking only
   //opt::perc_limit = opt::qc_only ? 101 : opt::perc_limit;

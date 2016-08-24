@@ -6,18 +6,17 @@ void VariantBamWalker::writeVariantBam()
 
 #ifndef __APPLE__
   // start the timer
-  clock_gettime(CLOCK_MONOTONIC, &start);
+  //clock_gettime(CLOCK_MONOTONIC, &start);
 #endif
 
-  SnowTools::BamRead r;
-  bool rule;
+  SeqLib::BamRecord r;
 
   bool COV_A = true;
   int32_t buffer_size = 10000;
-  SnowTools::BamReadVector buffer;
+  SeqLib::BamRecordVector buffer;
 
   // check if the BAM is sorted by looking at the header
-  std::string hh = std::string(header()->text);
+  std::string hh = m_hdr.AsString(); //std::string(header()->text);
   bool sorted = hh.find("SO:coord") != std::string::npos;
 
   if (!sorted && max_cov > 0) {
@@ -31,7 +30,9 @@ void VariantBamWalker::writeVariantBam()
     if (k.width() < 1000)
       k.pad(1000);
 
-  while (GetNextRead(r, rule)) {
+  while (GetNextRecord(r)) {
+
+    bool rule = m_mr.isValid(r);
 
       // prepare for case of long reads
       buffer_size = std::max((int32_t)r.Length() * 5, buffer_size);
@@ -48,10 +49,10 @@ void VariantBamWalker::writeVariantBam()
       // read is valid
       if (rule) {
 
-	if (max_cov == 0 && fop) {// if we specified an output file, write it
-	  writeAlignment(r);
+	if (max_cov == 0 && m_writer.IsOpen()) {// if we specified an output file, write it
+	  m_writer.WriteRecord(r);
 	  ++rc_main.keep;
-	} else if (fop) {
+	} else if (m_writer.IsOpen()) {
 	  buffer.push_back(r);
 
 	  // clear buffer
@@ -75,7 +76,7 @@ void VariantBamWalker::writeVariantBam()
 	      buffer.clear();
 	    }
 	  }
-	} else if (!fop) { // we are not outputting anything
+	} else if (!m_writer.IsOpen()) { // we are not outputting anything
 	  ++rc_main.keep;
 	}
 	 
@@ -105,7 +106,7 @@ void VariantBamWalker::writeVariantBam()
     printMessage(r);
 }
 
-void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const SnowTools::STCoverage& cov) {
+void VariantBamWalker::subSampleWrite(SeqLib::BamRecordVector& buff, const STCoverage& cov) {
 
   for (auto& r : buff)
     {
@@ -123,7 +124,7 @@ void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const Snow
 	{
 	  uint32_t k = __ac_Wang_hash(__ac_X31_hash_string(r.Qname().c_str()) ^ m_seed);
 	  if ((double)(k&0xffffff) / 0x1000000 <= sample_rate) { // passed the random filter
-	    writeAlignment(r);
+	    m_writer.WriteRecord(r);
 	    ++rc_main.keep;
 	  }
 	}
@@ -135,7 +136,7 @@ void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const Snow
       else // didn't have a coverage problems
 	{
 	  ++rc_main.keep;
-	  writeAlignment(r);
+	  m_writer.WriteRecord(r);
 	}
       
     }
@@ -143,24 +144,24 @@ void VariantBamWalker::subSampleWrite(SnowTools::BamReadVector& buff, const Snow
 
 }
 
-void VariantBamWalker::TrackSeenRead(SnowTools::BamRead &r)
+void VariantBamWalker::TrackSeenRead(SeqLib::BamRecord &r)
 {
   m_stats.addRead(r);
 }
 
-void VariantBamWalker::printMessage(const SnowTools::BamRead &r) const 
+void VariantBamWalker::printMessage(const SeqLib::BamRecord &r) const 
 {
 
   char buffer[90];
 
-  std::string posstring = SnowTools::AddCommas<int>(r.Position());
+  std::string posstring = SeqLib::AddCommas<int>(r.Position());
   std::string chrname;
-  try { chrname = SnowTools::GenomicRegion::chrToString(r.ChrID()); } catch(...) { chrname = "CHR_NAME_FAIL"; } 
+  try { chrname = Header().IDtoName(r.ChrID()); } catch(...) { chrname = "CHR_NAME_FAIL"; } 
 
   if (rc_main.total <= 0) {
     std::sprintf(buffer, "NO READS FOUND at %2s:%-11s",chrname.c_str(), posstring.c_str());
     std::string outr(buffer);
-    std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;
+    //std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;
     return;
   }
 
@@ -168,6 +169,6 @@ void VariantBamWalker::printMessage(const SnowTools::BamRead &r) const
 		rc_main.totalString().c_str(), chrname.c_str(), posstring.c_str(),  
 		rc_main.keepString().c_str(), rc_main.percent());
   std::string outr(buffer);
-  std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;;
+  //std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;;
   
 }
