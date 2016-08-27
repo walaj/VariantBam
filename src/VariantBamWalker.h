@@ -12,9 +12,7 @@ class VariantBamWalker: public SeqLib::BamReader
 {
  public:
 
-  VariantBamWalker() {}
-
-  VariantBamWalker(const std::string in) : SeqLib::BamReader(in) {}
+   VariantBamWalker() {}
 
   void writeVariantBam();
   
@@ -37,7 +35,7 @@ class VariantBamWalker: public SeqLib::BamReader
 
   bool m_verbose = false;
   
-  SeqLib::ReadFilterCollection m_mr;
+  SeqLib::Filter::ReadFilterCollection m_mr;
 
   SeqLib::BamWriter m_writer;
 

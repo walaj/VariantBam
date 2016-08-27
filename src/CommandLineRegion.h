@@ -32,9 +32,9 @@ CommandLineRegion(const std::string& mf, int t) : f(mf), type(t), pad(0), i_flag
 
 };
 
-static SeqLib::ReadFilter BuildReadFilterFromCommandLineRegion(const CommandLineRegion& c, const SeqLib::BamHeader& hdr) {
+static SeqLib::Filter::ReadFilter BuildReadFilterFromCommandLineRegion(const CommandLineRegion& c, const SeqLib::BamHeader& hdr) {
 
-  SeqLib::ReadFilter r;
+  SeqLib::Filter::ReadFilter r;
   //r.m_region_file = c.f;
   
   // set a whole genome ALL rule
@@ -48,7 +48,7 @@ static SeqLib::ReadFilter BuildReadFilterFromCommandLineRegion(const CommandLine
   }
   
   // add the abstract rule
-  SeqLib::AbstractRule ar;
+  SeqLib::Filter::AbstractRule ar;
   
   // set the flag
   if (c.i_flag || c.e_flag) {
@@ -58,28 +58,26 @@ static SeqLib::ReadFilter BuildReadFilterFromCommandLineRegion(const CommandLine
   
   // set the other fields
   if (c.len)
-    ar.len = SeqLib::Range(c.len, INT_MAX, false);
+    ar.len = SeqLib::Filter::Range(c.len, INT_MAX, false);
   if (c.nbases != INT_MAX)
-    ar.nbases = SeqLib::Range(0, c.nbases, false);
+    ar.nbases = SeqLib::Filter::Range(0, c.nbases, false);
   if (c.phred)
-    ar.phred = SeqLib::Range(c.phred, INT_MAX, false);
+    ar.phred = SeqLib::Filter::Range(c.phred, INT_MAX, false);
   if (c.mapq)
-    ar.mapq = SeqLib::Range(c.mapq, INT_MAX, false);
+    ar.mapq = SeqLib::Filter::Range(c.mapq, INT_MAX, false);
   if (c.clip)
-    ar.clip = SeqLib::Range(c.clip, INT_MAX, false);
+    ar.clip = SeqLib::Filter::Range(c.clip, INT_MAX, false);
   if (c.del)
-    ar.del = SeqLib::Range(c.del, INT_MAX, false);
+    ar.del = SeqLib::Filter::Range(c.del, INT_MAX, false);
   if (c.ins)
-    ar.ins = SeqLib::Range(c.ins, INT_MAX, false);
+    ar.ins = SeqLib::Filter::Range(c.ins, INT_MAX, false);
   
   // set the id
   //ar.id = id + "_CMD_RULE";
   
-#ifdef HAVE_AHO_CORASICK
   // add a motif rule
   if (!c.motif.empty())
     ar.addMotifRule(c.motif, false);
-#endif
   
   // add read group rule
   ar.SetReadGroup(c.rg);

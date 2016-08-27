@@ -9,12 +9,12 @@
 
   void STCoverage::settleCoverage() {
     SeqLib::GRC tmp = m_grc;
-    m_grc.mergeOverlappingIntervals();
+    m_grc.MergeOverlappingIntervals();
   }
   
   STCoverage::STCoverage(const SeqLib::GenomicRegion& gr) {
     m_gr = gr;
-    v = uint16_sp(new std::vector<uint16_t>(gr.width(),0));
+    v = uint16_sp(new std::vector<uint16_t>(gr.Width(),0));
   }
 
   uint16_t STCoverage::maxCov() const {

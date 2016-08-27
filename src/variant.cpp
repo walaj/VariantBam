@@ -36,10 +36,10 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  Description: Filter a BAM/SAM/CRAM/STDIN according to hierarchical rules\n"
 "\n"
 " General options\n"
-"      --help                           Display this help and exit\n"
+"  -h, --help                           Display this help and exit\n"
 "  -v, --verbose                        Verbose output\n"
   //"  -c, --counts-file                    File to place read counts per rule / region\n"
-"  -x, --no-output                      Don't output reads (used for profiling with -q and/or counting with -c)\n"
+"  -x, --no-output                      Don't output reads (used for profiling with -q)\n"
 "  -r, --rules                          JSON ecript for the rules.\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED of regions to process\n"
 " Output options\n"
@@ -63,9 +63,9 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "      --min-clip                       Minimum number of quality clipped bases\n"
 "      --max-nbases                     Maximum number of N bases\n"
 "      --min-mapq                       Minimum mapping quality\n"
-"      --min-del                        Minimum number of inserted bases\n"
-"      --min-ins                        Minimum number of deleted bases\n"
-"      --min-readlength                 Minimum read length (after base-quality trimming)\n"
+"      --min-del                        Minimum number of deleted bases\n"
+"      --min-ins                        Minimum number of inserted bases\n"
+"      --min-length                     Minimum read length (after base-quality trimming)\n"
 "      --motif                          Motif file\n"
 "  -R, --read-group                     Limit to just a single read group\n"
 "  -f, --include-aln-flag               Flags to include (like samtools -f)\n"
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
 
 #ifndef __APPLE__
   // start the timer
-  //clock_gettime(CLOCK_MONOTONIC, &start);
+  // clock_gettime(CLOCK_MONOTONIC, &start);
 #endif
 
   // parse the command line
@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
     } else if (opt::proc_regions.find(":") != std::string::npos) {
       grv_proc_regions.add(SeqLib::GenomicRegion(opt::proc_regions, reader.Header()));
     }
-    grv_proc_regions.createTreeMap();
+    grv_proc_regions.CreateTreeMap();
   }
 
   // open for writing
@@ -269,10 +269,10 @@ int main(int argc, char** argv) {
     std::cerr << "Rules script: " << str << std::endl;
   }
 
-  SeqLib::ReadFilterCollection rfc;
+  SeqLib::Filter::ReadFilterCollection rfc;
   
   if (!opt::rules.empty())
-    rfc = SeqLib::ReadFilterCollection(opt::rules, reader.Header());
+    rfc = SeqLib::Filter::ReadFilterCollection(opt::rules, reader.Header());
 
   // make sure command_line_reigons makes sense
   if (command_line_regions.size() == 2 && command_line_regions[1].all()) {
@@ -289,7 +289,7 @@ int main(int argc, char** argv) {
 
   // add specific mini rules from command-line
   for (auto& i : command_line_regions) {
-    SeqLib::ReadFilter rf = BuildReadFilterFromCommandLineRegion(i, reader.Header());
+    SeqLib::Filter::ReadFilter rf = BuildReadFilterFromCommandLineRegion(i, reader.Header());
     //SeqLib::MiniRules mr(i, walk.header());
     //SeqLib::ReadFilter rf(i, reader.Header());
     //mr.pad = i.pad;
@@ -318,7 +318,7 @@ int main(int argc, char** argv) {
 
   SeqLib::GRC rules_rg = grv_proc_regions; //reader.GetMiniRulesCollection().getAllRegions();
 
-  rules_rg.createTreeMap();
+  rules_rg.CreateTreeMap();
 
   if (grv_proc_regions.size() && rules_rg.size()) { // intersect rules regions with mask regions. 
     // dont incorporate rules regions if there are any mate-linked regions

@@ -16,7 +16,7 @@ void VariantBamWalker::writeVariantBam()
   SeqLib::BamRecordVector buffer;
 
   // check if the BAM is sorted by looking at the header
-  std::string hh = m_hdr.AsString(); //std::string(header()->text);
+  std::string hh = Header().AsString(); //std::string(header()->text);
   bool sorted = hh.find("SO:coord") != std::string::npos;
 
   if (!sorted && max_cov > 0) {
@@ -27,8 +27,8 @@ void VariantBamWalker::writeVariantBam()
 
   // check that regions are sufficient size
   for (auto& k : m_region)
-    if (k.width() < 1000)
-      k.pad(1000);
+    if (k.Width() < 1000)
+      k.Pad(1000);
 
   while (GetNextRecord(r)) {
 
@@ -37,7 +37,6 @@ void VariantBamWalker::writeVariantBam()
       // prepare for case of long reads
       buffer_size = std::max((int32_t)r.Length() * 5, buffer_size);
 
-      //std::cerr << "...r " << r << " rule " << rule << std::endl;
       TrackSeenRead(r);
 
       // add coverage
@@ -160,15 +159,12 @@ void VariantBamWalker::printMessage(const SeqLib::BamRecord &r) const
 
   if (rc_main.total <= 0) {
     std::sprintf(buffer, "NO READS FOUND at %2s:%-11s",chrname.c_str(), posstring.c_str());
-    std::string outr(buffer);
-    //std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;
+    std::cerr << std::string(buffer) << std::endl;
     return;
   }
 
   std::sprintf (buffer, "Read %11s at %2s:%-11s. Kept %10s (%2d%%) -- ",  
 		rc_main.totalString().c_str(), chrname.c_str(), posstring.c_str(),  
 		rc_main.keepString().c_str(), rc_main.percent());
-  std::string outr(buffer);
-  //std::cerr << outr << SnowTools::displayRuntime(start) << std::endl;;
-  
+  std::cerr << std::string(buffer) << std::endl;
 }
