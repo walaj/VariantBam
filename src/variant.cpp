@@ -52,6 +52,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 " Filtering options\n"
 "  -q, --qc-file                        Output a qc file that contains information about BAM\n"
 "  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted. Negative values enforce a minimum coverage\n"
+"  -p, --min-phred                      Set the minimum base quality score considered to be high-quality\n"
 " Region specifiers\n"
 "  -g, --region                         Regions (e.g. myvcf.vcf or WG for whole genome) or newline seperated subsequence file.\n"
 "  -G, --exclude-region                 Same as -g, but for region where satisfying a rule EXCLUDES this read.\n"
@@ -59,7 +60,6 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -L, --linked-exclude-region          Same as -l, but for mate-linked region where satisfying this rule EXCLUDES this read.\n"
 "  -P, --region-pad                     Apply a padding to each region supplied with the region flags (specify after region flag)\n"
 " Command line rules shortcuts (to be used without supplying a -r script)\n"
-"      --min-phred                      Set the minimum base quality score considered to be high-quality\n"
 "      --min-clip                       Minimum number of quality clipped bases\n"
 "      --max-nbases                     Maximum number of N bases\n"
 "      --min-mapq                       Minimum mapping quality\n"
@@ -83,6 +83,7 @@ void __check_command_line(std::vector<CommandLineRegion>& c) {
 
 namespace opt {
 
+  static int phred = -1;
   static std::string blacklist;
   static std::string bam;
   static std::string out;
@@ -104,7 +105,6 @@ enum {
   OPT_HELP,
   OPT_LENGTH,
   OPT_MAPQ,
-  OPT_PHRED,
   OPT_NBASES,
   OPT_CLIP,
   OPT_MOTIF,
@@ -112,7 +112,7 @@ enum {
   OPT_DEL
 };
 
-static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:";
+static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:p:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, 'h' },
   { "bam",                        no_argument, NULL, 'b' },
@@ -121,7 +121,7 @@ static const struct option longopts[] = {
   { "motif",              required_argument, NULL, OPT_MOTIF },
   { "min-ins",              required_argument, NULL, OPT_INS},
   { "min-del",              required_argument, NULL, OPT_DEL },
-  { "min-phred",              required_argument, NULL, OPT_PHRED },
+  { "min-phred",              required_argument, NULL, 'p' },
   { "min-mapq",              required_argument, NULL, OPT_MAPQ },
   { "min-clip",              required_argument, NULL, OPT_CLIP },
   { "max-nbases",              required_argument, NULL, OPT_NBASES },
@@ -205,6 +205,8 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
     
+  // set the phred trim limit
+  reader.phred = opt::phred;
 
   GRC grv_proc_regions;
   if (opt::proc_regions.length()) {
@@ -457,9 +459,8 @@ void parseVarOptions(int argc, char** argv) {
       __check_command_line(command_line_regions);
       arg >> command_line_regions.back().len;
       break;
-    case OPT_PHRED:
-      __check_command_line(command_line_regions);
-      arg >> command_line_regions.back().phred;
+    case 'p':
+      arg >> opt::phred; break;
       break;
     case OPT_NBASES:
       __check_command_line(command_line_regions);

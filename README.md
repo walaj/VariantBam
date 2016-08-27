@@ -122,13 +122,12 @@ account base-qualities when making a decision whether to keep a sequencing read.
 only be interested in high quality MAPQ 0 or clipped reads. VariantBam can be 
 setup to apply unique base-quality filters to different regions or across the entire genome, all with one-pass. 
 ```
-### Extract only high quality reads with >= 50 bases of phred >=4 and MAPQ >= 1 and not duplicated/hardclip/qcfail
+### Extract only high quality reads with >= 50 bases  and MAPQ >= 1 and not duplicated/hardclip/qcfail
 ### json
 {
   "region1" : {
   "region"  : "WG",
   "rules" : [{
-      "phred" : [4, 100],
       "length" : [50,1000],
       "mapq" : [1, 60],
       "duplicate" : false,
@@ -148,7 +147,7 @@ to keep only these reads allows the tool to run much faster. This is particurlal
 ### Extract clipped, discordant, unmapped and indel reads
 ### json
 {
-  "global" : { "nbases" : [0,0], "hardclip" : false, "supplementary" : false, "qcfail" : false, "phred" : [4,100] },
+  "global" : { "nbases" : [0,0], "hardclip" : false, "supplementary" : false, "qcfail" : false},
   "region_wg" : {"region" : "WG", "rules" : [ 
          { "mapq" : [0, 1000], "clip" : [5,1000] }, {"ic" : true}, {"ff" : true}, {"rf" : true}, {"rr" : true}, { "ins" : [1,1000], "mapq" : [1,100] }, { "del" : [1,1000], "mapq" : [1,1000] } 
   ]}
@@ -174,7 +173,6 @@ the length of a read)
 {
 "example6": {
   "rules": [{"motif": "mymotifs.txt",
-    	     "phred": 4,
              "length": 20 }]
 }
 }									  
@@ -182,7 +180,7 @@ the length of a read)
 
 ### 
 variant $bam -r example6.json ## input as a JSON
-variant $bam --min-phred 4 --min-length 20 --motif mymotifs.txt ## using command line shortcuts
+variant $bam --min-length 20 --motif mymotifs.txt ## using command line shortcuts
 ```
 
 ##### Example Use 7
@@ -434,7 +432,7 @@ Filters can be made based on the value of an alignment tag. Supported tags inclu
 
 ###### Cigar rules
 Filters can be supplied to enforce a min (or max) number of insertions or deletions, or number of clipped reads. Note that this refers to the max element size. e.g. a CIGAR
-of ``10M4D20M2D20M`` will pass the filter ``"del" : [0,4]`` but fail the filter ``"del" : [5, 100]``. The number of clipped bases is consider after trimming low-quality bases (if ``phred`` is supplied).
+of ``10M4D20M2D20M`` will pass the filter ``"del" : [0,4]`` but fail the filter ``"del" : [5, 100]``. The number of clipped bases is consider after trimming low-quality bases (if ``--min-phred`` is supplied).
 
 ###### Subsample rule
 Region-specific subsampling rates can be applied. For example, in region A you can set ``"subsample" : 0.5``, which will remove half of all reads that otherwise passed the other filters. If a
@@ -461,8 +459,10 @@ Full list of available JSON rules
 
 ```
     #RULE           #EXAMPLE                   #DESCRIPTION OF EXAMPLE / FLAG
-    flag            "flag" : 4                 Set the flag bits that must be ON
-    !flag           "!flag" : 4                Set the flag bits that must be OFF
+    anyflag         "anyflag" : 4              Set the flag bits that, if ON pass read
+    !anyflag        "!anyflag" : 4             Set the flag bits that, if OFF pass read
+    allflag         "allflag" : 4              Require that all these flag bits be ON
+    !allflag        "!allflag" : 4             Require that all these flag bits be OFF
     motif           "motif" : seqs.txt         File containing substrings that must be present in the sequence.
     !motif          "!motif" : seqs.txt        File containing substrings that must NOT be present in the sequence.
     rg              "rg" : "H01PE.2"           Limit to just a single read-group 
@@ -487,12 +487,11 @@ Full list of available JSON rules
                     "ins" : [101,5]            ... Take only reads with max insertion size NOT in [5,101] (e.g. 0-4)
     del             "del"  : [5,101]           Number of deleted bases relative to reference (from parsed CIGAR string). 
     nm              "nm" : [0,4]               NM tag from BAM (number of mismatches). e.g. must be 0-4 inclusive
-    xp              "xp" : [0,4]               Number of supplementary aligments, with XP or XA tag from BAM (hold identity of supplementary alignments)
+    xp              "xp" : [0,4]               Number of chimeric aligments, with XP or SA tag from BAM
     isize           "isize" : [100,500]        Insert size, where all insert sizes are converted to positive.
     len             "len" : [80,101]           Length of the read following phred trimming. If phred trimming, don't count hardclips. If not, then HC count to length
     clip            "clip" : [0,5]             Number of clipped bases following phred trimming
     nbases          "nbases" : [0,5]           Removed reads that have within this range of N bases.
-    phred           "phred" : [4,100]          Range of phred scores that are considered 'high-quality'
 ```
 
 Attributions

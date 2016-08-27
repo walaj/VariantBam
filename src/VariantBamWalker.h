@@ -31,6 +31,8 @@ class VariantBamWalker: public SeqLib::BamReader
 
   void subSampleWrite(SeqLib::BamRecordVector& buff, const STCoverage& cov);
 
+  int phred = -1;
+
   ReadCount rc_main;
 
   bool m_verbose = false;

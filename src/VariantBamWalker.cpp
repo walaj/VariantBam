@@ -32,6 +32,10 @@ void VariantBamWalker::writeVariantBam()
 
   while (GetNextRecord(r)) {
 
+    int s, e;
+    if (phred > 0)
+      r.QualityTrimmedSequence(phred, s, e);
+
     bool rule = m_mr.isValid(r);
 
       // prepare for case of long reads
