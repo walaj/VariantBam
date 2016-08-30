@@ -158,7 +158,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 variant_CPPFLAGS = \
-     -I$(top_srcdir)/SeqLib/src \
+     -I$(top_srcdir)/SeqLib \
      -I$(top_srcdir)/SeqLib/htslib
 
 variant_LDADD = \

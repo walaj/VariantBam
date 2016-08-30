@@ -118,39 +118,21 @@ void STCoverage::ToBedgraph(std::ofstream * o, const SeqLib::BamHeader h) const 
   
   int STCoverage::getCoverageAtPosition(int chr, int pos) const {
 
-    //CovMapMap::iterator it = m_map.find(chr);
-    //if (it == m_map.end())
-    //  return 0;
     if (chr >= (int)m_map.size())
       return 0;
-    
-    //std::cerr << " MAP " << std::endl;
-    //for (auto& i : m_map)
-    //  std::cerr << i.first << " " << i.second << std::endl;
-    
-    //if (!m_settled)
-    //  settleCoverage();
 
-    //if (pos < m_gr.pos1 || pos > m_gr.pos2) {
-      //std::cerr << "Coverage query out of bounds for location " << m_gr.chr << ":" << pos << std::endl;
-    //  return 0;
-    //}
-    
-    //size_t q = pos - m_gr.pos1;
-    //if (q >= v->size()) {
-    // std::cerr << "Coverage query out of bounds for location " << m_gr.chr << ":" << pos << " with pos-start of " << q << " attempt on v of size " << v->size() << std::endl;
-    //  return 0;
-    //}
-    //return it->second[pos];
-    
+    if (chr < 0)
+      return 0;
+
+    if (!m_map[chr].size())
+      return 0;
+
     CovMap::const_iterator ff = m_map[chr].find(pos);
+    
     if (ff == m_map[chr].end()) {
       return 0;
     }
 
     return ff->second;
-
-    //return (v->at(q));
-    
 
 }

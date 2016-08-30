@@ -1,7 +1,7 @@
 bin_PROGRAMS = variant
 
 variant_CPPFLAGS = \
-     -I$(top_srcdir)/SeqLib/src \
+     -I$(top_srcdir)/SeqLib \
      -I$(top_srcdir)/SeqLib/htslib
 
 variant_LDADD = \

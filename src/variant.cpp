@@ -210,14 +210,13 @@ int main(int argc, char** argv) {
 
   GRC grv_proc_regions;
   if (opt::proc_regions.length()) {
-    // set which regions to run
-    if (opt::verbose)
-      std::cerr << "...setting which regions to run from proc_regions" << std::endl;
     if (SeqLib::read_access_test(opt::proc_regions)) {
       grv_proc_regions = GRC(opt::proc_regions, reader.Header());
-      //grv_proc_regions.regionFileToGRV(opt::proc_regions, 0, walk.header()); // 0 is pad
     } else if (opt::proc_regions.find(":") != std::string::npos) {
       grv_proc_regions.add(SeqLib::GenomicRegion(opt::proc_regions, reader.Header()));
+    } else {
+      std::cerr << "...unexpected region format or could not read file" << std::endl;
+      exit(EXIT_FAILURE);
     }
     grv_proc_regions.CreateTreeMap();
   }
@@ -364,7 +363,7 @@ int main(int argc, char** argv) {
   reader.writeVariantBam();
 
   // dump the stats file
-  if (opt::bam_qcfile.length()) {
+  if (!opt::bam_qcfile.empty()) {
     std::ofstream ofs;
     ofs.open(opt::bam_qcfile);
     ofs << reader.m_stats;
@@ -383,14 +382,6 @@ int main(int argc, char** argv) {
   //if (opt::verbose > 0)
   //  std::cerr << "...sending merged regions to BED file" << std::endl;
   //mr->sendToBed("merged_rules.bed");
-
-  // index it
-#ifdef HAVE_BAMTOOLS
-  reader.BuildIndex();
-#endif
-
-  //if (opt::verbose) 
-  // std::cerr << "--- Total time: " << SeqLib::displayRuntime(start) << std::endl;
   
   return 0;
 }
