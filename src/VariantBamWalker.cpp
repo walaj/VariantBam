@@ -159,7 +159,15 @@ void VariantBamWalker::printMessage(const SeqLib::BamRecord &r) const
 
   std::string posstring = SeqLib::AddCommas<int>(r.Position());
   std::string chrname;
-  try { chrname = Header().IDtoName(r.ChrID()); } catch(...) { chrname = "CHR_NAME_FAIL"; } 
+  if (r.ChrID() == -1)
+    chrname = "Unmapped";
+  else {
+    try { 
+      chrname = Header().IDtoName(r.ChrID()); 
+    } catch(...) { 
+      chrname = "CHR_NAME_FAIL"; 
+    } 
+  }
 
   if (rc_main.total <= 0) {
     std::sprintf(buffer, "NO READS FOUND at %2s:%-11s",chrname.c_str(), posstring.c_str());

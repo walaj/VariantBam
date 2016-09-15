@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/jwalabroad/VariantBam.svg?branch=master)](https://travis-ci.org/jwalabroad/VariantBam)
+[![Build Status](https://travis-ci.org/walaj/VariantBam.svg?branch=master)](https://travis-ci.org/walaj/VariantBam)
 
 VariantBam: Filtering and profiling of next-generational sequencing data using region-specific rules
 ======================================================================================================
@@ -32,7 +32,7 @@ Table of contents
     * [Full list of options](#full-list-of-options)
   * [Full list of available JSON rules](#full-list-of-available-json-rules)
   * [Attributions](#attributions)
-
+x
 Installation
 ============
 I have succesfully built on Unix with GCC-4.8, 4.9 and 5.1

@@ -41,7 +41,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
   //"  -c, --counts-file                    File to place read counts per rule / region\n"
 "  -x, --no-output                      Don't output reads (used for profiling with -q)\n"
 "  -r, --rules                          JSON ecript for the rules.\n"
-"  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED of regions to process\n"
+"  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED/VCF of regions to process. -k UN iterates over unmapped-unmapped reads\n"
 " Output options\n"
 "  -o, --output                         Output file to write to (BAM/SAM/CRAM) file instead of stdout\n"
 "  -C, --cram                           Output file should be in CRAM format\n"
@@ -214,6 +214,8 @@ int main(int argc, char** argv) {
       grv_proc_regions = GRC(opt::proc_regions, reader.Header());
     } else if (opt::proc_regions.find(":") != std::string::npos) {
       grv_proc_regions.add(SeqLib::GenomicRegion(opt::proc_regions, reader.Header()));
+    } else if (opt::proc_regions == "-1" || opt::proc_regions == "UN") {
+      grv_proc_regions.add(SeqLib::GenomicRegion(-2, 0, 0));
     } else {
       std::cerr << "...unexpected region format or could not read file" << std::endl;
       exit(EXIT_FAILURE);

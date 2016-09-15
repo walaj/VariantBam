@@ -22,8 +22,6 @@ print(getwd())
 if (!file.exists(opt$input))
   stop(paste("Input file does not exist", opt$input))
 
-print(opt)
-
 require(ggplot2)
 require(reshape2)
 require(gridExtra)
