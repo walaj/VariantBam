@@ -49,6 +49,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -T, --reference                      Path to reference. Required for reading/writing CRAM\n"
 "  -s, --strip-tags                     Remove the specified tags, separated by commas. eg. -s RG,MD\n"
 "  -S, --strip-all-tags                 Remove all alignment tags\n"
+"      --write-trimmed                  Output the base-quality trimmed sequence rather than the original sequence. Also removes quality scores\n"
 " Filtering options\n"
 "  -q, --qc-file                        Output a qc file that contains information about BAM\n"
 "  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted. Negative values enforce a minimum coverage\n"
@@ -89,16 +90,17 @@ namespace opt {
   static std::string out;
   static int max_cov = 0;
   static bool verbose = false;
-  static std::string rules = "";
-  static std::string proc_regions = "";
+  static std::string rules;
+  static std::string proc_regions;
   static bool cram = false;
-  static std::string reference = SeqLib::REFHG19;
+  static std::string reference;
   static bool strip_all_tags = false;
-  static std::string tag_list = "";
-  static std::string counts_file = "";
+  static std::string tag_list;
+  static std::string counts_file;
   static bool noop = false;
-  static std::string bam_qcfile = "";
+  static std::string bam_qcfile;
   static bool bam_output = false;
+  static bool write_trimmed = false; // write the quality trimmed read?
 }
 
 enum {
@@ -112,11 +114,12 @@ enum {
   OPT_DEL
 };
 
-static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:p:";
+static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:p:Q";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, 'h' },
   { "bam",                        no_argument, NULL, 'b' },
   { "linked-region",              required_argument, NULL, 'l' },
+  { "write-trimmed",              no_argument, NULL, 'Q'} ,
   { "min-length",              required_argument, NULL, OPT_LENGTH },
   { "motif",              required_argument, NULL, OPT_MOTIF },
   { "min-ins",              required_argument, NULL, OPT_INS},
@@ -234,6 +237,7 @@ int main(int argc, char** argv) {
     else if (opt::cram) {
       reader.m_writer = SeqLib::BamWriter(SeqLib::CRAM);
       reader.m_writer.SetHeader(reader.Header());
+
       if (!reader.m_writer.Open(opt::out)) {
 	std::cerr << "ERROR: could not open output CRAM " << opt::out << std::endl;
 	exit(EXIT_FAILURE);
@@ -325,7 +329,7 @@ int main(int argc, char** argv) {
 
   if (grv_proc_regions.size() && rules_rg.size()) { // intersect rules regions with mask regions. 
     // dont incorporate rules regions if there are any mate-linked regions
-    rules_rg = rules_rg.intersection(grv_proc_regions, true); // true -> ignore_strand
+    rules_rg = rules_rg.Intersection(grv_proc_regions, true); // true -> ignore_strand
     if (opt::verbose)
       std::cerr << "rules region " << rules_rg.size() << std::endl;
   } else if (grv_proc_regions.size()) {
@@ -358,6 +362,9 @@ int main(int argc, char** argv) {
   // do the filtering
   if (opt::verbose)
     std::cerr << "...starting filtering" << std::endl;
+
+  // set the trim writer opeion
+  reader.m_write_trimmed = opt::write_trimmed;
 
   ////////////
   /// RUN THE WALKER
@@ -410,6 +417,7 @@ void parseVarOptions(int argc, char** argv) {
     case 's': arg >> opt::tag_list; break;
     case 'S': opt::strip_all_tags = true; break;
     case 'T': arg >> opt::reference; break;
+    case 'Q': opt::write_trimmed = true; break;
     case 'C': opt::cram = true; break;
     case 'i': arg >> opt::bam; break;
     case 'o': arg >> opt::out; break;

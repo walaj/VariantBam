@@ -33,8 +33,13 @@ void VariantBamWalker::writeVariantBam()
   while (GetNextRecord(r)) {
 
     int s, e;
-    if (phred > 0)
+    if (phred  > 0) {
+      std::string seq = r.Sequence();
       r.QualityTrimmedSequence(phred, s, e);
+      int new_len = e - s;
+      if (e != -1 && new_len < r.Length() && new_len > 0 && new_len - s >= 0 && s + new_len <= r.Length())
+	r.AddZTag("GV", seq.substr(s, new_len));
+    }
 
     bool rule = m_mr.isValid(r);
 
@@ -53,8 +58,7 @@ void VariantBamWalker::writeVariantBam()
       if (rule) {
 
 	if (max_cov == 0 && m_writer.IsOpen()) {// if we specified an output file, write it
-	  m_writer.WriteRecord(r);
-	  ++rc_main.keep;
+	  write_record(r);
 	} else if (m_writer.IsOpen()) {
 	  buffer.push_back(r);
 
@@ -127,8 +131,8 @@ void VariantBamWalker::subSampleWrite(SeqLib::BamRecordVector& buff, const STCov
 	{
 	  uint32_t k = __ac_Wang_hash(__ac_X31_hash_string(r.Qname().c_str()) ^ m_seed);
 	  if ((double)(k&0xffffff) / 0x1000000 <= sample_rate) { // passed the random filter
-	    m_writer.WriteRecord(r);
-	    ++rc_main.keep;
+	    write_record(r);
+
 	  }
 	}
       // only take if reaches minimum coverage
@@ -138,8 +142,7 @@ void VariantBamWalker::subSampleWrite(SeqLib::BamRecordVector& buff, const STCov
 	}
       else // didn't have a coverage problems
 	{
-	  ++rc_main.keep;
-	  m_writer.WriteRecord(r);
+	  write_record(r);
 	}
       
     }
@@ -179,4 +182,25 @@ void VariantBamWalker::printMessage(const SeqLib::BamRecord &r) const
 		rc_main.totalString().c_str(), chrname.c_str(), posstring.c_str(),  
 		rc_main.keepString().c_str(), rc_main.percent());
   std::cerr << std::string(buffer) << std::endl;
+}
+
+void VariantBamWalker::write_record(SeqLib::BamRecord& r) {
+
+  if (m_write_trimmed) {
+    r.SetSequence(r.QualitySequence());
+    r.SetQualities(std::string(), 0);
+  }
+
+  // strip tags
+  if (m_strip_all_tags)
+    r.RemoveAllTags();
+  else if (m_tags_to_strip.size()) {
+    for (const auto& i : m_tags_to_strip)
+      r.RemoveTag(i.c_str());
+  }
+
+  // write it
+  m_writer.WriteRecord(r);
+
+  ++rc_main.keep;
 }

@@ -22,6 +22,8 @@ class VariantBamWalker: public SeqLib::BamReader
   
   BamStats m_stats;
 
+  bool m_write_trimmed = false; // output the phred trimmed instead of orig sequence
+
   STCoverage cov_a;
   STCoverage cov_b;
 
@@ -44,6 +46,10 @@ class VariantBamWalker: public SeqLib::BamReader
   bool m_strip_all_tags = false;
 
   std::vector<std::string> m_tags_to_strip;
+
+ private:
+
+  void write_record(SeqLib::BamRecord& r);
 
 };
 #endif
