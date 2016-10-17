@@ -6,6 +6,7 @@ variant_CPPFLAGS = \
 
 variant_LDADD = \
 	$(top_builddir)/SeqLib/src/libseqlib.a \
-	$(top_builddir)/SeqLib/htslib/libhts.a 
+	$(top_builddir)/SeqLib/htslib/libhts.a \
+	$(LDFLAGS)
 
 variant_SOURCES = variant.cpp VariantBamWalker.cpp BamStats.cpp STCoverage.cpp Histogram.cpp
