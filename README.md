@@ -42,6 +42,18 @@ cd VariantBam
 make 
 ```
 
+To add support for reading BAMs, etc with HTTPS, FTP, S3, Google cloud, etc, you must compile and link with libcurl.
+```bash
+## set hts to build with libcurl links and hfile_libcurl.c
+cd VariantBam/SeqLib/htslib
+./configure --enable-libcurl 
+## compile seqlib with libcurl support
+cd ../../ # back to VariantBam main directory
+./configure LDFLAGS="-lcurl -lcrypto"
+make 
+make install
+```
+
 Quick Start
 ===========
 ```
