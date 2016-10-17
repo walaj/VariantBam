@@ -51,7 +51,10 @@ cd VariantBam/SeqLib/htslib
 cd ../../ # back to VariantBam main directory
 ./configure LDFLAGS="-lcurl -lcrypto"
 make 
-make install
+make install ## if no root or didn't configure with --prefix, binary is found at src/variant
+
+## test
+variant gs://isb-cgc-open/ccle/LUSC/DNA-Seq/C836.NCI-H1339.2.bam | head
 ```
 
 Quick Start
