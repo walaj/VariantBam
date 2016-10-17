@@ -43,7 +43,9 @@ static SeqLib::Filter::ReadFilter BuildReadFilterFromCommandLineRegion(const Com
     //id = "WG";
   } else {
     // set the genomic region this rule applies to
-    r.setRegions(SeqLib::GRC(c.f, hdr));
+    SeqLib::GRC regr(c.f, hdr);
+    regr.Pad(c.pad);
+    r.setRegions(regr);
     //debug setRegionFromFile(c.f, hdr);
   }
   
