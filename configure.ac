@@ -17,14 +17,10 @@ AC_CHECK_HEADER([zlib.h])
 
 # Check for libraries
 ##AC_SEARCH_LIBS([library],[function], [action-if-found], [action if not found])
+AC_SEARCH_LIBS([lzma_code],[lzma],,[AC_MSG_ERROR([lzma (part of xz) not found, please install xz (https://tukaani.org/xz/)])])
+AC_SEARCH_LIBS([BZ2_bzBuffToBuffDecompress],[bz2],,[AC_MSG_ERROR([lib bz2 not found, please install])])
 AC_SEARCH_LIBS([gzopen],[z],,[AC_MSG_ERROR([libz not found, please install zlib (http://www.zlib.net/)])])
 AC_SEARCH_LIBS([clock_gettime], [rt], [AC_DEFINE([HAVE_CLOCK_GETTIME], [1], [clock_getttime found])], )
-
-##AC_ARG_WITH(boost, AS_HELP_STRING([--with-boost=PATH],
-##	[specify directory containing the boost library)]))
-##if test "$with_boost" -a -d "$with_boost"; then
-##    boost_include="-I$with_boost"
-##fi
 
 # Only fail on warnings when the --enable-development flag is passed into configure
 AC_ARG_ENABLE(development, AS_HELP_STRING([--enable-development],
