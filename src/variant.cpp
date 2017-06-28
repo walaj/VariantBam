@@ -299,7 +299,7 @@ int main(int argc, char** argv) {
     
 
   if (opt::verbose && command_line_regions.size())
-    std::cerr << "...buliding rules from command line" << std::endl;
+    std::cerr << "...building rules from command line" << std::endl;
 
   // add specific mini rules from command-line
   for (auto& i : command_line_regions) {
