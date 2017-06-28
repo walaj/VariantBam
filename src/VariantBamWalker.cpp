@@ -42,57 +42,60 @@ void VariantBamWalker::writeVariantBam()
     }
 
     bool rule = m_mr.isValid(r);
-
-      // prepare for case of long reads
-      buffer_size = std::max((int32_t)r.Length() * 5, buffer_size);
-
-      TrackSeenRead(r);
-
-      // add coverage
-      if (max_cov != 0) {
-	cov_a.addRead(r, 0, false);
-	cov_b.addRead(r, 0, false);
-      }
-
-      // read is valid
-      if (rule) {
-
-	if (max_cov == 0 && m_writer.IsOpen()) {// if we specified an output file, write it
-	  write_record(r);
-	} else if (m_writer.IsOpen()) {
-	  buffer.push_back(r);
-
-	  // clear buffer
-	  // pass back and forth between cov_a and cov_b.
-	  if (buffer.size()) {
-
-	    // error if BAM not sorted
-	    if (buffer[0].Position() - buffer.back().Position() > 0 && buffer[0].ChrID() == buffer.back().ChrID())
-	      {
-		std::cerr << "ERROR: BAM file is not sorted. " << std::endl;
-		std::cerr << " ------ Found read:  " << buffer[0] << std::endl;
-		std::cerr << " ------ before read: " << buffer.back() << std::endl;
-		std::cerr << " ------ BAM must be sorted if using the -m flag for max coverage. Exiting" << std::endl;
-		exit(EXIT_FAILURE);
-	      }
-
-	    if ( (buffer.back().Position() - buffer[0].Position() > buffer_size) || buffer.back().ChrID() != buffer[0].ChrID()) {
-	      COV_A ? subSampleWrite(buffer, cov_a) : subSampleWrite(buffer, cov_b);
-	      COV_A ? cov_a.clear() : cov_b.clear();
-	      COV_A = !COV_A;
-	      buffer.clear();
-	    }
+    
+    // prepare for case of long reads
+    buffer_size = std::max((int32_t)r.Length() * 5, buffer_size);
+    
+    TrackSeenRead(r);
+    
+    // add coverage
+    if (max_cov != 0) {
+      cov_a.addRead(r, 0, false);
+      cov_b.addRead(r, 0, false);
+    }
+    
+    // read is valid
+    if (rule) {
+      
+      if (max_cov == 0 && m_writer.IsOpen()) { // if we specified an output file, write it
+	write_record(r);
+      } else if (m_writer.IsOpen()) {
+	buffer.push_back(r);
+	
+	// clear buffer
+	// pass back and forth between cov_a and cov_b.
+	if (buffer.size()) {
+	  
+	  // error if BAM not sorted
+	  if (buffer[0].Position() - buffer.back().Position() > 0 && buffer[0].ChrID() == buffer.back().ChrID()) {
+	    std::cerr << "ERROR: BAM file is not sorted. " << std::endl;
+	    std::cerr << " ------ Found read:  " << buffer[0] << std::endl;
+	    std::cerr << " ------ before read: " << buffer.back() << std::endl;
+	    std::cerr << " ------ BAM must be sorted if using the -m flag for max coverage. Exiting" << std::endl;
+	    exit(EXIT_FAILURE);
 	  }
-	} else if (!m_writer.IsOpen()) { // we are not outputting anything
-	  ++rc_main.keep;
+	  
+	  if ( (buffer.back().Position() - buffer[0].Position() > buffer_size) || buffer.back().ChrID() != buffer[0].ChrID()) {
+	    COV_A ? subSampleWrite(buffer, cov_a) : subSampleWrite(buffer, cov_b);
+	    COV_A ? cov_a.clear() : cov_b.clear();
+	    COV_A = !COV_A;
+	    buffer.clear();
+	  }
 	}
-	 
+      } else if (!m_writer.IsOpen()) { // we are not outputting anything
+	++rc_main.keep;
       }
       
-      if (++rc_main.total % 1000000 == 0 && m_verbose)
-	printMessage(r);
-
+    } else if (m_mark_qc_fail) { // fails, but we should mark it and write
+      r.SetQCFail(true);
+      write_record(r);
     }
+    
+    
+    if (++rc_main.total % 1000000 == 0 && m_verbose)
+      printMessage(r);
+    
+  }
 
   // clear last buffer
   if (buffer.size()) {
@@ -136,18 +139,16 @@ void VariantBamWalker::subSampleWrite(SeqLib::BamRecordVector& buff, const STCov
 	  }
 	}
       // only take if reaches minimum coverage
-      else if (this_cov < -max_cov) // max_cov = -10 
-	{
-	  //std::cerr << "not writing because this cov is " << this_cov << " and min cov is " << (-max_cov) << std::endl;
-	}
-      else // didn't have a coverage problems
-	{
-	  write_record(r);
-	}
+      else if (this_cov < -max_cov) { // max_cov = -10 
+	if (m_mark_qc_fail)
+	  r.SetQCFail(true);
+	//std::cerr << "not writing because this cov is " << this_cov << " and min cov is " << (-max_cov) << std::endl;
+      } 
+      write_record(r);
       
     }
-
-
+  
+  
 }
 
 void VariantBamWalker::TrackSeenRead(SeqLib::BamRecord &r)

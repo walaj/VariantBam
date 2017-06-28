@@ -23,7 +23,8 @@ class VariantBamWalker: public SeqLib::BamReader
   BamStats m_stats;
 
   bool m_write_trimmed = false; // output the phred trimmed instead of orig sequence
-
+  bool m_mark_qc_fail = false; // set as QC failed instead of deletingz
+  
   STCoverage cov_a;
   STCoverage cov_b;
 

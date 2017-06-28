@@ -42,6 +42,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -x, --no-output                      Don't output reads (used for profiling with -q)\n"
 "  -r, --rules                          JSON ecript for the rules.\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED/VCF of regions to process. -k UN iterates over unmapped-unmapped reads\n"
+"  -Q, --mark-as-qc-fail                Flag reads that don't pass VariantBam with the failed QC flag, rather than deleting the read.\n"
 " Output options\n"
 "  -o, --output                         Output file to write to (BAM/SAM/CRAM) file instead of stdout\n"
 "  -C, --cram                           Output file should be in CRAM format\n"
@@ -49,7 +50,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -T, --reference                      Path to reference. Required for reading/writing CRAM\n"
 "  -s, --strip-tags                     Remove the specified tags, separated by commas. eg. -s RG,MD\n"
 "  -S, --strip-all-tags                 Remove all alignment tags\n"
-"      --write-trimmed                  Output the base-quality trimmed sequence rather than the original sequence. Also removes quality scores\n"
+"  -Z, --write-trimmed                  Output the base-quality trimmed sequence rather than the original sequence. Also removes quality scores\n"
 " Filtering options\n"
 "  -q, --qc-file                        Output a qc file that contains information about BAM\n"
 "  -m, --max-coverage                   Maximum coverage of output file. BAM must be sorted. Negative values enforce a minimum coverage\n"
@@ -101,6 +102,8 @@ namespace opt {
   static std::string bam_qcfile;
   static bool bam_output = false;
   static bool write_trimmed = false; // write the quality trimmed read?
+
+  static bool mark_as_qcfail = false; // mark failed reads with QC fail flag, instead of deleting
 }
 
 enum {
@@ -114,12 +117,13 @@ enum {
   OPT_DEL
 };
 
-static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:p:Q";
+static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:p:QZ";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, 'h' },
   { "bam",                        no_argument, NULL, 'b' },
   { "linked-region",              required_argument, NULL, 'l' },
-  { "write-trimmed",              no_argument, NULL, 'Q'} ,
+  { "write-trimmed",              no_argument, NULL, 'Z'} ,
+  { "mark-as-qc-fail",              no_argument, NULL, 'Q'} ,
   { "min-length",              required_argument, NULL, OPT_LENGTH },
   { "motif",              required_argument, NULL, OPT_MOTIF },
   { "min-ins",              required_argument, NULL, OPT_INS},
@@ -208,6 +212,9 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
     
+  // set whether to mark failed as QC fail, or just delete (default)
+  reader.m_mark_qc_fail = opt::mark_as_qcfail;
+  
   // set the phred trim limit
   reader.phred = opt::phred;
 
@@ -417,7 +424,8 @@ void parseVarOptions(int argc, char** argv) {
     case 's': arg >> opt::tag_list; break;
     case 'S': opt::strip_all_tags = true; break;
     case 'T': arg >> opt::reference; break;
-    case 'Q': opt::write_trimmed = true; break;
+    case 'Z': opt::write_trimmed = true; break;
+    case 'Q': opt::mark_as_qcfail = true; break;
     case 'C': opt::cram = true; break;
     case 'i': arg >> opt::bam; break;
     case 'o': arg >> opt::out; break;
