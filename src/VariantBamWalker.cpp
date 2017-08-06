@@ -134,16 +134,22 @@ void VariantBamWalker::subSampleWrite(SeqLib::BamRecordVector& buff, const STCov
 	  uint32_t k = __ac_Wang_hash(__ac_X31_hash_string(r.Qname().c_str()) ^ m_seed);
 	  if ((double)(k&0xffffff) / 0x1000000 <= sample_rate) { // passed the random filter
 	    write_record(r);
-
+	  } else if (m_mark_qc_fail) {
+	    r.SetQCFail(true);
+	    write_record(r);
 	  }
 	}
       // only take if reaches minimum coverage
       else if (this_cov < -max_cov) { // max_cov = -10 
-	if (m_mark_qc_fail)
+	if (m_mark_qc_fail) {
 	  r.SetQCFail(true);
-	//std::cerr << "not writing because this cov is " << this_cov << " and min cov is " << (-max_cov) << std::endl;
-      } 
-      write_record(r);
+          write_record(r);
+	} else {
+	  //std::cerr << "not writing because this cov is " << this_cov << " and min cov is " << (-max_cov) << std::endl;
+	}
+      } else {
+        write_record(r);
+      }
       
     }
   
