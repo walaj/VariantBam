@@ -1,8 +1,7 @@
 #include "VariantBamWalker.h"
 #include "htslib/khash.h"
 
-void VariantBamWalker::writeVariantBam() 
-{
+void VariantBamWalker::writeVariantBam() {
 
 #ifndef __APPLE__
   // start the timer
@@ -94,7 +93,6 @@ void VariantBamWalker::writeVariantBam()
     
     if (++rc_main.total % 1000000 == 0 && m_verbose)
       printMessage(r);
-    
   }
 
   // clear last buffer
@@ -114,6 +112,7 @@ void VariantBamWalker::writeVariantBam()
 
   if (m_verbose)
     printMessage(r);
+
 }
 
 void VariantBamWalker::subSampleWrite(SeqLib::BamRecordVector& buff, const STCoverage& cov) {

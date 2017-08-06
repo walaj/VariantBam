@@ -39,6 +39,7 @@ static const char *VARIANT_BAM_USAGE_MESSAGE =
 "  -h, --help                           Display this help and exit\n"
 "  -v, --verbose                        Verbose output\n"
   //"  -c, --counts-file                    File to place read counts per rule / region\n"
+"  -t, --num-threads                    Add additional threads from pool for reading/writing. Per htslib, -t 1 adds one additional thread to main. [0]\n"
 "  -x, --no-output                      Don't output reads (used for profiling with -q)\n"
 "  -r, --rules                          JSON ecript for the rules.\n"
 "  -k, --proc-regions-file              Samtools-style region string (e.g. 1:1,000-2,000) or BED/VCF of regions to process. -k UN iterates over unmapped-unmapped reads\n"
@@ -102,7 +103,7 @@ namespace opt {
   static std::string bam_qcfile;
   static bool bam_output = false;
   static bool write_trimmed = false; // write the quality trimmed read?
-
+  static int nthreads = 0;
   static bool mark_as_qcfail = false; // mark failed reads with QC fail flag, instead of deleting
 }
 
@@ -117,11 +118,12 @@ enum {
   OPT_DEL
 };
 
-static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:p:QZ";
+static const char* shortopts = "hvbxi:o:r:k:g:Cf:s:ST:l:c:q:m:L:G:P:F:R:p:QZt:";
 static const struct option longopts[] = {
   { "help",                       no_argument, NULL, 'h' },
   { "bam",                        no_argument, NULL, 'b' },
   { "linked-region",              required_argument, NULL, 'l' },
+  { "num-threads",              required_argument, NULL, 't' },
   { "write-trimmed",              no_argument, NULL, 'Z'} ,
   { "mark-as-qc-fail",              no_argument, NULL, 'Q'} ,
   { "min-length",              required_argument, NULL, OPT_LENGTH },
@@ -207,10 +209,20 @@ int main(int argc, char** argv) {
 
   // setup the walker
   VariantBamWalker reader;
+
+  // open the thread pool if have one
+  SeqLib::ThreadPool pool; //null threadpool
+  if (opt::nthreads > 0) {
+    pool = SeqLib::ThreadPool(opt::nthreads);
+    if (!reader.SetThreadPool(pool))
+      std::cerr << "trying to set unopened pool" << std::endl;
+  }
+
   if (!reader.Open(opt::bam))  {
     std::cerr << "ERROR: could not open file " << opt::bam << std::endl;
     exit(EXIT_FAILURE);
   }
+
     
   // set whether to mark failed as QC fail, or just delete (default)
   reader.m_mark_qc_fail = opt::mark_as_qcfail;
@@ -262,6 +274,11 @@ int main(int argc, char** argv) {
       }
     }
     reader.m_writer.WriteHeader();
+
+    // set threads for multicore
+    if (pool.IsOpen()) 
+      if (!reader.m_writer.SetThreadPool(pool))
+	std::cerr << "trying to set unopened pool" << std::endl;
   }
 
   // should we clear tags?
@@ -422,6 +439,7 @@ void parseVarOptions(int argc, char** argv) {
     case 'h': die = true; break;
     case 'v': opt::verbose = true; break;
     case 's': arg >> opt::tag_list; break;
+    case 't': arg >> opt::nthreads; break;
     case 'S': opt::strip_all_tags = true; break;
     case 'T': arg >> opt::reference; break;
     case 'Z': opt::write_trimmed = true; break;
