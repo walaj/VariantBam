@@ -97,14 +97,12 @@ void VariantBamWalker::writeVariantBam() {
 
   // clear last buffer
   if (buffer.size()) {
-    if ( (buffer.back().Position() - buffer[0].Position() > buffer_size) || buffer.back().ChrID() != buffer[0].ChrID()) {
-      COV_A ? subSampleWrite(buffer, cov_a) : subSampleWrite(buffer, cov_b);
-      COV_A ? cov_a.clear() : cov_b.clear();
-      COV_A = !COV_A;
-      buffer.clear();
-    }
+    COV_A ? subSampleWrite(buffer, cov_a) : subSampleWrite(buffer, cov_b);
+    COV_A ? cov_a.clear() : cov_b.clear();
+    COV_A = !COV_A;
+    buffer.clear();
   }
-
+  
   if (r.isEmpty()) {
     std::cerr << "NO READS RETRIEVED FROM THESE REGIONS" << std::endl;
     return;
