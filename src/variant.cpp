@@ -328,6 +328,8 @@ int main(int argc, char** argv) {
     rfc.AddReadFilter(rf);
     //mrc.m_regions.push_back(mr);
   }
+
+  rfc.CheckHasIncluder();
   
   reader.m_mr = rfc;
 
